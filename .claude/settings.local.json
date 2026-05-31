@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(flutter build *)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\dell\\\\Documents\\\\Proyectos\\\\Vexa\\\\vexa_finance\\\\lib\\\\features\\\\shell\\\\presentation\\\\pages\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\dell\\\\Documents\\\\Proyectos\\\\Vexa\\\\vexa_finance\\\\lib\\\\features\\\\analysis\\\\presentation\\\\pages\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\dell\\\\Documents\\\\Proyectos\\\\Vexa\\\\vexa_finance\\\\lib\\\\features\\\\budget\\\\presentation\\\\pages\")",
+      "Bash(mkdir -p \"c:\\\\Users\\\\dell\\\\Documents\\\\Proyectos\\\\Vexa\\\\vexa_finance\\\\lib\\\\features\\\\profile\\\\presentation\\\\pages\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\dell\\\\Documents\\\\Proyectos\\\\Vexa\\\\vexa_finance\\\\lib\" -Recurse -Name)",
+      "Bash(Sort-Object)",
+      "Bash(flutter --version)",
+      "Read(//c/c/Users/dell/Documents/Proyectos/Vexa/vexa_finance/**)",
+      "Bash(xargs sed -i 's/const BouncingScrollPhysics\\(\\\\s*parent:\\\\s*AlwaysScrollableScrollPhysics\\(\\)\\\\s*\\)/const AlwaysScrollableScrollPhysics\\(\\)/g')",
+      "Bash(xargs perl -0777 -i -pe 's/const BouncingScrollPhysics\\\\\\(\\\\s*parent:\\\\s*AlwaysScrollableScrollPhysics\\\\\\(\\\\\\)\\\\s*\\\\\\)/const AlwaysScrollableScrollPhysics\\(\\)/g; s/const BouncingScrollPhysics\\\\\\(\\\\\\)/const BouncingScrollPhysics\\(\\)/g')",
+      "Bash(echo \"EXIT: $?\")"
+    ]
+  }
+}

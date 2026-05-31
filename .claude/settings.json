@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs perl -0777 -i -pe ' *)",
+      "Bash(xargs perl -i -pe 's/,,/,/g')"
+    ]
+  }
+}
