@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../features/shell/presentation/pages/main_shell.dart';
+import '../../../onboarding/presentation/pages/onboarding_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -70,8 +70,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (_, a1, a2) => const MainShell(),
-        transitionsBuilder: (_, anim, a2, child) =>
+        pageBuilder: (ctx, a1, a2) => const OnboardingPage(),
+        transitionsBuilder: (ctx, anim, a2, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 420),
       ),

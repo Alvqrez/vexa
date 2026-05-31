@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../shared/widgets/confetti_overlay.dart';
 import '../../domain/models/financial_goal.dart';
 import '../providers/goals_provider.dart';
 
@@ -48,8 +49,16 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _AddProgressSheet(
         goal: goal,
-        onAdd: (amount) =>
-            ref.read(goalsProvider.notifier).addProgress(goal.id, amount),
+        onAdd: (amount) {
+          ref.read(goalsProvider.notifier).addProgress(goal.id, amount);
+          final newProgress = (goal.current + amount) / goal.target;
+          if (newProgress >= 1.0 && !goal.completed) {
+            HapticFeedback.heavyImpact();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) ConfettiOverlay.show(context);
+            });
+          }
+        },
       ),
     );
   }

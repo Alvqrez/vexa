@@ -6,6 +6,8 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/utils/export_utils.dart';
+import '../../../home/presentation/providers/home_provider.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -204,6 +206,17 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                           title: 'Privacidad y datos',
                           items: [
                             _ToggleItem(
+                              icon: Icons.visibility_off_outlined,
+                              color: AppColors.negative,
+                              title: 'Ocultar montos',
+                              subtitle: 'Muestra asteriscos en lugar de valores.',
+                              value: ref.watch(hideAmountsProvider),
+                              onChanged: (v) {
+                                HapticFeedback.selectionClick();
+                                ref.read(hideAmountsProvider.notifier).state = v;
+                              },
+                            ),
+                            _ToggleItem(
                               icon: Icons.analytics_outlined,
                               color: AppColors.textSecondary,
                               title: 'Enviar analíticas',
@@ -218,8 +231,27 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                             _ActionItem(
                               icon: Icons.download_outlined,
                               color: AppColors.emerald,
-                              title: 'Exportar mis datos',
-                              onTap: () {},
+                              title: 'Exportar mis datos (CSV)',
+                              onTap: () async {
+                                final txns = ref.read(transactionsProvider);
+                                final count = await ExportUtils.copyToClipboard(txns);
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '$count transacciones copiadas al portapapeles.',
+                                      style: AppTypography.labelM.copyWith(
+                                          color: AppColors.textPrimary),
+                                    ),
+                                    backgroundColor: AppColors.card,
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          AppSpacing.cardRadius),
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),

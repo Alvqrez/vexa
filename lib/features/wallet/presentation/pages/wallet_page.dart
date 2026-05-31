@@ -1,0 +1,582 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
+import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/constants/app_curves.dart';
+import '../../../home/presentation/providers/home_provider.dart';
+import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
+import '../providers/wallet_provider.dart';
+import 'wallet_categories_page.dart';
+
+class WalletPage extends ConsumerStatefulWidget {
+  const WalletPage({super.key});
+
+  @override
+  ConsumerState<WalletPage> createState() => _WalletPageState();
+}
+
+class _WalletPageState extends ConsumerState<WalletPage>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _stagger;
+  static const _sectionCount = 4;
+
+  @override
+  void initState() {
+    super.initState();
+    _stagger = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _stagger.dispose();
+    super.dispose();
+  }
+
+  Widget _reveal(int i, Widget child) {
+    final start = i / _sectionCount * 0.55;
+    final end = (start + 0.55).clamp(0.0, 1.0);
+    return FadeTransition(
+      opacity: CurvedAnimation(
+          parent: _stagger,
+          curve: Interval(start, end, curve: AppCurves.gentle)),
+      child: SlideTransition(
+        position: Tween<Offset>(begin: const Offset(0, 0.10), end: Offset.zero)
+            .animate(CurvedAnimation(
+          parent: _stagger,
+          curve: Interval(start, end, curve: AppCurves.spring),
+        )),
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        const _WalletBg(),
+        SafeArea(
+          bottom: false,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    const SizedBox(height: AppSpacing.lg),
+                    _reveal(0, const _WalletHeader()),
+                    const SizedBox(height: AppSpacing.xxl),
+                    _reveal(1, const _AccountsOverviewCard()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(2, const _SubscriptionsPreviewSection()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(3, const _CategoriesPreviewSection()),
+                    const SizedBox(
+                      height: AppSpacing.bottomNavHeight +
+                          AppSpacing.bottomNavBottomPadding +
+                          AppSpacing.xxxl,
+                    ),
+                  ]),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Background ────────────────────────────────────────────────────────────────
+
+class _WalletBg extends StatelessWidget {
+  const _WalletBg();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
+        children: [
+          Container(color: AppColors.background),
+          Positioned(
+            top: -100,
+            right: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  AppColors.petroleum.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 380,
+            left: -80,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  AppColors.emerald.withValues(alpha: 0.07),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+class _WalletHeader extends StatelessWidget {
+  const _WalletHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Mi Cartera',
+            style: AppTypography.headingM
+                .copyWith(color: AppColors.textPrimary)),
+        const SizedBox(height: 2),
+        Text('Cuentas, suscripciones y categorías',
+            style: AppTypography.labelM
+                .copyWith(color: AppColors.textTertiary)),
+      ],
+    );
+  }
+}
+
+// ── Accounts overview card ────────────────────────────────────────────────────
+
+class _AccountsOverviewCard extends ConsumerWidget {
+  const _AccountsOverviewCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = ref.watch(totalBalanceProvider);
+    final accounts = ref.watch(accountsProvider);
+    final income = ref.watch(monthlyIncomeProvider);
+    final expenses = ref.watch(monthlyExpensesProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
+        color: Colors.white.withValues(alpha: 0.03),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0.0, 0.5, 1.0],
+            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.emerald.withValues(alpha: 0.06),
+              blurRadius: 60,
+              spreadRadius: -8,
+              offset: const Offset(0, 24),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Balance total',
+                        style: AppTypography.labelM
+                            .copyWith(color: AppColors.textTertiary)),
+                    const SizedBox(height: 4),
+                    Text(
+                      '\$${total.toStringAsFixed(2)}',
+                      style: AppTypography.headingL
+                          .copyWith(color: AppColors.textPrimary),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.emeraldSurface,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.pillRadius),
+                  ),
+                  child: Text('${accounts.length} cuentas',
+                      style: AppTypography.eyebrow
+                          .copyWith(color: AppColors.emeraldDim)),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniKpi(
+                    label: 'Ingresos',
+                    value: '\$${income.toStringAsFixed(0)}',
+                    color: AppColors.positive,
+                    icon: Icons.south_rounded,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: _MiniKpi(
+                    label: 'Gastos',
+                    value: '\$${expenses.toStringAsFixed(0)}',
+                    color: AppColors.negative,
+                    icon: Icons.north_rounded,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            // Account chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: accounts.map((a) {
+                  return Container(
+                    margin: const EdgeInsets.only(right: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: a.color.withValues(alpha: 0.12),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.pillRadius),
+                      border: Border.all(
+                          color: a.color.withValues(alpha: 0.25), width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                              color: a.color, shape: BoxShape.circle),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(a.name,
+                            style: AppTypography.labelS.copyWith(color: a.color)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MiniKpi extends StatelessWidget {
+  const _MiniKpi(
+      {required this.label,
+      required this.value,
+      required this.color,
+      required this.icon});
+  final String label;
+  final String value;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(
+            color: color.withValues(alpha: 0.15), width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 13, color: color),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: AppTypography.labelS
+                        .copyWith(color: AppColors.textTertiary)),
+                Text(value,
+                    style: AppTypography.labelL.copyWith(
+                        color: color, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Subscriptions preview ─────────────────────────────────────────────────────
+
+class _SubscriptionsPreviewSection extends ConsumerWidget {
+  const _SubscriptionsPreviewSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final upcoming = ref.watch(upcomingSubscriptionsProvider).take(3).toList();
+    final total = ref.watch(monthlySubscriptionsTotalProvider);
+
+    return _WalletSection(
+      title: 'Suscripciones',
+      subtitle: '\$${total.toStringAsFixed(2)}/mes',
+      icon: Icons.subscriptions_rounded,
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const SubscriptionsPage())),
+      child: upcoming.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(
+                child: Text('Sin suscripciones',
+                    style: AppTypography.labelM
+                        .copyWith(color: AppColors.textTertiary)),
+              ),
+            )
+          : Column(
+              children: upcoming.map((s) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: _SubsPreviewTile(subscription: s),
+                );
+              }).toList(),
+            ),
+    );
+  }
+}
+
+class _SubsPreviewTile extends StatelessWidget {
+  const _SubsPreviewTile({required this.subscription});
+  final dynamic subscription;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: subscription.color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(subscription.icon, size: 17, color: subscription.color),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Text(subscription.name,
+              style:
+                  AppTypography.labelL.copyWith(color: AppColors.textPrimary)),
+        ),
+        Text('-\$${subscription.amount.toStringAsFixed(2)}',
+            style: AppTypography.labelM.copyWith(
+                color: AppColors.negative, fontWeight: FontWeight.w600)),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          subscription.daysUntilBilling == 0
+              ? 'Hoy'
+              : 'en ${subscription.daysUntilBilling}d',
+          style: AppTypography.labelS.copyWith(
+            color: subscription.isDueSoon
+                ? AppColors.warning
+                : AppColors.textTertiary,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Categories preview ────────────────────────────────────────────────────────
+
+class _CategoriesPreviewSection extends ConsumerWidget {
+  const _CategoriesPreviewSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cats = ref.watch(walletCategoriesProvider).take(6).toList();
+
+    return _WalletSection(
+      title: 'Categorías',
+      subtitle: '${ref.watch(walletCategoriesProvider).length} en total',
+      icon: Icons.category_rounded,
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const WalletCategoriesPage())),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: cats.map((cat) {
+          return Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: cat.color.withValues(alpha: 0.12),
+              borderRadius:
+                  BorderRadius.circular(AppSpacing.pillRadius),
+              border: Border.all(
+                  color: cat.color.withValues(alpha: 0.25), width: 0.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(cat.icon, size: 13, color: cat.color),
+                const SizedBox(width: 5),
+                Text(cat.name,
+                    style: AppTypography.labelS.copyWith(color: cat.color)),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ── Wallet section container ──────────────────────────────────────────────────
+
+class _WalletSection extends StatelessWidget {
+  const _WalletSection({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+    required this.child,
+  });
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+        color: Colors.white.withValues(alpha: 0.02),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppColors.petroleumSurface,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 16, color: AppColors.petroleum),
+                ),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          style: AppTypography.labelL.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600)),
+                      Text(subtitle,
+                          style: AppTypography.labelS
+                              .copyWith(color: AppColors.textTertiary)),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: onTap,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.glassLight,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.pillRadius),
+                      border: Border.all(
+                          color: AppColors.glassBorder, width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('Ver todo',
+                            style: AppTypography.labelS.copyWith(
+                                color: AppColors.textSecondary)),
+                        const SizedBox(width: 3),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            size: 10, color: AppColors.textTertiary),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Divider(height: 1, thickness: 0.5, color: AppColors.glassBorder),
+            const SizedBox(height: AppSpacing.lg),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+

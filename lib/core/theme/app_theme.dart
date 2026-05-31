@@ -2,6 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
+import '../router/app_transitions.dart';
+
+const _transitions = PageTransitionsTheme(builders: {
+  TargetPlatform.android: VexaPageTransitionsBuilder(),
+  TargetPlatform.iOS: VexaPageTransitionsBuilder(),
+  TargetPlatform.macOS: VexaPageTransitionsBuilder(),
+  TargetPlatform.windows: VexaPageTransitionsBuilder(),
+  TargetPlatform.linux: VexaPageTransitionsBuilder(),
+});
 
 abstract final class AppTheme {
   static ThemeData get light {
@@ -35,6 +44,7 @@ abstract final class AppTheme {
       splashFactory: InkRipple.splashFactory,
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
+      pageTransitionsTheme: _transitions,
     );
   }
 
@@ -69,6 +79,7 @@ abstract final class AppTheme {
       splashFactory: InkRipple.splashFactory,
       highlightColor: Colors.transparent,
       splashColor: Colors.transparent,
+      pageTransitionsTheme: _transitions,
     );
   }
 }

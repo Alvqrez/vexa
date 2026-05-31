@@ -78,15 +78,18 @@ class TransactionDetailPage extends ConsumerWidget {
               ),
               child: Column(
                 children: [
-                  // Category icon
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: cat.surface,
-                      borderRadius: BorderRadius.circular(20),
+                  // Hero: icon expanding from transaction list
+                  Hero(
+                    tag: 'txn_icon_${transaction.id}',
+                    child: Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: cat.surface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(cat.icon, color: cat.color, size: 28),
                     ),
-                    child: Icon(cat.icon, color: cat.color, size: 28),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   // Amount

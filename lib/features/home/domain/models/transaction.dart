@@ -65,6 +65,7 @@ class Transaction {
     required this.date,
     this.accountId,
     this.note,
+    this.tags = const [],
   });
 
   final String id;
@@ -75,6 +76,7 @@ class Transaction {
   final DateTime date;
   final String? accountId;
   final String? note;
+  final List<String> tags;
 
   bool get isIncome => type == TransactionType.income;
 
@@ -91,6 +93,7 @@ class Transaction {
     DateTime? date,
     String? accountId,
     String? note,
+    List<String>? tags,
     bool clearNote = false,
   }) {
     return Transaction(
@@ -102,6 +105,7 @@ class Transaction {
       date: date ?? this.date,
       accountId: accountId ?? this.accountId,
       note: clearNote ? null : (note ?? this.note),
+      tags: tags ?? this.tags,
     );
   }
 }

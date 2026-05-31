@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,14 +8,27 @@ import '../../core/constants/app_spacing.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../features/home/presentation/providers/home_provider.dart';
 
+// ── Nav item descriptor ───────────────────────────────────────────────────────
+
+enum _NavTabType { home, wallet, analysis, budget, goals }
+
+class _NavItem {
+  const _NavItem({required this.type, required this.label});
+  final _NavTabType type;
+  final String label;
+}
+
+// ── Main nav bar ──────────────────────────────────────────────────────────────
+
 class AppBottomNav extends ConsumerWidget {
   const AppBottomNav({super.key});
 
   static const _items = [
-    _NavItem(icon: Icons.grid_view_rounded, label: 'Inicio'),
-    _NavItem(icon: Icons.bar_chart_rounded, label: 'Análisis'),
-    _NavItem(icon: Icons.account_balance_wallet_rounded, label: 'Cartera'),
-    _NavItem(icon: Icons.flag_rounded, label: 'Metas'),
+    _NavItem(type: _NavTabType.home, label: 'Inicio'),
+    _NavItem(type: _NavTabType.wallet, label: 'Cartera'),
+    _NavItem(type: _NavTabType.analysis, label: 'Análisis'),
+    _NavItem(type: _NavTabType.budget, label: 'Presupuesto'),
+    _NavItem(type: _NavTabType.goals, label: 'Metas'),
   ];
 
   @override
@@ -64,11 +78,7 @@ class AppBottomNav extends ConsumerWidget {
   }
 }
 
-class _NavItem {
-  const _NavItem({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-}
+// ── Nav button with per-tab animations ────────────────────────────────────────
 
 class _NavButton extends ConsumerStatefulWidget {
   const _NavButton({
@@ -89,64 +99,88 @@ class _NavButton extends ConsumerStatefulWidget {
 
 class _NavButtonState extends ConsumerState<_NavButton>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _bounce;
+  late final AnimationController _ctrl;
+
+  // Shared animations
   late final Animation<double> _scale;
-  late final Animation<double> _iconRotate;
+
+  // Tab-specific animations
+  late final Animation<double> _rotate;      // wallet + settings
+  late final Animation<double> _barHeight;   // analysis bars pulse
+  late final Animation<double> _arcProgress; // budget arc fill
 
   bool _prevActive = false;
 
   @override
   void initState() {
     super.initState();
-    _bounce = AnimationController(
+    _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 480),
     );
 
-    // Scale: normal → squish → overshoot → settle
+    // Scale: squish → pop → settle (all tabs)
     _scale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 1.0, end: 0.78)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 25,
-      ),
+          tween: Tween(begin: 1.0, end: 0.80)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 20),
       TweenSequenceItem(
-        tween: Tween(begin: 0.78, end: 1.18)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 35,
-      ),
+          tween: Tween(begin: 0.80, end: 1.16)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 40),
       TweenSequenceItem(
-        tween: Tween(begin: 1.18, end: 1.0)
-            .chain(CurveTween(curve: Curves.elasticOut)),
-        weight: 40,
-      ),
-    ]).animate(_bounce);
+          tween: Tween(begin: 1.16, end: 1.0)
+              .chain(CurveTween(curve: Curves.elasticOut)),
+          weight: 40),
+    ]).animate(_ctrl);
 
-    // Subtle rotation: ±8 degrees and back
-    _iconRotate = TweenSequence<double>([
+    // Rotation for wallet (slight rock) and settings (cw turn)
+    _rotate = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.0, end: -0.14)
-            .chain(CurveTween(curve: Curves.easeIn)),
-        weight: 30,
-      ),
+          tween: Tween(begin: 0.0, end: -0.18)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 25),
       TweenSequenceItem(
-        tween: Tween(begin: -0.14, end: 0.10)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 35,
-      ),
+          tween: Tween(begin: -0.18, end: 0.12)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 35),
       TweenSequenceItem(
-        tween: Tween(begin: 0.10, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 35,
-      ),
-    ]).animate(_bounce);
+          tween: Tween(begin: 0.12, end: 0.0)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 40),
+    ]).animate(_ctrl);
+
+    // Bar pulse for analysis: 1 → 0.4 → 1
+    _barHeight = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.3)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 30),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.3, end: 1.0)
+              .chain(CurveTween(curve: Curves.elasticOut)),
+          weight: 70),
+    ]).animate(_ctrl);
+
+    // Arc progress for budget: 0 → 1 → 0
+    _arcProgress = TweenSequence<double>([
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 50),
+      TweenSequenceItem(
+          tween: Tween(begin: 1.0, end: 0.0)
+              .chain(CurveTween(curve: Curves.easeIn)),
+          weight: 50),
+    ]).animate(_ctrl);
   }
 
   @override
   void didUpdateWidget(_NavButton old) {
     super.didUpdateWidget(old);
     if (widget.isActive && !_prevActive && widget.animated) {
-      _bounce
+      _ctrl
         ..reset()
         ..forward();
     }
@@ -155,7 +189,7 @@ class _NavButtonState extends ConsumerState<_NavButton>
 
   @override
   void dispose() {
-    _bounce.dispose();
+    _ctrl.dispose();
     super.dispose();
   }
 
@@ -168,51 +202,42 @@ class _NavButtonState extends ConsumerState<_NavButton>
       },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
-        width: 60,
+        width: 58,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             AnimatedBuilder(
-              animation: _bounce,
+              animation: _ctrl,
               builder: (_, child) {
                 final s = widget.animated ? _scale.value : 1.0;
-                final r = widget.animated ? _iconRotate.value : 0.0;
                 return Transform.scale(
                   scale: s,
-                  child: Transform.rotate(
-                    angle: r,
-                    child: child,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: widget.isActive
+                          ? AppColors.emeraldSurface
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: _buildIcon(),
                   ),
                 );
               },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: widget.isActive
-                      ? AppColors.emeraldSurface
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  widget.item.icon,
-                  size: 22,
-                  color: widget.isActive
-                      ? AppColors.emerald
-                      : AppColors.textTertiary,
-                ),
-              ),
             ),
             const SizedBox(height: 3),
             AnimatedDefaultTextStyle(
               duration: const Duration(milliseconds: 200),
               style: AppTypography.labelS.copyWith(
-                color:
-                    widget.isActive ? AppColors.emerald : AppColors.textTertiary,
-                fontWeight:
-                    widget.isActive ? FontWeight.w600 : FontWeight.w400,
-                fontSize: 10,
+                color: widget.isActive
+                    ? AppColors.emerald
+                    : AppColors.textTertiary,
+                fontWeight: widget.isActive
+                    ? FontWeight.w600
+                    : FontWeight.w400,
+                fontSize: 9,
               ),
               child: Text(widget.item.label),
             ),
@@ -220,5 +245,214 @@ class _NavButtonState extends ConsumerState<_NavButton>
         ),
       ),
     );
+  }
+
+  Widget _buildIcon() {
+    final color =
+        widget.isActive ? AppColors.emerald : AppColors.textTertiary;
+
+    return switch (widget.item.type) {
+      _NavTabType.home => _HomeIcon(color: color, ctrl: _ctrl, animated: widget.animated),
+      _NavTabType.wallet => _WalletIcon(color: color, rotate: _rotate, animated: widget.animated),
+      _NavTabType.analysis => _AnalysisBarsIcon(color: color, barHeight: _barHeight, animated: widget.animated),
+      _NavTabType.budget => _BudgetCircleIcon(color: color, arcProgress: _arcProgress, animated: widget.animated),
+      _NavTabType.goals => _GoalsIcon(color: color, ctrl: _ctrl, animated: widget.animated),
+    };
+  }
+}
+
+// ── Home icon — scale pulse ───────────────────────────────────────────────────
+
+class _HomeIcon extends StatelessWidget {
+  const _HomeIcon(
+      {required this.color, required this.ctrl, required this.animated});
+  final Color color;
+  final AnimationController ctrl;
+  final bool animated;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(Icons.grid_view_rounded, size: 22, color: color);
+  }
+}
+
+// ── Wallet icon — rocking open ────────────────────────────────────────────────
+
+class _WalletIcon extends StatelessWidget {
+  const _WalletIcon(
+      {required this.color,
+      required this.rotate,
+      required this.animated});
+  final Color color;
+  final Animation<double> rotate;
+  final bool animated;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: rotate,
+      builder: (_, child) => Transform.rotate(
+        angle: animated ? rotate.value : 0,
+        alignment: Alignment.center,
+        child: child,
+      ),
+      child: Icon(Icons.account_balance_wallet_rounded, size: 22, color: color),
+    );
+  }
+}
+
+// ── Analysis bars icon — bars pulse up/down ───────────────────────────────────
+
+class _AnalysisBarsIcon extends StatelessWidget {
+  const _AnalysisBarsIcon(
+      {required this.color,
+      required this.barHeight,
+      required this.animated});
+  final Color color;
+  final Animation<double> barHeight;
+  final bool animated;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: barHeight,
+      builder: (_, child) => SizedBox(
+        width: 22,
+        height: 22,
+        child: CustomPaint(
+          painter: _BarsPainter(
+            color: color,
+            progress: animated ? barHeight.value : 1.0,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BarsPainter extends CustomPainter {
+  const _BarsPainter({required this.color, required this.progress});
+  final Color color;
+  final double progress;
+
+  // Normalized heights for each bar: short, tall, medium
+  static const _heights = [0.45, 1.0, 0.65];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const barCount = 3;
+    // Divide width into equal slots; bar uses 58% of each slot, centered.
+    final slot = size.width / barCount;
+    final barW = slot * 0.58;
+    final leftPad = (slot - barW) / 2; // center bar within its slot
+
+    final paint = Paint()..color = color;
+
+    for (int i = 0; i < barCount; i++) {
+      final targetH = _heights[i] * size.height;
+      final h = targetH * progress;
+      if (h < 0.5) continue; // skip invisible bars
+      final left = slot * i + leftPad;
+      final top = size.height - h;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(left, top, barW, h),
+        const Radius.circular(2),
+      );
+      canvas.drawRRect(rect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BarsPainter old) =>
+      old.progress != progress || old.color != color;
+}
+
+// ── Budget arc icon — arc sweeps around ──────────────────────────────────────
+
+class _BudgetCircleIcon extends StatelessWidget {
+  const _BudgetCircleIcon(
+      {required this.color,
+      required this.arcProgress,
+      required this.animated});
+  final Color color;
+  final Animation<double> arcProgress;
+  final bool animated;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: arcProgress,
+      builder: (_, child) => SizedBox(
+        width: 22,
+        height: 22,
+        child: CustomPaint(
+          painter: _ArcIconPainter(
+            color: color,
+            progress: animated ? arcProgress.value : 0,
+          ),
+          child: Center(
+            child: Icon(Icons.pie_chart_rounded, size: 11, color: color),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArcIconPainter extends CustomPainter {
+  const _ArcIconPainter({required this.color, required this.progress});
+  final Color color;
+  final double progress;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 1;
+
+    // Track
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2,
+      false,
+      Paint()
+        ..color = color.withValues(alpha: 0.15)
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke,
+    );
+
+    if (progress <= 0) return;
+
+    // Fill arc
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      math.pi * 2 * progress,
+      false,
+      Paint()
+        ..color = color
+        ..strokeWidth = 2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ArcIconPainter old) =>
+      old.progress != progress || old.color != color;
+}
+
+// ── Goals icon — flag with scale bounce ──────────────────────────────────────
+
+class _GoalsIcon extends StatelessWidget {
+  const _GoalsIcon(
+      {required this.color, required this.ctrl, required this.animated});
+  final Color color;
+  final AnimationController ctrl;
+  final bool animated;
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(Icons.flag_rounded, size: 22, color: color);
   }
 }

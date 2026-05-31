@@ -8,30 +8,28 @@ import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
-  /// Pass [existing] to open in edit mode pre-filled with the transaction data.
-  const AddTransactionSheet({super.key, this.existing});
+  const AddTransactionSheet({
+    super.key,
+    this.existing,
+    this.defaultType = TransactionType.expense,
+    this.scrollController,
+  });
 
   final Transaction? existing;
+  final TransactionType defaultType;
+  final ScrollController? scrollController;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
       _AddTransactionSheetState();
 }
 
-class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _entryController;
-  late Animation<double> _fadeIn;
-  late Animation<Offset> _slideIn;
-
+class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late TransactionType _type;
   late TransactionCategory _category;
   String? _selectedAccountId;
 
   final _amountController = TextEditingController();
-  final _merchantController = TextEditingController();
-  final _noteController = TextEditingController();
-  final _amountFocus = FocusNode();
 
   bool get _isEditing => widget.existing != null;
 
@@ -40,41 +38,26 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
     super.initState();
 
     final e = widget.existing;
-    _type = e?.type ?? TransactionType.expense;
-    _category = e?.category ?? TransactionCategory.other;
-    _selectedAccountId = e?.accountId;
+    _type = e?.type ?? widget.defaultType;
+    _category = e?.category ??
+        (_type == TransactionType.income
+            ? TransactionCategory.salary
+            : TransactionCategory.other);
 
     if (e != null) {
       _amountController.text = e.amount.toStringAsFixed(2);
-      _merchantController.text = e.merchant;
-      _noteController.text = e.note ?? '';
+      _selectedAccountId = e.accountId;
+    } else {
+      final accounts = ref.read(accountsProvider);
+      final wallet =
+          accounts.where((a) => a.icon == AccountIcon.wallet).firstOrNull;
+      _selectedAccountId = wallet?.id ?? accounts.firstOrNull?.id;
     }
-
-    _entryController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 420),
-    )..forward();
-
-    _fadeIn = CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    );
-    _slideIn = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.7, curve: Curves.easeOutCubic),
-    ));
   }
 
   @override
   void dispose() {
-    _entryController.dispose();
     _amountController.dispose();
-    _merchantController.dispose();
-    _noteController.dispose();
-    _amountFocus.dispose();
     super.dispose();
   }
 
@@ -91,23 +74,16 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
       _showAccountRequiredSnack();
       return;
     }
-    final merchant = _merchantController.text.trim().isEmpty
-        ? _category.label
-        : _merchantController.text.trim();
-
-    final note = _noteController.text.trim().isEmpty
-        ? null
-        : _noteController.text.trim();
 
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
-        merchant: merchant,
+        merchant: _category.label,
         amount: amount,
         type: _type,
         category: _category,
         accountId: _selectedAccountId,
-        note: note,
-        clearNote: note == null,
+        clearNote: true,
+        tags: const [],
       );
       ref
           .read(transactionsProvider.notifier)
@@ -115,13 +91,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
     } else {
       final transaction = Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        merchant: merchant,
+        merchant: _category.label,
         amount: amount,
         type: _type,
         category: _category,
         date: DateTime.now(),
         accountId: _selectedAccountId,
-        note: note,
       );
       ref.read(transactionsProvider.notifier).add(transaction);
     }
@@ -148,95 +123,77 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet>
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final accounts = ref.watch(accountsProvider);
 
-    return FadeTransition(
-      opacity: _fadeIn,
-      child: SlideTransition(
-        position: _slideIn,
-        child: Container(
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL),
-            ),
-          ),
-          padding: EdgeInsets.only(bottom: bottom),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const _DragHandle(),
-                const SizedBox(height: AppSpacing.xs),
-                _SheetHeader(
-                  isEditing: _isEditing,
-                  type: _type,
-                  onClose: () => Navigator.of(context).pop(),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _TypeToggle(
-                        selected: _type,
-                        onChanged: (t) => setState(() {
-                          _type = t;
-                          _category = t == TransactionType.income
-                              ? TransactionCategory.salary
-                              : TransactionCategory.other;
-                        }),
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      _AmountField(
-                        controller: _amountController,
-                        focusNode: _amountFocus,
-                        type: _type,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      _InputField(
-                        controller: _merchantController,
-                        label: 'Descripción (opcional)',
-                        hint: 'ej. Mercadona, Nómina…',
-                        icon: Icons.store_rounded,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      _CategoryPicker(
-                        selected: _category,
-                        type: _type,
-                        onChanged: (c) => setState(() => _category = c),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      _AccountPicker(
-                        accounts: accounts,
-                        selectedId: _selectedAccountId,
-                        onChanged: (id) =>
-                            setState(() => _selectedAccountId = id),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      _InputField(
-                        controller: _noteController,
-                        label: 'Nota (opcional)',
-                        hint: 'Añade un comentario…',
-                        icon: Icons.notes_rounded,
-                      ),
-                      const SizedBox(height: AppSpacing.xxl),
-                      _SaveButton(
-                        type: _type,
-                        isEditing: _isEditing,
-                        onTap: _submit,
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const _DragHandle(),
+          Flexible(
+            child: SingleChildScrollView(
+              controller: widget.scrollController,
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding,
+                AppSpacing.xs,
+                AppSpacing.screenPadding,
+                AppSpacing.xxl + bottom,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _SheetHeader(
+                      isEditing: _isEditing,
+                      type: _type,
+                      onClose: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    _TypeToggle(
+                      selected: _type,
+                      onChanged: (t) => setState(() {
+                        _type = t;
+                        _category = t == TransactionType.income
+                            ? TransactionCategory.salary
+                            : TransactionCategory.other;
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    _AmountField(
+                      controller: _amountController,
+                      type: _type,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _CategoryPicker(
+                      selected: _category,
+                      type: _type,
+                      onChanged: (c) => setState(() => _category = c),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _AccountPicker(
+                      accounts: accounts,
+                      selectedId: _selectedAccountId,
+                      onChanged: (id) =>
+                          setState(() => _selectedAccountId = id),
+                    ),
+                    const SizedBox(height: AppSpacing.xxl),
+                    _SaveButton(
+                      type: _type,
+                      isEditing: _isEditing,
+                      onTap: _submit,
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -280,37 +237,34 @@ class _SheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
-      child: Row(
-        children: [
-          Text(
-            isEditing ? 'Editar transacción' : 'Nueva transacción',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-          ),
-          const Spacer(),
-          GestureDetector(
-            onTap: onClose,
-            child: Container(
-              width: 32,
-              height: 32,
-              decoration: const BoxDecoration(
-                color: AppColors.glassMedium,
-                shape: BoxShape.circle,
+    return Row(
+      children: [
+        Text(
+          isEditing ? 'Editar transacción' : 'Nueva transacción',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
               ),
-              child: const Icon(
-                Icons.close_rounded,
-                color: AppColors.textSecondary,
-                size: 18,
-              ),
+        ),
+        const Spacer(),
+        GestureDetector(
+          onTap: onClose,
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: const BoxDecoration(
+              color: AppColors.glassMedium,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.close_rounded,
+              color: AppColors.textSecondary,
+              size: 18,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -421,12 +375,10 @@ class _ToggleOption extends StatelessWidget {
 class _AmountField extends StatelessWidget {
   const _AmountField({
     required this.controller,
-    required this.focusNode,
     required this.type,
   });
 
   final TextEditingController controller;
-  final FocusNode focusNode;
   final TransactionType type;
 
   Color get _accentColor =>
@@ -460,7 +412,7 @@ class _AmountField extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
-              focusNode: focusNode,
+              autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
@@ -485,70 +437,6 @@ class _AmountField extends StatelessWidget {
                 border: InputBorder.none,
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Generic input field ───────────────────────────────────────────────────────
-
-class _InputField extends StatelessWidget {
-  const _InputField({
-    required this.controller,
-    required this.label,
-    required this.hint,
-    required this.icon,
-  });
-
-  final TextEditingController controller;
-  final String label;
-  final String hint;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.sm,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.textTertiary, size: 18),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                labelText: label,
-                labelStyle: const TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                hintText: hint,
-                hintStyle: const TextStyle(
-                  color: AppColors.textTertiary,
-                  fontSize: 15,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               ),
             ),
           ),
@@ -667,7 +555,7 @@ class _AccountPicker extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Cuenta *',
+          'Cuenta',
           style: TextStyle(
             color: AppColors.textTertiary,
             fontSize: 12,

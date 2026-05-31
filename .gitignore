@@ -1,45 +1,73 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
-
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# ── Flutter / Dart / Pub ──────────────────────────────────────────────────────
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
 /build/
 /coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
 
-# Symbolication related
+# ── Android ───────────────────────────────────────────────────────────────────
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/.gradle/
+**/android/local.properties
+**/android/key.properties
+**/android/*.jks
+**/android/*.keystore
+
+# ── iOS / macOS ───────────────────────────────────────────────────────────────
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/macos/Pods/
+**/macos/.symlinks/
+**/macos/Flutter/Flutter.framework
+**/macos/Flutter/Flutter.podspec
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# ── Web ───────────────────────────────────────────────────────────────────────
+/web/favicon.png
+
+# ── Secrets / Environment ─────────────────────────────────────────────────────
+.env
+.env.*
+*.secret
+secrets.dart
+google-services.json
+GoogleService-Info.plist
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
+*.apk
+*.aab
+*.ipa
+*.dSYM.zip
+*.dSYM
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# ── OS / Editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.history/
+.svn/
+.atom/
+.buildlog/
+migrate_working_dir/
+
+# ── IntelliJ / Android Studio ────────────────────────────────────────────────
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# ── VS Code ───────────────────────────────────────────────────────────────────
+.vscode/

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../shared/widgets/vexa_empty_state.dart';
 import '../providers/home_provider.dart';
 import '../pages/all_transactions_page.dart';
 import 'transaction_item.dart';
@@ -60,7 +61,12 @@ class TransactionsSection extends ConsumerWidget {
             border: Border.all(color: AppColors.glassBorder, width: 0.5),
           ),
           child: visible.isEmpty
-              ? _EmptyState()
+              ? const VexaEmptyState(
+                  icon: Icons.receipt_long_rounded,
+                  title: 'Sin movimientos',
+                  body: 'Registra tu primer gasto\no ingreso con el botón +.',
+                  iconColor: AppColors.textTertiary,
+                )
               : Column(
                   children: [
                     for (int i = 0; i < visible.length; i++) ...[
@@ -88,25 +94,3 @@ class TransactionsSection extends ConsumerWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        children: [
-          Icon(
-            Icons.receipt_long_outlined,
-            size: 40,
-            color: AppColors.textTertiary,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Sin transacciones',
-            style: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          ),
-        ],
-      ),
-    );
-  }
-}

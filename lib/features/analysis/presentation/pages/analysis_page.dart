@@ -1,6 +1,9 @@
 import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../calendar/presentation/pages/financial_calendar_page.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -18,16 +21,16 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
-  int _period = 1;
+  int _period = 1; // 0=Sem, 1=Mes, 2=Año
 
-  static const _sectionCount = 5;
+  static const _sectionCount = 7;
 
   @override
   void initState() {
     super.initState();
     _stagger = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 1200),
     )..forward();
   }
 
@@ -46,13 +49,11 @@ class _AnalysisPageState extends State<AnalysisPage>
         curve: Interval(start, end, curve: AppCurves.gentle),
       ),
       child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
-            .animate(
-              CurvedAnimation(
-                parent: _stagger,
-                curve: Interval(start, end, curve: AppCurves.spring),
-              ),
-            ),
+        position: Tween<Offset>(begin: const Offset(0, 0.10), end: Offset.zero)
+            .animate(CurvedAnimation(
+          parent: _stagger,
+          curve: Interval(start, end, curve: AppCurves.spring),
+        )),
         child: child,
       ),
     );
@@ -70,8 +71,7 @@ class _AnalysisPageState extends State<AnalysisPage>
             slivers: [
               SliverPadding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.screenPadding,
-                ),
+                    horizontal: AppSpacing.screenPadding),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const SizedBox(height: AppSpacing.lg),
@@ -85,14 +85,19 @@ class _AnalysisPageState extends State<AnalysisPage>
                     const SizedBox(height: AppSpacing.xxl),
                     _reveal(1, const _OverviewRow()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(2, _SpendingTrendCard(stagger: _stagger)),
+                    _reveal(2, const _BalanceLineChartCard()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, const _CategoryBreakdown()),
+                    _reveal(3, _SpendingTrendCard(stagger: _stagger)),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(4, const _TopSpendsList()),
+                    _reveal(4, const _CategoryPieChartCard()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(5, const _FinancialIntelligenceSection()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(6, const _CategoryBreakdown()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(6, const _TopSpendsList()),
                     const SizedBox(
-                      height:
-                          AppSpacing.bottomNavHeight +
+                      height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
                           AppSpacing.xxxl,
                     ),
@@ -126,12 +131,10 @@ class _AnalysisBg extends StatelessWidget {
               height: 320,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.emerald.withValues(alpha: 0.10),
-                    Colors.transparent,
-                  ],
-                ),
+                gradient: RadialGradient(colors: [
+                  AppColors.emerald.withValues(alpha: 0.10),
+                  Colors.transparent,
+                ]),
               ),
             ),
           ),
@@ -143,12 +146,10 @@ class _AnalysisBg extends StatelessWidget {
               height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppColors.petroleum.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
-                ),
+                gradient: RadialGradient(colors: [
+                  AppColors.petroleum.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ]),
               ),
             ),
           ),
@@ -161,32 +162,52 @@ class _AnalysisBg extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _AnalysisHeader extends StatelessWidget {
-  const _AnalysisHeader({required this.period, required this.onPeriodChanged});
+  const _AnalysisHeader(
+      {required this.period, required this.onPeriodChanged});
   final int period;
   final ValueChanged<int> onPeriodChanged;
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final label = DateFormat('MMMM yyyy', 'es').format(now);
+    final capitalized = label[0].toUpperCase() + label.substring(1);
+
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Análisis',
-                style: AppTypography.headingM.copyWith(
-                  color: AppColors.textPrimary,
-                ),
-              ),
+              Text('Análisis',
+                  style: AppTypography.headingM
+                      .copyWith(color: AppColors.textPrimary)),
               const SizedBox(height: 2),
-              Text(
-                'Mayo 2026',
-                style: AppTypography.labelM.copyWith(
-                  color: AppColors.textTertiary,
-                ),
-              ),
+              Text(capitalized,
+                  style: AppTypography.labelM
+                      .copyWith(color: AppColors.textTertiary)),
             ],
+          ),
+        ),
+        // Calendar shortcut
+        GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const FinancialCalendarPage()),
+          ),
+          child: Container(
+            width: 36,
+            height: 36,
+            margin: const EdgeInsets.only(right: AppSpacing.sm),
+            decoration: BoxDecoration(
+              color: AppColors.glassLight,
+              borderRadius: BorderRadius.circular(11),
+              border:
+                  Border.all(color: AppColors.glassBorder, width: 0.5),
+            ),
+            child: const Icon(Icons.calendar_month_rounded,
+                size: 17, color: AppColors.textSecondary),
           ),
         ),
         _PeriodPills(selected: period, onChanged: onPeriodChanged),
@@ -220,7 +241,8 @@ class _PeriodPills extends StatelessWidget {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
               decoration: BoxDecoration(
                 color: active ? AppColors.emerald : Colors.transparent,
                 borderRadius: BorderRadius.circular(10),
@@ -231,7 +253,8 @@ class _PeriodPills extends StatelessWidget {
                   color: active
                       ? AppColors.textInverse
                       : AppColors.textTertiary,
-                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight:
+                      active ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
@@ -292,12 +315,11 @@ class _OverviewRow extends ConsumerWidget {
 }
 
 class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
+  const _StatTile(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
   final String label;
   final String value;
   final IconData icon;
@@ -308,12 +330,11 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+        borderRadius:
+            BorderRadius.circular(AppSpacing.cardRadius + 2.5),
         color: Colors.white.withValues(alpha: 0.03),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
+            color: Colors.white.withValues(alpha: 0.05), width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -334,20 +355,13 @@ class _StatTile extends StatelessWidget {
               child: Icon(icon, size: 14, color: color),
             ),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              value,
-              style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-              ),
-            ),
+            Text(value,
+                style: AppTypography.headingS.copyWith(
+                    color: AppColors.textPrimary, fontSize: 15)),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: AppTypography.labelS.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
+            Text(label,
+                style: AppTypography.labelS
+                    .copyWith(color: AppColors.textTertiary)),
           ],
         ),
       ),
@@ -355,7 +369,194 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-// ── Spending trend bar chart ───────────────────────────────────────────────────
+// ── Balance line chart (fl_chart) ─────────────────────────────────────────────
+
+class _BalanceLineChartCard extends ConsumerStatefulWidget {
+  const _BalanceLineChartCard();
+
+  @override
+  ConsumerState<_BalanceLineChartCard> createState() =>
+      _BalanceLineChartCardState();
+}
+
+class _BalanceLineChartCardState
+    extends ConsumerState<_BalanceLineChartCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1400));
+    _anim = CurvedAnimation(parent: _ctrl, curve: AppCurves.spring);
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  List<FlSpot> _buildSpots(List<Transaction> transactions) {
+    final now = DateTime.now();
+    final dayTotals = <int, double>{};
+    for (var d = 0; d < 7; d++) {
+      dayTotals[d] = 0;
+    }
+    for (final t in transactions) {
+      final daysAgo = now.difference(t.date).inDays;
+      if (daysAgo >= 0 && daysAgo < 7) {
+        final day = 6 - daysAgo;
+        dayTotals[day] = (dayTotals[day] ?? 0) +
+            (t.isIncome ? t.amount : -t.amount);
+      }
+    }
+    double running = 0;
+    return List.generate(7, (i) {
+      running += dayTotals[i] ?? 0;
+      return FlSpot(i.toDouble(), running);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final transactions = ref.watch(transactionsProvider);
+    final spots = _buildSpots(transactions);
+    final minY = spots.map((s) => s.y).reduce(math.min) - 50;
+    final maxY = spots.map((s) => s.y).reduce(math.max) + 50;
+
+    final dayLabels = List.generate(7, (i) {
+      final d = DateTime.now().subtract(Duration(days: 6 - i));
+      return DateFormat('E', 'es').format(d);
+    });
+
+    return _SectionCard(
+      title: 'Evolución del balance',
+      badge: '7 días',
+      badgeColor: AppColors.petroleum,
+      child: SizedBox(
+        height: 180,
+        child: AnimatedBuilder(
+          animation: _anim,
+          builder: (context, child) {
+            final progress = _anim.value;
+            final visibleSpots = spots
+                .take((spots.length * progress).ceil().clamp(1, spots.length))
+                .toList();
+
+            return LineChart(
+              LineChartData(
+                minX: 0,
+                maxX: 6,
+                minY: minY,
+                maxY: maxY,
+                clipData: const FlClipData.all(),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: (maxY - minY) / 4,
+                  getDrawingHorizontalLine: (_) => FlLine(
+                    color: AppColors.glassBorder,
+                    strokeWidth: 0.5,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 24,
+                      getTitlesWidget: (value, meta) {
+                        final i = value.toInt();
+                        if (i < 0 || i >= dayLabels.length) {
+                          return const SizedBox.shrink();
+                        }
+                        return Text(
+                          dayLabels[i],
+                          style: AppTypography.labelS.copyWith(
+                            color: i == 6
+                                ? AppColors.emerald
+                                : AppColors.textTertiary,
+                            fontSize: 10,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) =>
+                        AppColors.cardElevated,
+                    getTooltipItems: (spots) => spots
+                        .map((s) => LineTooltipItem(
+                              '\$${s.y.toStringAsFixed(0)}',
+                              AppTypography.labelM.copyWith(
+                                  color: AppColors.emerald,
+                                  fontWeight: FontWeight.w600),
+                            ))
+                        .toList(),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: visibleSpots,
+                    isCurved: true,
+                    curveSmoothness: 0.35,
+                    color: AppColors.emerald,
+                    barWidth: 2.5,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, bar, index) {
+                        if (index != visibleSpots.length - 1) {
+                          return FlDotCirclePainter(
+                            radius: 0,
+                            color: Colors.transparent,
+                            strokeColor: Colors.transparent,
+                          );
+                        }
+                        return FlDotCirclePainter(
+                          radius: 4,
+                          color: AppColors.emerald,
+                          strokeWidth: 2,
+                          strokeColor: AppColors.background,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.emerald.withValues(alpha: 0.18),
+                          AppColors.emerald.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// ── Spending trend bar chart (custom) ─────────────────────────────────────────
 
 class _SpendingTrendCard extends StatefulWidget {
   const _SpendingTrendCard({required this.stagger});
@@ -383,9 +584,7 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
   void initState() {
     super.initState();
     _bar = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    );
+        vsync: this, duration: const Duration(milliseconds: 1400));
     _barAnim = CurvedAnimation(parent: _bar, curve: AppCurves.spring);
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) _bar.forward();
@@ -400,96 +599,41 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tendencia de gastos',
-                  style: AppTypography.headingS.copyWith(
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.negativeSurface,
-                    borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-                  ),
-                  child: Text(
-                    '6 meses',
-                    style: AppTypography.eyebrow.copyWith(
-                      color: AppColors.negative,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            AnimatedBuilder(
-              animation: _barAnim,
-              builder: (context, _) => SizedBox(
-                height: 120,
-                child: CustomPaint(
-                  painter: _BarChartPainter(
-                    data: _data,
-                    progress: _barAnim.value,
-                  ),
-                  size: Size.infinite,
-                ),
+    return _SectionCard(
+      title: 'Tendencia de gastos',
+      badge: '6 meses',
+      badgeColor: AppColors.negative,
+      child: Column(
+        children: [
+          AnimatedBuilder(
+            animation: _barAnim,
+            builder: (context, child) => SizedBox(
+              height: 120,
+              child: CustomPaint(
+                painter: _BarChartPainter(
+                    data: _data, progress: _barAnim.value),
+                size: Size.infinite,
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _data.map((d) {
-                final isCurrent = d.label == 'May';
-                return Text(
-                  d.label,
-                  style: AppTypography.labelS.copyWith(
-                    color: isCurrent
-                        ? AppColors.emerald
-                        : AppColors.textTertiary,
-                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: _data.map((d) {
+              final isCurrent = d.label == 'May';
+              return Text(
+                d.label,
+                style: AppTypography.labelS.copyWith(
+                  color: isCurrent
+                      ? AppColors.emerald
+                      : AppColors.textTertiary,
+                  fontWeight:
+                      isCurrent ? FontWeight.w600 : FontWeight.w400,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -497,7 +641,6 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
 
 class _BarChartPainter extends CustomPainter {
   const _BarChartPainter({required this.data, required this.progress});
-
   final List<({String label, double value})> data;
   final double progress;
 
@@ -516,26 +659,17 @@ class _BarChartPainter extends CustomPainter {
         Rect.fromLTWH(x - barWidth / 2, size.height - barH, barWidth, barH),
         const Radius.circular(6),
       );
-
       if (isCurrent) {
         canvas.drawRRect(
           rect,
           Paint()
-            ..shader =
-                LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.emerald, AppColors.emeraldDim],
-                ).createShader(
-                  Rect.fromLTWH(
-                    x - barWidth / 2,
-                    size.height - barH,
-                    barWidth,
-                    barH,
-                  ),
-                ),
+            ..shader = LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.emerald, AppColors.emeraldDim],
+            ).createShader(Rect.fromLTWH(
+                x - barWidth / 2, size.height - barH, barWidth, barH)),
         );
-        // Glow
         canvas.drawRRect(
           rect,
           Paint()
@@ -549,7 +683,6 @@ class _BarChartPainter extends CustomPainter {
             ..color = AppColors.glassMedium
             ..style = PaintingStyle.fill,
         );
-        // subtle top highlight
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             Rect.fromLTWH(x - barWidth / 2, size.height - barH, barWidth, 2),
@@ -559,8 +692,6 @@ class _BarChartPainter extends CustomPainter {
         );
       }
     }
-
-    // Horizontal guide line
     final linePaint = Paint()
       ..color = AppColors.glassBorder
       ..strokeWidth = 0.5;
@@ -575,48 +706,399 @@ class _BarChartPainter extends CustomPainter {
   bool shouldRepaint(_BarChartPainter old) => old.progress != progress;
 }
 
-// ── Category breakdown ────────────────────────────────────────────────────────
+// ── Category pie chart (fl_chart) ─────────────────────────────────────────────
 
-class _CategoryBreakdown extends StatelessWidget {
-  const _CategoryBreakdown();
+class _CategoryPieChartCard extends ConsumerStatefulWidget {
+  const _CategoryPieChartCard();
 
-  static const _cats = [
-    (cat: TransactionCategory.food, spent: 92.20, total: 1800.0),
-    (cat: TransactionCategory.shopping, spent: 89.95, total: 1800.0),
-    (cat: TransactionCategory.health, spent: 45.00, total: 1800.0),
-    (cat: TransactionCategory.entertainment, spent: 9.99, total: 1800.0),
-    (cat: TransactionCategory.transport, spent: 12.50, total: 1800.0),
-  ];
+  @override
+  ConsumerState<_CategoryPieChartCard> createState() =>
+      _CategoryPieChartCardState();
+}
+
+class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+  int _touchedIndex = -1;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1000));
+    _anim = CurvedAnimation(parent: _ctrl, curve: AppCurves.spring);
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) _ctrl.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final breakdown = ref.watch(categoryBreakdownProvider);
+    if (breakdown.isEmpty) return const SizedBox.shrink();
+
+    final total = breakdown.values.fold(0.0, (a, b) => a + b);
+    final entries = breakdown.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return _SectionCard(
+      title: 'Distribución por categoría',
+      badge: 'este mes',
+      badgeColor: AppColors.petroleum,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 140,
+            height: 140,
+            child: AnimatedBuilder(
+              animation: _anim,
+              builder: (context, child) => PieChart(
+                PieChartData(
+                  startDegreeOffset: -90,
+                  sectionsSpace: 2,
+                  centerSpaceRadius: 40,
+                  pieTouchData: PieTouchData(
+                    touchCallback: (event, response) {
+                      setState(() {
+                        _touchedIndex =
+                            response?.touchedSection?.touchedSectionIndex ?? -1;
+                      });
+                    },
+                  ),
+                  sections: entries.asMap().entries.map((entry) {
+                    final i = entry.key;
+                    final cat = entry.value.key;
+                    final value = entry.value.value;
+                    final pct = value / total;
+                    final isTouched = i == _touchedIndex;
+                    return PieChartSectionData(
+                      value: value * _anim.value,
+                      color: cat.color,
+                      radius: isTouched ? 42 : 36,
+                      title: pct > 0.1
+                          ? '${(pct * 100).toStringAsFixed(0)}%'
+                          : '',
+                      titleStyle: AppTypography.labelS.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 9,
+                      ),
+                      titlePositionPercentageOffset: 0.55,
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xl),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: entries.take(5).map((entry) {
+                final pct = entry.value / total;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: entry.key.color,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(entry.key.label,
+                            style: AppTypography.labelS.copyWith(
+                                color: AppColors.textSecondary)),
+                      ),
+                      Text(
+                        '${(pct * 100).toStringAsFixed(0)}%',
+                        style: AppTypography.labelS.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Financial intelligence ────────────────────────────────────────────────────
+
+class _FinancialIntelligenceSection extends ConsumerWidget {
+  const _FinancialIntelligenceSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prediction = ref.watch(predictionProvider);
+    final breakdown = ref.watch(categoryBreakdownProvider);
+    final income = ref.watch(monthlyIncomeProvider);
+    final expenses = ref.watch(monthlyExpensesProvider);
+    final topCat = ref.watch(topCategoryProvider);
+
+    final insights = _buildInsights(
+      prediction: prediction,
+      breakdown: breakdown,
+      income: income,
+      expenses: expenses,
+      topCategory: topCat,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Por categoría',
-          style: AppTypography.headingS.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.emerald, AppColors.petroleum],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  size: 14, color: Colors.white),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text('Inteligencia financiera',
+                style: AppTypography.headingS.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.4)),
+          ],
         ),
+        const SizedBox(height: AppSpacing.md),
+        ...insights.map((insight) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _InsightCard(insight: insight),
+            )),
+      ],
+    );
+  }
+
+  List<_Insight> _buildInsights({
+    required MonthlyPrediction prediction,
+    required Map<TransactionCategory, double> breakdown,
+    required double income,
+    required double expenses,
+    required TransactionCategory? topCategory,
+  }) {
+    final insights = <_Insight>[];
+    final savingsRate = income > 0 ? (income - expenses) / income : 0.0;
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+
+    // Insight 1: balance prediction
+    if (prediction.predictedBalance > 0) {
+      insights.add(_Insight(
+        icon: Icons.trending_up_rounded,
+        color: AppColors.positive,
+        title: 'Proyección de saldo',
+        body:
+            'Si mantienes este ritmo, tendrás \$${prediction.predictedBalance.toStringAsFixed(0)} disponibles al final del mes.',
+        type: _InsightType.positive,
+      ));
+    } else {
+      insights.add(_Insight(
+        icon: Icons.warning_amber_rounded,
+        color: AppColors.warning,
+        title: 'Riesgo de presupuesto',
+        body:
+            'A este ritmo de gasto podrías superar tus ingresos. Considera reducir gastos en los próximos ${prediction.daysLeft} días.',
+        type: _InsightType.warning,
+      ));
+    }
+
+    // Insight 2: savings rate
+    if (savingsRate > 0) {
+      final savingsFmt =
+          (income * savingsRate).toStringAsFixed(0);
+      insights.add(_Insight(
+        icon: Icons.savings_rounded,
+        color: AppColors.emerald,
+        title: 'Potencial de ahorro',
+        body:
+            'Podrías ahorrar aproximadamente \$$savingsFmt este mes (${(savingsRate * 100).toStringAsFixed(0)}% de ingresos).',
+        type: _InsightType.positive,
+      ));
+    }
+
+    // Insight 3: daily average
+    if (prediction.dailyAvgExpense > 0) {
+      insights.add(_Insight(
+        icon: Icons.today_rounded,
+        color: AppColors.petroleum,
+        title: 'Gasto diario promedio',
+        body:
+            'Gastas en promedio \$${prediction.dailyAvgExpense.toStringAsFixed(2)} por día este mes.',
+        type: _InsightType.neutral,
+      ));
+    }
+
+    // Insight 4: top category
+    if (topCategory != null && breakdown.isNotEmpty) {
+      final topAmount = breakdown[topCategory] ?? 0;
+      insights.add(_Insight(
+        icon: topCategory.icon,
+        color: topCategory.color,
+        title: 'Mayor categoría',
+        body:
+            'Tu mayor gasto es ${topCategory.label} con \$${topAmount.toStringAsFixed(2)} este mes.',
+        type: _InsightType.neutral,
+      ));
+    }
+
+    // Insight 5: month progress vs spending
+    final monthProgress = now.day / daysInMonth;
+    final spendingProgress =
+        income > 0 ? expenses / income : 0.0;
+    if (spendingProgress > monthProgress + 0.15) {
+      insights.add(_Insight(
+        icon: Icons.speed_rounded,
+        color: AppColors.negative,
+        title: 'Gasto acelerado',
+        body:
+            'Llevas ${(spendingProgress * 100).toStringAsFixed(0)}% del ingreso gastado con solo el ${(monthProgress * 100).toStringAsFixed(0)}% del mes transcurrido.',
+        type: _InsightType.warning,
+      ));
+    }
+
+    return insights.take(4).toList();
+  }
+}
+
+enum _InsightType { positive, warning, neutral }
+
+class _Insight {
+  const _Insight({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+    required this.type,
+  });
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
+  final _InsightType type;
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({required this.insight});
+  final _Insight insight;
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = switch (insight.type) {
+      _InsightType.positive => AppColors.positive.withValues(alpha: 0.05),
+      _InsightType.warning => AppColors.warning.withValues(alpha: 0.05),
+      _InsightType.neutral => AppColors.glassMedium,
+    };
+    final borderColor = switch (insight.type) {
+      _InsightType.positive => AppColors.positive.withValues(alpha: 0.15),
+      _InsightType.warning => AppColors.warning.withValues(alpha: 0.15),
+      _InsightType.neutral => AppColors.glassBorder,
+    };
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: borderColor, width: 0.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: insight.color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(insight.icon, size: 16, color: insight.color),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(insight.title,
+                    style: AppTypography.labelL.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(insight.body,
+                    style: AppTypography.labelM.copyWith(
+                        color: AppColors.textSecondary, height: 1.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Category breakdown (progress bars) ────────────────────────────────────────
+
+class _CategoryBreakdown extends ConsumerWidget {
+  const _CategoryBreakdown();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final breakdown = ref.watch(categoryBreakdownProvider);
+    if (breakdown.isEmpty) return const SizedBox.shrink();
+
+    final total = breakdown.values.fold(0.0, (a, b) => a + b);
+    final entries = breakdown.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Por categoría',
+            style: AppTypography.headingS.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.4,
+            )),
         const SizedBox(height: AppSpacing.md),
         SurfaceCard(
           padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             children: [
-              for (int i = 0; i < _cats.length; i++) ...[
+              for (int i = 0; i < entries.length; i++) ...[
                 _CatBar(
-                  category: _cats[i].cat,
-                  spent: _cats[i].spent,
-                  total: _cats[i].total,
+                  category: entries[i].key,
+                  spent: entries[i].value,
+                  total: total,
                 ),
-                if (i < _cats.length - 1)
+                if (i < entries.length - 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.md,
-                    ),
+                        vertical: AppSpacing.md),
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
@@ -633,11 +1115,10 @@ class _CategoryBreakdown extends StatelessWidget {
 }
 
 class _CatBar extends StatefulWidget {
-  const _CatBar({
-    required this.category,
-    required this.spent,
-    required this.total,
-  });
+  const _CatBar(
+      {required this.category,
+      required this.spent,
+      required this.total});
   final TransactionCategory category;
   final double spent;
   final double total;
@@ -646,7 +1127,8 @@ class _CatBar extends StatefulWidget {
   State<_CatBar> createState() => _CatBarState();
 }
 
-class _CatBarState extends State<_CatBar> with SingleTickerProviderStateMixin {
+class _CatBarState extends State<_CatBar>
+    with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
 
@@ -654,9 +1136,7 @@ class _CatBarState extends State<_CatBar> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
+        vsync: this, duration: const Duration(milliseconds: 1200));
     _anim = CurvedAnimation(parent: _ctrl, curve: AppCurves.spring);
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _ctrl.forward();
@@ -671,9 +1151,8 @@ class _CatBarState extends State<_CatBar> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final ratio = widget.spent / widget.total;
+    final ratio = widget.total > 0 ? widget.spent / widget.total : 0.0;
     final color = widget.category.color;
-
     return Row(
       children: [
         Container(
@@ -693,18 +1172,12 @@ class _CatBarState extends State<_CatBar> with SingleTickerProviderStateMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    widget.category.label,
-                    style: AppTypography.labelM.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  Text(
-                    '\$${widget.spent.toStringAsFixed(2)}',
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                  Text(widget.category.label,
+                      style: AppTypography.labelM
+                          .copyWith(color: AppColors.textSecondary)),
+                  Text('\$${widget.spent.toStringAsFixed(2)}',
+                      style: AppTypography.labelL
+                          .copyWith(color: AppColors.textPrimary)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -715,7 +1188,7 @@ class _CatBarState extends State<_CatBar> with SingleTickerProviderStateMixin {
                   color: color.withValues(alpha: 0.12),
                   child: AnimatedBuilder(
                     animation: _anim,
-                    builder: (_, _) => FractionallySizedBox(
+                    builder: (_, child) => FractionallySizedBox(
                       alignment: Alignment.centerLeft,
                       widthFactor: ratio * _anim.value,
                       child: Container(
@@ -748,17 +1221,16 @@ class _TopSpendsList extends ConsumerWidget {
       ..sort((a, b) => b.amount.compareTo(a.amount));
     final top = expenses.take(4).toList();
 
+    if (top.isEmpty) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Mayores gastos',
-          style: AppTypography.headingS.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
-          ),
-        ),
+        Text('Mayores gastos',
+            style: AppTypography.headingS.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4)),
         const SizedBox(height: AppSpacing.md),
         SurfaceCard(
           child: Column(
@@ -766,9 +1238,7 @@ class _TopSpendsList extends ConsumerWidget {
               for (int i = 0; i < top.length; i++) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.md,
-                  ),
+                      horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   child: Row(
                     children: [
                       Container(
@@ -778,46 +1248,33 @@ class _TopSpendsList extends ConsumerWidget {
                           color: top[i].category.surface,
                           borderRadius: BorderRadius.circular(11),
                         ),
-                        child: Icon(
-                          top[i].category.icon,
-                          size: 16,
-                          color: top[i].category.color,
-                        ),
+                        child: Icon(top[i].category.icon,
+                            size: 16, color: top[i].category.color),
                       ),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              top[i].merchant,
-                              style: AppTypography.labelL.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            Text(
-                              top[i].category.label,
-                              style: AppTypography.labelS.copyWith(
-                                color: AppColors.textTertiary,
-                              ),
-                            ),
+                            Text(top[i].merchant,
+                                style: AppTypography.labelL.copyWith(
+                                    color: AppColors.textPrimary)),
+                            Text(top[i].category.label,
+                                style: AppTypography.labelS.copyWith(
+                                    color: AppColors.textTertiary)),
                           ],
                         ),
                       ),
-                      Text(
-                        '-\$${top[i].amount.toStringAsFixed(2)}',
-                        style: AppTypography.labelL.copyWith(
-                          color: AppColors.negative,
-                        ),
-                      ),
+                      Text('-\$${top[i].amount.toStringAsFixed(2)}',
+                          style: AppTypography.labelL
+                              .copyWith(color: AppColors.negative)),
                     ],
                   ),
                 ),
                 if (i < top.length - 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                    ),
+                        horizontal: AppSpacing.md),
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
@@ -829,6 +1286,85 @@ class _TopSpendsList extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Shared section card ───────────────────────────────────────────────────────
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.badge,
+    required this.badgeColor,
+    required this.child,
+  });
+  final String title;
+  final String badge;
+  final Color badgeColor;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius:
+            BorderRadius.circular(AppSpacing.cardRadiusL + 3),
+        color: Colors.white.withValues(alpha: 0.03),
+        border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            stops: [0.0, 0.5, 1.0],
+            colors: [
+              Color(0xFF1C1C32),
+              Color(0xFF141428),
+              Color(0xFF0F0F1E)
+            ],
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.22),
+              blurRadius: 32,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title,
+                    style: AppTypography.headingS
+                        .copyWith(color: AppColors.textPrimary)),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.12),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.pillRadius),
+                  ),
+                  child: Text(badge,
+                      style: AppTypography.eyebrow
+                          .copyWith(color: badgeColor)),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            child,
+          ],
+        ),
+      ),
     );
   }
 }
