@@ -1,10 +1,74 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
-import '../../../home/domain/models/transaction.dart';
+
+// ── Budget item model ─────────────────────────────────────────────────────────
+
+class BudgetItem {
+  const BudgetItem({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.spent,
+    required this.limit,
+  });
+
+  final String name;
+  final IconData icon;
+  final Color color;
+  final double spent;
+  final double limit;
+
+  double get ratio => (spent / limit).clamp(0.0, 1.0);
+  double get remaining => limit - spent;
+  bool get isWarning => ratio >= 0.80;
+
+  Color get surface => color.withValues(alpha: 0.18);
+}
+
+// ── Preset icon options ───────────────────────────────────────────────────────
+
+const _kIconOptions = [
+  Icons.fork_right_rounded,
+  Icons.directions_car_rounded,
+  Icons.shopping_bag_rounded,
+  Icons.movie_rounded,
+  Icons.favorite_rounded,
+  Icons.home_rounded,
+  Icons.school_rounded,
+  Icons.flight_rounded,
+  Icons.sports_esports_rounded,
+  Icons.fitness_center_rounded,
+  Icons.local_cafe_rounded,
+  Icons.pets_rounded,
+  Icons.music_note_rounded,
+  Icons.health_and_safety_rounded,
+  Icons.savings_rounded,
+  Icons.category_rounded,
+];
+
+// ── Preset color options ──────────────────────────────────────────────────────
+
+const _kColorOptions = [
+  AppColors.catFood,
+  AppColors.catTransport,
+  AppColors.catShopping,
+  AppColors.catEntertainment,
+  AppColors.catHealth,
+  AppColors.emerald,
+  AppColors.petroleum,
+  AppColors.negative,
+  AppColors.warning,
+  Color(0xFFE91E63),
+  Color(0xFF9C27B0),
+  AppColors.catOther,
+];
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 class BudgetPage extends StatefulWidget {
   const BudgetPage({super.key});
@@ -19,27 +83,50 @@ class _BudgetPageState extends State<BudgetPage>
 
   static const _sectionCount = 4;
 
-  final List<_BudgetItem> _items = [
-    const _BudgetItem(category: TransactionCategory.food, spent: 92.20, limit: 300),
-    const _BudgetItem(category: TransactionCategory.shopping, spent: 89.95, limit: 200),
-    const _BudgetItem(category: TransactionCategory.health, spent: 45.00, limit: 100),
-    const _BudgetItem(category: TransactionCategory.entertainment, spent: 9.99, limit: 50),
-    const _BudgetItem(category: TransactionCategory.transport, spent: 12.50, limit: 150),
+  final List<BudgetItem> _items = const [
+    BudgetItem(
+      name: 'Comida',
+      icon: Icons.fork_right_rounded,
+      color: AppColors.catFood,
+      spent: 92.20,
+      limit: 300,
+    ),
+    BudgetItem(
+      name: 'Compras',
+      icon: Icons.shopping_bag_rounded,
+      color: AppColors.catShopping,
+      spent: 89.95,
+      limit: 200,
+    ),
+    BudgetItem(
+      name: 'Salud',
+      icon: Icons.favorite_rounded,
+      color: AppColors.catHealth,
+      spent: 45.00,
+      limit: 100,
+    ),
+    BudgetItem(
+      name: 'Entretenimiento',
+      icon: Icons.movie_rounded,
+      color: AppColors.catEntertainment,
+      spent: 9.99,
+      limit: 50,
+    ),
+    BudgetItem(
+      name: 'Transporte',
+      icon: Icons.directions_car_rounded,
+      color: AppColors.catTransport,
+      spent: 12.50,
+      limit: 150,
+    ),
   ];
 
   void _showAddSheet() {
-    final usedCategories = _items.map((e) => e.category).toSet();
-    final available = TransactionCategory.values
-        .where((c) => c != TransactionCategory.salary && !usedCategories.contains(c))
-        .toList();
-    if (available.isEmpty) return;
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddBudgetSheet(
-        available: available,
         onAdd: (item) => setState(() => _items.add(item)),
       ),
     );
@@ -70,12 +157,10 @@ class _BudgetPageState extends State<BudgetPage>
       ),
       child: SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
-            .animate(
-              CurvedAnimation(
-                parent: _stagger,
-                curve: Interval(start, end, curve: AppCurves.spring),
-              ),
-            ),
+            .animate(CurvedAnimation(
+          parent: _stagger,
+          curve: Interval(start, end, curve: AppCurves.spring),
+        )),
         child: child,
       ),
     );
@@ -106,8 +191,7 @@ class _BudgetPageState extends State<BudgetPage>
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(3, _AddBudgetButton(onTap: _showAddSheet)),
                     const SizedBox(
-                      height:
-                          AppSpacing.bottomNavHeight +
+                      height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
                           AppSpacing.xxxl,
                     ),
@@ -260,11 +344,10 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
   Widget build(BuildContext context) {
     final ratio = _spent / _limit;
     final remaining = _limit - _spent;
-    final daysLeft = DateTime(
-      2026,
-      6,
-      1,
-    ).difference(DateTime.now()).inDays.clamp(0, 31);
+    final daysLeft = DateTime(2026, 6, 1)
+        .difference(DateTime.now())
+        .inDays
+        .clamp(0, 31);
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -304,11 +387,12 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
           children: [
             AnimatedBuilder(
               animation: _arcAnim,
-              builder: (_, _) => SizedBox(
+              builder: (_, child) => SizedBox(
                 width: 116,
                 height: 116,
                 child: CustomPaint(
-                  painter: _BudgetArcPainter(progress: ratio * _arcAnim.value),
+                  painter:
+                      _BudgetArcPainter(progress: ratio * _arcAnim.value),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -340,20 +424,16 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
+                        horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.emeraldSurface,
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.pillRadius,
-                      ),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.pillRadius),
                     ),
                     child: Text(
                       'MAYO 2026',
-                      style: AppTypography.eyebrow.copyWith(
-                        color: AppColors.emeraldDim,
-                      ),
+                      style: AppTypography.eyebrow
+                          .copyWith(color: AppColors.emeraldDim),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -362,15 +442,13 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                       children: [
                         TextSpan(
                           text: '\$${_spent.toStringAsFixed(0)}',
-                          style: AppTypography.headingL.copyWith(
-                            color: AppColors.textPrimary,
-                          ),
+                          style: AppTypography.headingL
+                              .copyWith(color: AppColors.textPrimary),
                         ),
                         TextSpan(
                           text: ' / \$${_limit.toStringAsFixed(0)}',
-                          style: AppTypography.bodyM.copyWith(
-                            color: AppColors.textTertiary,
-                          ),
+                          style: AppTypography.bodyM
+                              .copyWith(color: AppColors.textTertiary),
                         ),
                       ],
                     ),
@@ -428,12 +506,12 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTypography.labelM.copyWith(
-              color: AppColors.textSecondary,
-            ),
+            style:
+                AppTypography.labelM.copyWith(color: AppColors.textSecondary),
           ),
         ),
-        Text(value, style: AppTypography.labelL.copyWith(color: color)),
+        Text(value,
+            style: AppTypography.labelL.copyWith(color: color)),
       ],
     );
   }
@@ -465,7 +543,6 @@ class _BudgetArcPainter extends CustomPainter {
 
     if (progress <= 0) return;
 
-    // Glow
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       startAngle,
@@ -488,7 +565,10 @@ class _BudgetArcPainter extends CustomPainter {
         ..shader = SweepGradient(
           startAngle: startAngle,
           endAngle: startAngle + sweepAngle * progress,
-          colors: [AppColors.emerald.withValues(alpha: 0.6), AppColors.emerald],
+          colors: [
+            AppColors.emerald.withValues(alpha: 0.6),
+            AppColors.emerald,
+          ],
         ).createShader(Rect.fromCircle(center: center, radius: radius))
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke
@@ -500,12 +580,12 @@ class _BudgetArcPainter extends CustomPainter {
   bool shouldRepaint(_BudgetArcPainter old) => old.progress != progress;
 }
 
-// ── Category budget list ──────────────────────────────────────────────────────
+// ── Category list ─────────────────────────────────────────────────────────────
 
 class _BudgetCategoryList extends StatelessWidget {
   const _BudgetCategoryList({required this.items});
 
-  final List<_BudgetItem> items;
+  final List<BudgetItem> items;
 
   @override
   Widget build(BuildContext context) {
@@ -543,20 +623,9 @@ class _BudgetCategoryList extends StatelessWidget {
   }
 }
 
-class _BudgetItem {
-  const _BudgetItem({
-    required this.category,
-    required this.spent,
-    required this.limit,
-  });
-  final TransactionCategory category;
-  final double spent;
-  final double limit;
-}
-
 class _BudgetCategoryCard extends StatefulWidget {
   const _BudgetCategoryCard({required this.item});
-  final _BudgetItem item;
+  final BudgetItem item;
 
   @override
   State<_BudgetCategoryCard> createState() => _BudgetCategoryCardState();
@@ -588,10 +657,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
 
   @override
   Widget build(BuildContext context) {
-    final ratio = (widget.item.spent / widget.item.limit).clamp(0.0, 1.0);
-    final remaining = widget.item.limit - widget.item.spent;
-    final color = widget.item.category.color;
-    final isWarning = ratio >= 0.80;
+    final item = widget.item;
 
     return Container(
       padding: const EdgeInsets.all(2.5),
@@ -617,14 +683,10 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: widget.item.category.surface,
+                    color: item.surface,
                     borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(
-                    widget.item.category.icon,
-                    size: 17,
-                    color: color,
-                  ),
+                  child: Icon(item.icon, size: 17, color: item.color),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -632,14 +694,14 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.item.category.label,
+                        item.name,
                         style: AppTypography.labelL.copyWith(
                           color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '\$${remaining.toStringAsFixed(0)} disponible',
+                        '\$${item.remaining.toStringAsFixed(0)} disponible',
                         style: AppTypography.labelS.copyWith(
                           color: AppColors.textTertiary,
                         ),
@@ -651,15 +713,15 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '\$${widget.item.spent.toStringAsFixed(0)}',
+                      '\$${item.spent.toStringAsFixed(0)}',
                       style: AppTypography.labelL.copyWith(
-                        color: isWarning
+                        color: item.isWarning
                             ? AppColors.warning
                             : AppColors.textPrimary,
                       ),
                     ),
                     Text(
-                      'de \$${widget.item.limit.toStringAsFixed(0)}',
+                      'de \$${item.limit.toStringAsFixed(0)}',
                       style: AppTypography.labelS.copyWith(
                         color: AppColors.textTertiary,
                       ),
@@ -673,18 +735,21 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
               borderRadius: BorderRadius.circular(4),
               child: Container(
                 height: 5,
-                color: color.withValues(alpha: 0.12),
+                color: item.color.withValues(alpha: 0.12),
                 child: AnimatedBuilder(
                   animation: _anim,
-                  builder: (_, _) => FractionallySizedBox(
+                  builder: (_, child) => FractionallySizedBox(
                     alignment: Alignment.centerLeft,
-                    widthFactor: ratio * _anim.value,
+                    widthFactor: item.ratio * _anim.value,
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: isWarning
+                          colors: item.isWarning
                               ? [AppColors.warning, AppColors.warning]
-                              : [color.withValues(alpha: 0.7), color],
+                              : [
+                                  item.color.withValues(alpha: 0.7),
+                                  item.color,
+                                ],
                         ),
                         borderRadius: BorderRadius.circular(4),
                       ),
@@ -717,7 +782,8 @@ class _AddBudgetButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.glassLight,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+          border:
+              Border.all(color: AppColors.glassBorderStrong, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -750,192 +816,399 @@ class _AddBudgetButton extends StatelessWidget {
 // ── Add budget sheet ──────────────────────────────────────────────────────────
 
 class _AddBudgetSheet extends StatefulWidget {
-  const _AddBudgetSheet({required this.available, required this.onAdd});
+  const _AddBudgetSheet({required this.onAdd});
 
-  final List<TransactionCategory> available;
-  final void Function(_BudgetItem) onAdd;
+  final void Function(BudgetItem) onAdd;
 
   @override
   State<_AddBudgetSheet> createState() => _AddBudgetSheetState();
 }
 
 class _AddBudgetSheetState extends State<_AddBudgetSheet> {
-  late TransactionCategory _selected;
+  final _nameCtrl = TextEditingController();
   final _limitCtrl = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _selected = widget.available.first;
-  }
+  IconData _selectedIcon = _kIconOptions.first;
+  Color _selectedColor = _kColorOptions.first;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _limitCtrl.dispose();
     super.dispose();
   }
 
   void _submit() {
+    final name = _nameCtrl.text.trim();
     final limit = double.tryParse(_limitCtrl.text.replaceAll(',', '.'));
-    if (limit == null || limit <= 0) return;
-    widget.onAdd(_BudgetItem(category: _selected, spent: 0, limit: limit));
+    if (name.isEmpty || limit == null || limit <= 0) {
+      HapticFeedback.heavyImpact();
+      return;
+    }
+    widget.onAdd(BudgetItem(
+      name: name,
+      icon: _selectedIcon,
+      color: _selectedColor,
+      spent: 0,
+      limit: limit,
+    ));
+    HapticFeedback.mediumImpact();
     Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
       padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl + bottom),
+        AppSpacing.xxl,
+        AppSpacing.md,
+        AppSpacing.xxl,
+        AppSpacing.xxl + bottom,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.card,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Drag handle
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          Text('Nueva categoría',
-              style:
-                  AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
-          const SizedBox(height: AppSpacing.xl),
 
-          // Category picker
-          Text('Categoría',
+            Text(
+              'Nueva categoría',
               style:
-                  AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
-          const SizedBox(height: AppSpacing.sm),
-          SizedBox(
-            height: 44,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.available.length,
-              separatorBuilder: (context2, i2) => const SizedBox(width: AppSpacing.sm),
-              itemBuilder: (_, i) {
-                final cat = widget.available[i];
-                final isSelected = cat == _selected;
-                return GestureDetector(
-                  onTap: () => setState(() => _selected = cat),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md, vertical: AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? cat.color.withValues(alpha: 0.15)
-                          : Colors.white.withValues(alpha: 0.05),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
-                      border: Border.all(
-                        color: isSelected
-                            ? cat.color.withValues(alpha: 0.4)
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(cat.icon,
-                            size: 14,
-                            color: isSelected
-                                ? cat.color
-                                : AppColors.textTertiary),
-                        const SizedBox(width: 6),
-                        Text(
-                          cat.label,
-                          style: TextStyle(
-                            color: isSelected
-                                ? cat.color
-                                : AppColors.textSecondary,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                  AppTypography.headingS.copyWith(color: AppColors.textPrimary),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xxl),
 
-          // Limit field
-          Text('Límite mensual',
-              style:
-                  AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
-          const SizedBox(height: AppSpacing.sm),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+            // ── Name ──────────────────────────────────────────────────────────
+            _Label('Nombre'),
+            const SizedBox(height: AppSpacing.sm),
+            _TextField(
+              controller: _nameCtrl,
+              hint: 'ej. Gimnasio, Suscripciones…',
+              icon: Icons.label_outline_rounded,
+              autofocus: true,
             ),
-            child: TextField(
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Icon picker ───────────────────────────────────────────────────
+            _Label('Icono'),
+            const SizedBox(height: AppSpacing.sm),
+            _IconGrid(
+              icons: _kIconOptions,
+              selected: _selectedIcon,
+              color: _selectedColor,
+              onChanged: (ic) => setState(() => _selectedIcon = ic),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Color picker ──────────────────────────────────────────────────
+            _Label('Color'),
+            const SizedBox(height: AppSpacing.sm),
+            _ColorGrid(
+              colors: _kColorOptions,
+              selected: _selectedColor,
+              onChanged: (c) => setState(() => _selectedColor = c),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            // ── Limit ─────────────────────────────────────────────────────────
+            _Label('Límite mensual'),
+            const SizedBox(height: AppSpacing.sm),
+            _TextField(
               controller: _limitCtrl,
+              hint: 'ej. 200',
+              icon: Icons.attach_money_rounded,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              autofocus: true,
-              style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                hintText: 'ej. 200',
-                hintStyle: AppTypography.bodyM
-                    .copyWith(color: AppColors.textTertiary),
-                prefixIcon: const Icon(Icons.attach_money_rounded,
-                    size: 18, color: AppColors.textTertiary),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+
+            // ── Preview ───────────────────────────────────────────────────────
+            _BudgetPreviewRow(
+              icon: _selectedIcon,
+              color: _selectedColor,
+              name: _nameCtrl.text.isEmpty ? 'Categoría' : _nameCtrl.text,
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+
+            // ── Submit ────────────────────────────────────────────────────────
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: _submit,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [AppColors.emerald, AppColors.emeraldDim],
+                    ),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.emerald.withValues(alpha: 0.30),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Text(
+                    'Agregar',
+                    style: AppTypography.labelL.copyWith(
+                      color: AppColors.textInverse,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Sheet sub-widgets ─────────────────────────────────────────────────────────
+
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+    );
+  }
+}
+
+class _TextField extends StatelessWidget {
+  const _TextField({
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    this.keyboardType,
+    this.inputFormatters,
+    this.autofocus = false,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
+  final bool autofocus;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        autofocus: autofocus,
+        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle:
+              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
+          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconGrid extends StatelessWidget {
+  const _IconGrid({
+    required this.icons,
+    required this.selected,
+    required this.color,
+    required this.onChanged,
+  });
+
+  final List<IconData> icons;
+  final IconData selected;
+  final Color color;
+  final ValueChanged<IconData> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: icons.map((ic) {
+        final isSelected = ic == selected;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onChanged(ic);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? color.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(
+                color: isSelected
+                    ? color.withValues(alpha: 0.50)
+                    : Colors.white.withValues(alpha: 0.06),
+                width: isSelected ? 1.5 : 1,
+              ),
+            ),
+            child: Icon(
+              ic,
+              size: 20,
+              color: isSelected ? color : AppColors.textTertiary,
             ),
           ),
-          const SizedBox(height: AppSpacing.xxl),
+        );
+      }).toList(),
+    );
+  }
+}
 
-          // Submit
-          SizedBox(
-            width: double.infinity,
-            child: GestureDetector(
-              onTap: _submit,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.emerald, AppColors.emeraldDim],
-                  ),
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.emerald.withValues(alpha: 0.30),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Agregar',
-                  style: AppTypography.labelL.copyWith(
-                    color: AppColors.textInverse,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+class _ColorGrid extends StatelessWidget {
+  const _ColorGrid({
+    required this.colors,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<Color> colors;
+  final Color selected;
+  final ValueChanged<Color> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
+      children: colors.map((c) {
+        final isSelected = c.toARGB32() == selected.toARGB32();
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onChanged(c);
+          },
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: c,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? Colors.white : Colors.transparent,
+                width: 2.5,
               ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: c.withValues(alpha: 0.50),
+                        blurRadius: 10,
+                        spreadRadius: -2,
+                      ),
+                    ]
+                  : null,
             ),
+            child: isSelected
+                ? const Icon(Icons.check_rounded,
+                    size: 16, color: Colors.white)
+                : null,
+          ),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _BudgetPreviewRow extends StatelessWidget {
+  const _BudgetPreviewRow({
+    required this.icon,
+    required this.color,
+    required this.name,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.06),
+          width: 0.5,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, size: 18, color: color),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Text(
+            name,
+            style: AppTypography.labelL.copyWith(color: AppColors.textPrimary),
+          ),
+          const Spacer(),
+          Text(
+            'Vista previa',
+            style: AppTypography.labelS.copyWith(color: AppColors.textTertiary),
           ),
         ],
       ),

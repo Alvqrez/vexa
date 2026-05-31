@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage>
+class _SettingsPageState extends ConsumerState<SettingsPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
 
@@ -168,12 +170,25 @@ class _SettingsPageState extends State<SettingsPage>
                               icon: Icons.vibration_rounded,
                               color: AppColors.catEntertainment,
                               title: 'Vibración y hápticos',
-                              subtitle:
-                                  'Feedback táctil en acciones.',
+                              subtitle: 'Feedback táctil en acciones.',
                               value: _haptics,
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
                                 setState(() => _haptics = v);
+                              },
+                            ),
+                            _ToggleItem(
+                              icon: Icons.animation_rounded,
+                              color: AppColors.catShopping,
+                              title: 'Animaciones',
+                              subtitle:
+                                  'Transiciones y efectos visuales.',
+                              value: ref.watch(animationsEnabledProvider),
+                              onChanged: (v) {
+                                HapticFeedback.selectionClick();
+                                ref
+                                    .read(animationsEnabledProvider.notifier)
+                                    .state = v;
                               },
                             ),
                           ],

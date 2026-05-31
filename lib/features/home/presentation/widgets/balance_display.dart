@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../../shared/widgets/animated_number.dart';
 import '../providers/home_provider.dart';
 
@@ -43,15 +44,18 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
   @override
   Widget build(BuildContext context) {
     final balance = ref.watch(totalBalanceProvider);
+    final animated = ref.watch(animationsEnabledProvider);
 
     return FadeTransition(
-      opacity: _fade,
+      opacity: animated ? _fade : const AlwaysStoppedAnimation(1.0),
       child: SlideTransition(
-        position: _slide,
+        position: animated
+            ? _slide
+            : const AlwaysStoppedAnimation(Offset.zero),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Eyebrow pill tag
+            // Eyebrow pill
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -84,15 +88,16 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
               ),
             ),
             const SizedBox(height: 14),
-            // Main balance number
+            // Main balance with change badge
             AnimatedNumber(
               value: balance,
               style: AppTypography.displayL.copyWith(
                 color: AppColors.textPrimary,
               ),
+              showChangeBadge: true,
+              animate: animated,
             ),
             const SizedBox(height: 14),
-            // Monthly change badge
             _MonthlyBadge(),
           ],
         ),
