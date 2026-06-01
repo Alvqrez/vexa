@@ -627,6 +627,19 @@ class _SubscriptionMenu extends ConsumerWidget {
           backgroundColor: Colors.transparent,
           builder: (_) => _SubsActionSheet(
             subscription: subscription,
+            onEdit: () {
+              Navigator.pop(context);
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => _EditSubscriptionSheet(
+                  subscription: subscription,
+                  onSave: (updated) =>
+                      ref.read(subscriptionsProvider.notifier).update(updated),
+                ),
+              );
+            },
             onToggle: () =>
                 ref.read(subscriptionsProvider.notifier).toggleActive(subscription.id),
             onDelete: () =>
@@ -656,11 +669,13 @@ class _SubscriptionMenu extends ConsumerWidget {
 class _SubsActionSheet extends StatelessWidget {
   const _SubsActionSheet({
     required this.subscription,
+    required this.onEdit,
     required this.onToggle,
     required this.onDelete,
     required this.onCharge,
   });
   final Subscription subscription;
+  final VoidCallback onEdit;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onCharge;
@@ -717,6 +732,13 @@ class _SubsActionSheet extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xxl),
+          _ActionTile(
+            icon: Icons.edit_rounded,
+            label: 'Editar suscripción',
+            color: AppColors.petroleum,
+            onTap: onEdit,
+          ),
+          const SizedBox(height: AppSpacing.sm),
           _ActionTile(
             icon: Icons.payment_rounded,
             label: 'Registrar pago ahora',
@@ -1186,6 +1208,293 @@ class _EmptyState extends StatelessWidget {
         child: Text(message,
             style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
             textAlign: TextAlign.center),
+      ),
+    );
+  }
+}
+
+// ── Edit subscription sheet ───────────────────────────────────────────────────
+
+class _EditSubscriptionSheet extends ConsumerStatefulWidget {
+  const _EditSubscriptionSheet({
+    required this.subscription,
+    required this.onSave,
+  });
+  final Subscription subscription;
+  final ValueChanged<Subscription> onSave;
+
+  @override
+  ConsumerState<_EditSubscriptionSheet> createState() =>
+      _EditSubscriptionSheetState();
+}
+
+class _EditSubscriptionSheetState
+    extends ConsumerState<_EditSubscriptionSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _amountCtrl;
+  late SubscriptionFrequency _freq;
+  late TransactionCategory _cat;
+  late Color _color;
+  late IconData _icon;
+  late DateTime _billingDate;
+
+  static const _iconOptions = [
+    Icons.play_circle_rounded,
+    Icons.music_note_rounded,
+    Icons.smart_toy_rounded,
+    Icons.ondemand_video_rounded,
+    Icons.local_shipping_rounded,
+    Icons.cloud_rounded,
+    Icons.fitness_center_rounded,
+    Icons.menu_book_rounded,
+    Icons.games_rounded,
+    Icons.subscriptions_rounded,
+  ];
+
+  static const _colorOptions = [
+    Color(0xFFE50914),
+    Color(0xFF1DB954),
+    Color(0xFF10A37F),
+    Color(0xFFFF0000),
+    Color(0xFFFF9900),
+    Color(0xFF6366F1),
+    AppColors.emerald,
+    AppColors.petroleum,
+    AppColors.catFood,
+    AppColors.catShopping,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.subscription;
+    _nameCtrl = TextEditingController(text: s.name);
+    _amountCtrl = TextEditingController(text: s.amount.toStringAsFixed(2));
+    _freq = s.frequency;
+    _cat = s.category;
+    _color = s.color;
+    _icon = s.icon;
+    _billingDate = s.nextBillingDate;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billingDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: const ColorScheme.dark(
+            primary: AppColors.emerald,
+            surface: AppColors.card,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _billingDate = picked);
+  }
+
+  void _submit() {
+    final name = _nameCtrl.text.trim();
+    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    if (name.isEmpty || amount == null || amount <= 0) {
+      HapticFeedback.heavyImpact();
+      return;
+    }
+    widget.onSave(widget.subscription.copyWith(
+      name: name,
+      amount: amount,
+      frequency: _freq,
+      category: _cat,
+      color: _color,
+      icon: _icon,
+      nextBillingDate: _billingDate,
+    ));
+    HapticFeedback.mediumImpact();
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text('Editar suscripción',
+                style: AppTypography.headingS
+                    .copyWith(color: AppColors.textPrimary)),
+            const SizedBox(height: AppSpacing.xxl),
+
+            _SheetLabel('Nombre'),
+            const SizedBox(height: AppSpacing.sm),
+            _SheetTextField(
+                controller: _nameCtrl,
+                hint: 'ej. Netflix, Spotify…',
+                icon: Icons.label_outline_rounded,
+                autofocus: true),
+            const SizedBox(height: AppSpacing.xl),
+
+            _SheetLabel('Monto'),
+            const SizedBox(height: AppSpacing.sm),
+            _SheetTextField(
+                controller: _amountCtrl,
+                hint: 'ej. 9.99',
+                icon: Icons.attach_money_rounded,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
+            const SizedBox(height: AppSpacing.xl),
+
+            _SheetLabel('Próximo cobro'),
+            const SizedBox(height: AppSpacing.sm),
+            GestureDetector(
+              onTap: _pickDate,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 18, color: AppColors.textTertiary),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      DateFormat('d MMM yyyy', 'es').format(_billingDate),
+                      style: AppTypography.bodyM
+                          .copyWith(color: AppColors.textPrimary),
+                    ),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 16, color: AppColors.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            _SheetLabel('Frecuencia'),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: SubscriptionFrequency.values.map((f) {
+                final active = f == _freq;
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _freq = f);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: active
+                          ? AppColors.emeraldSurface
+                          : Colors.white.withValues(alpha: 0.04),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.pillRadius),
+                      border: Border.all(
+                        color: active
+                            ? AppColors.emerald.withValues(alpha: 0.4)
+                            : Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Text(f.label,
+                        style: AppTypography.labelM.copyWith(
+                          color: active
+                              ? AppColors.emerald
+                              : AppColors.textTertiary,
+                          fontWeight:
+                              active ? FontWeight.w600 : FontWeight.w400,
+                        )),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+
+            _SheetLabel('Icono'),
+            const SizedBox(height: AppSpacing.sm),
+            _IconPicker(
+                icons: _iconOptions,
+                selected: _icon,
+                color: _color,
+                onChanged: (ic) => setState(() => _icon = ic)),
+            const SizedBox(height: AppSpacing.xl),
+
+            _SheetLabel('Color'),
+            const SizedBox(height: AppSpacing.sm),
+            _ColorPicker(
+                colors: _colorOptions,
+                selected: _color,
+                onChanged: (c) => setState(() => _color = c)),
+            const SizedBox(height: AppSpacing.xxl),
+
+            SizedBox(
+              width: double.infinity,
+              child: GestureDetector(
+                onTap: _submit,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [AppColors.emerald, AppColors.emeraldDim]),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.emerald.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Text('Guardar cambios',
+                      style: AppTypography.labelL.copyWith(
+                        color: AppColors.textInverse,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

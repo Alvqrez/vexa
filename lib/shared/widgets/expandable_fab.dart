@@ -18,14 +18,23 @@ class FabAction {
 }
 
 class ExpandableFab extends StatefulWidget {
-  const ExpandableFab({super.key, required this.actions});
+  const ExpandableFab({
+    super.key,
+    required this.actions,
+    this.onOpenChanged,
+  });
   final List<FabAction> actions;
 
+  /// Called with `true` when FAB opens and `false` when it closes.
+  /// Use this to render a dismissal barrier outside this widget.
+  final ValueChanged<bool>? onOpenChanged;
+
   @override
-  State<ExpandableFab> createState() => _ExpandableFabState();
+  State<ExpandableFab> createState() => ExpandableFabState();
 }
 
-class _ExpandableFabState extends State<ExpandableFab>
+// Public so callers can hold a GlobalKey<ExpandableFabState> and call close().
+class ExpandableFabState extends State<ExpandableFab>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   bool _open = false;
@@ -41,6 +50,8 @@ class _ExpandableFabState extends State<ExpandableFab>
 
   @override
   void dispose() {
+    // Ensure parent knows FAB closed if widget is removed while open
+    if (_open) widget.onOpenChanged?.call(false);
     _ctrl.dispose();
     super.dispose();
   }
@@ -48,14 +59,19 @@ class _ExpandableFabState extends State<ExpandableFab>
   void _toggle() {
     HapticFeedback.selectionClick();
     setState(() => _open = !_open);
-    _open ? _ctrl.forward() : _ctrl.reverse();
-  }
-
-  void _close() {
     if (_open) {
-      setState(() => _open = false);
+      _ctrl.forward();
+    } else {
       _ctrl.reverse();
     }
+    widget.onOpenChanged?.call(_open);
+  }
+
+  void close() {
+    if (!_open) return;
+    setState(() => _open = false);
+    _ctrl.reverse();
+    widget.onOpenChanged?.call(false);
   }
 
   @override
@@ -64,7 +80,8 @@ class _ExpandableFabState extends State<ExpandableFab>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Child action buttons (bottom to top)
+        // Child action buttons (bottom to top).
+        // IgnorePointer when closed so invisible buttons cannot receive taps.
         ...widget.actions.asMap().entries.map((e) {
           final i = e.key;
           final action = e.value;
@@ -88,14 +105,20 @@ class _ExpandableFabState extends State<ExpandableFab>
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: FadeTransition(
-              opacity: fadeAnim,
-              child: SlideTransition(
-                position: slideAnim,
-                child: _ActionButton(action: action, onTap: () {
-                  _close();
-                  action.onTap();
-                }),
+            child: IgnorePointer(
+              ignoring: !_open,
+              child: FadeTransition(
+                opacity: fadeAnim,
+                child: SlideTransition(
+                  position: slideAnim,
+                  child: _ActionButton(
+                    action: action,
+                    onTap: () {
+                      close();
+                      action.onTap();
+                    },
+                  ),
+                ),
               ),
             ),
           );

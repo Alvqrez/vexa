@@ -1,36 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../providers/budget_provider.dart';
 
-// ── Budget item model ─────────────────────────────────────────────────────────
-
-class BudgetItem {
-  const BudgetItem({
-    required this.name,
-    required this.icon,
-    required this.color,
-    required this.spent,
-    required this.limit,
-  });
-
-  final String name;
-  final IconData icon;
-  final Color color;
-  final double spent;
-  final double limit;
-
-  double get ratio => (spent / limit).clamp(0.0, 1.0);
-  double get remaining => limit - spent;
-  bool get isWarning => ratio >= 0.80;
-
-  Color get surface => color.withValues(alpha: 0.18);
-}
-
-// ── Preset icon options ───────────────────────────────────────────────────────
+// ── Icon + Color options ──────────────────────────────────────────────────────
 
 const _kIconOptions = [
   Icons.fork_right_rounded,
@@ -51,8 +31,6 @@ const _kIconOptions = [
   Icons.category_rounded,
 ];
 
-// ── Preset color options ──────────────────────────────────────────────────────
-
 const _kColorOptions = [
   AppColors.catFood,
   AppColors.catTransport,
@@ -70,67 +48,17 @@ const _kColorOptions = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-class BudgetPage extends StatefulWidget {
+class BudgetPage extends ConsumerStatefulWidget {
   const BudgetPage({super.key});
 
   @override
-  State<BudgetPage> createState() => _BudgetPageState();
+  ConsumerState<BudgetPage> createState() => _BudgetPageState();
 }
 
-class _BudgetPageState extends State<BudgetPage>
+class _BudgetPageState extends ConsumerState<BudgetPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
-
   static const _sectionCount = 4;
-
-  final List<BudgetItem> _items = const [
-    BudgetItem(
-      name: 'Comida',
-      icon: Icons.fork_right_rounded,
-      color: AppColors.catFood,
-      spent: 92.20,
-      limit: 300,
-    ),
-    BudgetItem(
-      name: 'Compras',
-      icon: Icons.shopping_bag_rounded,
-      color: AppColors.catShopping,
-      spent: 89.95,
-      limit: 200,
-    ),
-    BudgetItem(
-      name: 'Salud',
-      icon: Icons.favorite_rounded,
-      color: AppColors.catHealth,
-      spent: 45.00,
-      limit: 100,
-    ),
-    BudgetItem(
-      name: 'Entretenimiento',
-      icon: Icons.movie_rounded,
-      color: AppColors.catEntertainment,
-      spent: 9.99,
-      limit: 50,
-    ),
-    BudgetItem(
-      name: 'Transporte',
-      icon: Icons.directions_car_rounded,
-      color: AppColors.catTransport,
-      spent: 12.50,
-      limit: 150,
-    ),
-  ];
-
-  void _showAddSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _AddBudgetSheet(
-        onAdd: (item) => setState(() => _items.add(item)),
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -166,8 +94,22 @@ class _BudgetPageState extends State<BudgetPage>
     );
   }
 
+  void _showAddSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddBudgetSheet(
+        onAdd: (item) => ref.read(budgetProvider.notifier).add(item),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final items = ref.watch(budgetWithSpentProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
     return Stack(
       children: [
         const _BudgetBg(),
@@ -183,11 +125,16 @@ class _BudgetPageState extends State<BudgetPage>
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const SizedBox(height: AppSpacing.lg),
-                    _reveal(0, const _BudgetHeader()),
+                    _reveal(0, _BudgetHeader(onAdd: _showAddSheet)),
                     const SizedBox(height: AppSpacing.xxl),
-                    _reveal(1, const _BudgetOverviewCard()),
+                    _reveal(1, _BudgetOverviewCard(currency: currency)),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(2, _BudgetCategoryList(items: _items)),
+                    _reveal(2, _BudgetCategoryList(
+                      items: items,
+                      currency: currency,
+                      onDelete: (id) =>
+                          ref.read(budgetProvider.notifier).delete(id),
+                    )),
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(3, _AddBudgetButton(onTap: _showAddSheet)),
                     const SizedBox(
@@ -260,10 +207,17 @@ class _BudgetBg extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _BudgetHeader extends StatelessWidget {
-  const _BudgetHeader();
+  const _BudgetHeader({required this.onAdd});
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final monthLabel = () {
+      final l = DateFormat('MMMM yyyy', 'es').format(now);
+      return l[0].toUpperCase() + l.substring(1);
+    }();
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -278,25 +232,29 @@ class _BudgetHeader extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(
-              'Mayo 2026',
+              monthLabel,
               style: AppTypography.labelM.copyWith(
                 color: AppColors.textTertiary,
               ),
             ),
           ],
         ),
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.glassLight,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
-          ),
-          child: const Icon(
-            Icons.tune_rounded,
-            color: AppColors.textSecondary,
-            size: 18,
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onAdd();
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.emeraldSurface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: AppColors.emerald.withValues(alpha: 0.3), width: 0.5),
+            ),
+            child: const Icon(Icons.add_rounded,
+                color: AppColors.emerald, size: 18),
           ),
         ),
       ],
@@ -306,20 +264,19 @@ class _BudgetHeader extends StatelessWidget {
 
 // ── Overview card ─────────────────────────────────────────────────────────────
 
-class _BudgetOverviewCard extends StatefulWidget {
-  const _BudgetOverviewCard();
+class _BudgetOverviewCard extends ConsumerStatefulWidget {
+  const _BudgetOverviewCard({required this.currency});
+  final String currency;
 
   @override
-  State<_BudgetOverviewCard> createState() => _BudgetOverviewCardState();
+  ConsumerState<_BudgetOverviewCard> createState() =>
+      _BudgetOverviewCardState();
 }
 
-class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
+class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _arc;
   late Animation<double> _arcAnim;
-
-  static const double _spent = 249.64;
-  static const double _limit = 2000.0;
 
   @override
   void initState() {
@@ -342,12 +299,14 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
 
   @override
   Widget build(BuildContext context) {
-    final ratio = _spent / _limit;
-    final remaining = _limit - _spent;
-    final daysLeft = DateTime(2026, 6, 1)
-        .difference(DateTime.now())
-        .inDays
-        .clamp(0, 31);
+    final spent = ref.watch(totalBudgetSpentProvider);
+    final limit = ref.watch(totalBudgetLimitProvider);
+    final ratio = limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
+    final remaining = limit - spent;
+    final now = DateTime.now();
+    final firstNextMonth = DateTime(now.year, now.month + 1, 1);
+    final daysLeft = firstNextMonth.difference(now).inDays.clamp(0, 31);
+    final monthLabel = DateFormat('MMMM yyyy', 'es').format(now).toUpperCase();
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -391,8 +350,8 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                 width: 116,
                 height: 116,
                 child: CustomPaint(
-                  painter:
-                      _BudgetArcPainter(progress: ratio * _arcAnim.value),
+                  painter: _BudgetArcPainter(
+                      progress: ratio * _arcAnim.value, ratio: ratio),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -423,15 +382,15 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.emeraldSurface,
                       borderRadius:
                           BorderRadius.circular(AppSpacing.pillRadius),
                     ),
                     child: Text(
-                      'MAYO 2026',
+                      monthLabel,
                       style: AppTypography.eyebrow
                           .copyWith(color: AppColors.emeraldDim),
                     ),
@@ -441,12 +400,14 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: '\$${_spent.toStringAsFixed(0)}',
+                          text:
+                              '${widget.currency}${spent.toStringAsFixed(0)}',
                           style: AppTypography.headingL
                               .copyWith(color: AppColors.textPrimary),
                         ),
                         TextSpan(
-                          text: ' / \$${_limit.toStringAsFixed(0)}',
+                          text:
+                              ' / ${widget.currency}${limit.toStringAsFixed(0)}',
                           style: AppTypography.bodyM
                               .copyWith(color: AppColors.textTertiary),
                         ),
@@ -457,8 +418,11 @@ class _BudgetOverviewCardState extends State<_BudgetOverviewCard>
                   _InfoRow(
                     icon: Icons.savings_outlined,
                     label: 'Disponible',
-                    value: '\$${remaining.toStringAsFixed(0)}',
-                    color: AppColors.positive,
+                    value:
+                        '${widget.currency}${remaining.toStringAsFixed(0)}',
+                    color: remaining >= 0
+                        ? AppColors.positive
+                        : AppColors.negative,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _InfoRow(
@@ -506,8 +470,7 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style:
-                AppTypography.labelM.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.labelM.copyWith(color: AppColors.textSecondary),
           ),
         ),
         Text(value,
@@ -518,8 +481,9 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _BudgetArcPainter extends CustomPainter {
-  const _BudgetArcPainter({required this.progress});
+  const _BudgetArcPainter({required this.progress, required this.ratio});
   final double progress;
+  final double ratio;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -543,13 +507,19 @@ class _BudgetArcPainter extends CustomPainter {
 
     if (progress <= 0) return;
 
+    final arcColor = ratio >= 1.0
+        ? AppColors.negative
+        : ratio >= 0.8
+            ? AppColors.warning
+            : AppColors.emerald;
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       startAngle,
       sweepAngle * progress,
       false,
       Paint()
-        ..color = AppColors.emeraldGlow
+        ..color = arcColor.withValues(alpha: 0.25)
         ..strokeWidth = strokeWidth + 8
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round
@@ -566,8 +536,8 @@ class _BudgetArcPainter extends CustomPainter {
           startAngle: startAngle,
           endAngle: startAngle + sweepAngle * progress,
           colors: [
-            AppColors.emerald.withValues(alpha: 0.6),
-            AppColors.emerald,
+            arcColor.withValues(alpha: 0.6),
+            arcColor,
           ],
         ).createShader(Rect.fromCircle(center: center, radius: radius))
         ..strokeWidth = strokeWidth
@@ -577,18 +547,43 @@ class _BudgetArcPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BudgetArcPainter old) => old.progress != progress;
+  bool shouldRepaint(_BudgetArcPainter old) =>
+      old.progress != progress || old.ratio != ratio;
 }
 
 // ── Category list ─────────────────────────────────────────────────────────────
 
 class _BudgetCategoryList extends StatelessWidget {
-  const _BudgetCategoryList({required this.items});
+  const _BudgetCategoryList({
+    required this.items,
+    required this.currency,
+    required this.onDelete,
+  });
 
-  final List<BudgetItem> items;
+  final List<BudgetItemWithSpent> items;
+  final String currency;
+  final ValueChanged<String> onDelete;
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        decoration: BoxDecoration(
+          color: AppColors.glassLight,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        ),
+        child: Center(
+          child: Text(
+            'Sin categorías de presupuesto.\nToca + para agregar.',
+            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -615,7 +610,11 @@ class _BudgetCategoryList extends StatelessWidget {
         ...items.map(
           (item) => Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: _BudgetCategoryCard(item: item),
+            child: _BudgetCategoryCard(
+              item: item,
+              currency: currency,
+              onDelete: () => onDelete(item.item.id),
+            ),
           ),
         ),
       ],
@@ -624,8 +623,14 @@ class _BudgetCategoryList extends StatelessWidget {
 }
 
 class _BudgetCategoryCard extends StatefulWidget {
-  const _BudgetCategoryCard({required this.item});
-  final BudgetItem item;
+  const _BudgetCategoryCard({
+    required this.item,
+    required this.currency,
+    required this.onDelete,
+  });
+  final BudgetItemWithSpent item;
+  final String currency;
+  final VoidCallback onDelete;
 
   @override
   State<_BudgetCategoryCard> createState() => _BudgetCategoryCardState();
@@ -655,111 +660,221 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
     super.dispose();
   }
 
+  void _showMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _BudgetItemActions(
+        item: widget.item.item,
+        onDelete: () {
+          widget.onDelete();
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
+    final color = item.isOver
+        ? AppColors.negative
+        : item.isWarning
+            ? AppColors.warning
+            : item.item.color;
 
-    return Container(
-      padding: const EdgeInsets.all(2.5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
-      ),
+    return GestureDetector(
+      onLongPress: () => _showMenu(context),
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+          color: Colors.white.withValues(alpha: 0.03),
+          border: Border.all(
+            color: item.isWarning
+                ? AppColors.warning.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.05),
+            width: 0.5,
+          ),
         ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(
-                    color: item.surface,
-                    borderRadius: BorderRadius.circular(11),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: item.item.color.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(item.item.icon, size: 17, color: item.item.color),
                   ),
-                  child: Icon(item.icon, size: 17, color: item.color),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.item.name,
+                          style: AppTypography.labelL.copyWith(
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${widget.currency}${item.remaining.toStringAsFixed(0)} disponible',
+                          style: AppTypography.labelS.copyWith(
+                            color: item.isOver
+                                ? AppColors.negative
+                                : AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        item.name,
-                        style: AppTypography.labelL.copyWith(
-                          color: AppColors.textPrimary,
-                        ),
+                        '${widget.currency}${item.spent.toStringAsFixed(0)}',
+                        style: AppTypography.labelL.copyWith(color: color),
                       ),
-                      const SizedBox(height: 2),
                       Text(
-                        '\$${item.remaining.toStringAsFixed(0)} disponible',
+                        'de ${widget.currency}${item.item.limit.toStringAsFixed(0)}',
                         style: AppTypography.labelS.copyWith(
                           color: AppColors.textTertiary,
                         ),
                       ),
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${item.spent.toStringAsFixed(0)}',
-                      style: AppTypography.labelL.copyWith(
-                        color: item.isWarning
-                            ? AppColors.warning
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'de \$${item.limit.toStringAsFixed(0)}',
-                      style: AppTypography.labelS.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                height: 5,
-                color: item.color.withValues(alpha: 0.12),
-                child: AnimatedBuilder(
-                  animation: _anim,
-                  builder: (_, child) => FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: item.ratio * _anim.value,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: item.isWarning
-                              ? [AppColors.warning, AppColors.warning]
-                              : [
-                                  item.color.withValues(alpha: 0.7),
-                                  item.color,
-                                ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  height: 5,
+                  color: item.item.color.withValues(alpha: 0.12),
+                  child: AnimatedBuilder(
+                    animation: _anim,
+                    builder: (_, child) => FractionallySizedBox(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: item.ratio * _anim.value,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [color.withValues(alpha: 0.7), color],
+                          ),
+                          borderRadius: BorderRadius.circular(4),
                         ),
-                        borderRadius: BorderRadius.circular(4),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+              if (item.isOver) ...[
+                const SizedBox(height: AppSpacing.sm),
+                Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        size: 13, color: AppColors.negative),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Presupuesto superado',
+                      style: AppTypography.labelS
+                          .copyWith(color: AppColors.negative),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Budget item actions sheet ─────────────────────────────────────────────────
+
+class _BudgetItemActions extends StatelessWidget {
+  const _BudgetItemActions({required this.item, required this.onDelete});
+  final BudgetItem item;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(item.icon, size: 18, color: item.color),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(item.name,
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          GestureDetector(
+            onTap: onDelete,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: AppColors.negativeSurface,
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                border: Border.all(
+                    color: AppColors.negative.withValues(alpha: 0.20)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.delete_outline_rounded,
+                      size: 18, color: AppColors.negative),
+                  const SizedBox(width: AppSpacing.md),
+                  Text('Eliminar categoría',
+                      style: AppTypography.labelL
+                          .copyWith(color: AppColors.negative)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -769,7 +884,6 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
 
 class _AddBudgetButton extends StatelessWidget {
   const _AddBudgetButton({required this.onTap});
-
   final VoidCallback onTap;
 
   @override
@@ -782,8 +896,7 @@ class _AddBudgetButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.glassLight,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border:
-              Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+          border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -795,17 +908,12 @@ class _AddBudgetButton extends StatelessWidget {
                 color: AppColors.emeraldSurface,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.add_rounded,
-                color: AppColors.emerald,
-                size: 16,
-              ),
+              child: const Icon(Icons.add_rounded,
+                  color: AppColors.emerald, size: 16),
             ),
             const SizedBox(width: AppSpacing.md),
-            Text(
-              'Añadir categoría',
-              style: AppTypography.labelL.copyWith(color: AppColors.emerald),
-            ),
+            Text('Añadir categoría',
+                style: AppTypography.labelL.copyWith(color: AppColors.emerald)),
           ],
         ),
       ),
@@ -817,7 +925,6 @@ class _AddBudgetButton extends StatelessWidget {
 
 class _AddBudgetSheet extends StatefulWidget {
   const _AddBudgetSheet({required this.onAdd});
-
   final void Function(BudgetItem) onAdd;
 
   @override
@@ -827,9 +934,8 @@ class _AddBudgetSheet extends StatefulWidget {
 class _AddBudgetSheetState extends State<_AddBudgetSheet> {
   final _nameCtrl = TextEditingController();
   final _limitCtrl = TextEditingController();
-
-  IconData _selectedIcon = _kIconOptions.first;
-  Color _selectedColor = _kColorOptions.first;
+  IconData _icon = _kIconOptions.first;
+  Color _color = _kColorOptions.first;
 
   @override
   void dispose() {
@@ -846,10 +952,10 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
       return;
     }
     widget.onAdd(BudgetItem(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: name,
-      icon: _selectedIcon,
-      color: _selectedColor,
-      spent: 0,
+      icon: _icon,
+      color: _color,
       limit: limit,
     ));
     HapticFeedback.mediumImpact();
@@ -862,23 +968,18 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        AppSpacing.md,
-        AppSpacing.xxl,
-        AppSpacing.xxl + bottom,
+        AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom,
       ),
       decoration: const BoxDecoration(
         color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.cardRadiusL),
-        ),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Drag handle
             Center(
               child: Container(
                 width: 36,
@@ -890,83 +991,52 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
                 ),
               ),
             ),
-
-            Text(
-              'Nueva categoría',
-              style:
-                  AppTypography.headingS.copyWith(color: AppColors.textPrimary),
-            ),
+            Text('Nueva categoría de presupuesto',
+                style:
+                    AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: AppSpacing.xxl),
-
-            // ── Name ──────────────────────────────────────────────────────────
             _Label('Nombre'),
             const SizedBox(height: AppSpacing.sm),
-            _TextField(
-              controller: _nameCtrl,
-              hint: 'ej. Gimnasio, Suscripciones…',
-              icon: Icons.label_outline_rounded,
-              autofocus: true,
-            ),
+            _TField(
+                controller: _nameCtrl,
+                hint: 'ej. Gimnasio, Restaurantes…',
+                icon: Icons.label_outline_rounded,
+                autofocus: true),
             const SizedBox(height: AppSpacing.xl),
-
-            // ── Icon picker ───────────────────────────────────────────────────
             _Label('Icono'),
             const SizedBox(height: AppSpacing.sm),
             _IconGrid(
-              icons: _kIconOptions,
-              selected: _selectedIcon,
-              color: _selectedColor,
-              onChanged: (ic) => setState(() => _selectedIcon = ic),
-            ),
+                icons: _kIconOptions,
+                selected: _icon,
+                color: _color,
+                onChanged: (ic) => setState(() => _icon = ic)),
             const SizedBox(height: AppSpacing.xl),
-
-            // ── Color picker ──────────────────────────────────────────────────
             _Label('Color'),
             const SizedBox(height: AppSpacing.sm),
             _ColorGrid(
-              colors: _kColorOptions,
-              selected: _selectedColor,
-              onChanged: (c) => setState(() => _selectedColor = c),
-            ),
+                colors: _kColorOptions,
+                selected: _color,
+                onChanged: (c) => setState(() => _color = c)),
             const SizedBox(height: AppSpacing.xl),
-
-            // ── Limit ─────────────────────────────────────────────────────────
             _Label('Límite mensual'),
             const SizedBox(height: AppSpacing.sm),
-            _TextField(
+            _TField(
               controller: _limitCtrl,
               hint: 'ej. 200',
               icon: Icons.attach_money_rounded,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
             ),
             const SizedBox(height: AppSpacing.xxl),
-
-            // ── Preview ───────────────────────────────────────────────────────
-            _BudgetPreviewRow(
-              icon: _selectedIcon,
-              color: _selectedColor,
-              name: _nameCtrl.text.isEmpty ? 'Categoría' : _nameCtrl.text,
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-            // ── Submit ────────────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
                 onTap: _submit,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [AppColors.emerald, AppColors.emeraldDim],
-                    ),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
+                        colors: [AppColors.emerald, AppColors.emeraldDim]),
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.emerald.withValues(alpha: 0.30),
@@ -993,36 +1063,29 @@ class _AddBudgetSheetState extends State<_AddBudgetSheet> {
   }
 }
 
-// ── Sheet sub-widgets ─────────────────────────────────────────────────────────
+// ── Sheet helpers ─────────────────────────────────────────────────────────────
 
 class _Label extends StatelessWidget {
   const _Label(this.text);
   final String text;
 
   @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
-    );
-  }
+  Widget build(BuildContext context) => Text(text,
+      style: AppTypography.labelM.copyWith(color: AppColors.textTertiary));
 }
 
-class _TextField extends StatelessWidget {
-  const _TextField({
+class _TField extends StatelessWidget {
+  const _TField({
     required this.controller,
     required this.hint,
     required this.icon,
     this.keyboardType,
-    this.inputFormatters,
     this.autofocus = false,
   });
-
   final TextEditingController controller;
   final String hint;
   final IconData icon;
   final TextInputType? keyboardType;
-  final List<TextInputFormatter>? inputFormatters;
   final bool autofocus;
 
   @override
@@ -1032,26 +1095,20 @@ class _TextField extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-          width: 0.5,
-        ),
+            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
         autofocus: autofocus,
         style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
           prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         ),
       ),
     );
@@ -1065,7 +1122,6 @@ class _IconGrid extends StatelessWidget {
     required this.color,
     required this.onChanged,
   });
-
   final List<IconData> icons;
   final IconData selected;
   final Color color;
@@ -1077,7 +1133,7 @@ class _IconGrid extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: icons.map((ic) {
-        final isSelected = ic == selected;
+        final isSel = ic == selected;
         return GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
@@ -1088,22 +1144,19 @@ class _IconGrid extends StatelessWidget {
             width: 46,
             height: 46,
             decoration: BoxDecoration(
-              color: isSelected
+              color: isSel
                   ? color.withValues(alpha: 0.18)
                   : Colors.white.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(13),
               border: Border.all(
-                color: isSelected
-                    ? color.withValues(alpha: 0.50)
+                color: isSel
+                    ? color.withValues(alpha: 0.5)
                     : Colors.white.withValues(alpha: 0.06),
-                width: isSelected ? 1.5 : 1,
+                width: isSel ? 1.5 : 1,
               ),
             ),
-            child: Icon(
-              ic,
-              size: 20,
-              color: isSelected ? color : AppColors.textTertiary,
-            ),
+            child: Icon(ic,
+                size: 20, color: isSel ? color : AppColors.textTertiary),
           ),
         );
       }).toList(),
@@ -1117,7 +1170,6 @@ class _ColorGrid extends StatelessWidget {
     required this.selected,
     required this.onChanged,
   });
-
   final List<Color> colors;
   final Color selected;
   final ValueChanged<Color> onChanged;
@@ -1128,7 +1180,7 @@ class _ColorGrid extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: colors.map((c) {
-        final isSelected = c.toARGB32() == selected.toARGB32();
+        final isSel = c.toARGB32() == selected.toARGB32();
         return GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
@@ -1142,76 +1194,22 @@ class _ColorGrid extends StatelessWidget {
               color: c,
               shape: BoxShape.circle,
               border: Border.all(
-                color: isSelected ? Colors.white : Colors.transparent,
-                width: 2.5,
-              ),
-              boxShadow: isSelected
+                  color: isSel ? Colors.white : Colors.transparent, width: 2.5),
+              boxShadow: isSel
                   ? [
                       BoxShadow(
-                        color: c.withValues(alpha: 0.50),
-                        blurRadius: 10,
-                        spreadRadius: -2,
-                      ),
+                          color: c.withValues(alpha: 0.5),
+                          blurRadius: 10,
+                          spreadRadius: -2)
                     ]
                   : null,
             ),
-            child: isSelected
-                ? const Icon(Icons.check_rounded,
-                    size: 16, color: Colors.white)
+            child: isSel
+                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
                 : null,
           ),
         );
       }).toList(),
-    );
-  }
-}
-
-class _BudgetPreviewRow extends StatelessWidget {
-  const _BudgetPreviewRow({
-    required this.icon,
-    required this.color,
-    required this.name,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.06),
-          width: 0.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 38,
-            height: 38,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.18),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(icon, size: 18, color: color),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Text(
-            name,
-            style: AppTypography.labelL.copyWith(color: AppColors.textPrimary),
-          ),
-          const Spacer(),
-          Text(
-            'Vista previa',
-            style: AppTypography.labelS.copyWith(color: AppColors.textTertiary),
-          ),
-        ],
-      ),
     );
   }
 }

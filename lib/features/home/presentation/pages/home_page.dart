@@ -65,10 +65,13 @@ class _HomePageState extends State<HomePage>
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: const SystemUiOverlayStyle(
+      value: SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: AppColors.background,
+        statusBarIconBrightness:
+            Theme.of(context).brightness == Brightness.dark
+                ? Brightness.light
+                : Brightness.dark,
+        systemNavigationBarColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Scaffold(
         backgroundColor: AppColors.background,

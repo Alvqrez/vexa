@@ -108,16 +108,23 @@ class _NotificationButton extends ConsumerStatefulWidget {
 class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   final _link = LayerLink();
   final _overlayController = OverlayPortalController();
-  bool _cleared = false;
+  final _dismissed = <String>{};
 
   void _toggle() {
     HapticFeedback.lightImpact();
     _overlayController.toggle();
   }
 
-  void _clear() {
+  void _dismissOne(String id) {
+    HapticFeedback.selectionClick();
+    setState(() => _dismissed.add(id));
+  }
+
+  void _clearAll() {
     HapticFeedback.mediumImpact();
-    setState(() => _cleared = true);
+    setState(() {
+      _dismissed.addAll(['n1', 'n2', 'n3', 'n4']);
+    });
     _overlayController.hide();
   }
 
@@ -126,45 +133,49 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
     final prediction = ref.watch(predictionProvider);
     final tip = _dailyTip();
 
-    final notifications = _cleared
-        ? <_Notif>[]
-        : [
-            _Notif(
-              icon: Icons.auto_graph_rounded,
-              color:
-                  prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
-              title: 'Predicción del mes',
-              body: prediction.isOnTrack
-                  ? 'Vas bien. Ahorro estimado: +\$${prediction.predictedSavings.toStringAsFixed(0)}'
-                  : 'Atención: gastos superarán ingresos este mes.',
-              time: 'hoy',
-              unread: true,
-            ),
-            _Notif(
-              icon: tip.$2,
-              color: tip.$3,
-              title: 'Consejo del día',
-              body: tip.$1,
-              time: 'hoy',
-              unread: true,
-            ),
-            const _Notif(
-              icon: Icons.receipt_long_outlined,
-              color: AppColors.petroleum,
-              title: 'Transacción registrada',
-              body: 'Zara · -\$89.95',
-              time: 'hace 3 días',
-              unread: false,
-            ),
-            const _Notif(
-              icon: Icons.bar_chart_rounded,
-              color: AppColors.emerald,
-              title: 'Resumen semanal',
-              body: 'Ahorraste \$1,550 esta semana. ¡Bien!',
-              time: 'hace 7 días',
-              unread: false,
-            ),
-          ];
+    final allNotifs = [
+      _Notif(
+        id: 'n1',
+        icon: Icons.auto_graph_rounded,
+        color: prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
+        title: 'Predicción del mes',
+        body: prediction.isOnTrack
+            ? 'Vas bien. Ahorro estimado: +\$${prediction.predictedSavings.toStringAsFixed(0)}'
+            : 'Atención: gastos superarán ingresos este mes.',
+        time: 'hoy',
+        unread: true,
+      ),
+      _Notif(
+        id: 'n2',
+        icon: tip.$2,
+        color: tip.$3,
+        title: 'Consejo del día',
+        body: tip.$1,
+        time: 'hoy',
+        unread: true,
+      ),
+      const _Notif(
+        id: 'n3',
+        icon: Icons.receipt_long_outlined,
+        color: AppColors.petroleum,
+        title: 'Transacción registrada',
+        body: 'Zara · -\$89.95',
+        time: 'hace 3 días',
+        unread: false,
+      ),
+      const _Notif(
+        id: 'n4',
+        icon: Icons.bar_chart_rounded,
+        color: AppColors.emerald,
+        title: 'Resumen semanal',
+        body: 'Ahorraste \$1,550 esta semana. ¡Bien!',
+        time: 'hace 7 días',
+        unread: false,
+      ),
+    ];
+
+    final notifications =
+        allNotifs.where((n) => !_dismissed.contains(n.id)).toList();
 
     return CompositedTransformTarget(
       link: _link,
@@ -174,7 +185,8 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
           link: _link,
           notifications: notifications,
           onDismiss: _overlayController.hide,
-          onClear: _cleared ? null : _clear,
+          onDismissOne: _dismissOne,
+          onClear: notifications.isEmpty ? null : _clearAll,
         ),
         child: GestureDetector(
           onTap: _toggle,
@@ -233,6 +245,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
 
 class _Notif {
   const _Notif({
+    required this.id,
     required this.icon,
     required this.color,
     required this.title,
@@ -240,6 +253,7 @@ class _Notif {
     required this.time,
     required this.unread,
   });
+  final String id;
   final IconData icon;
   final Color color;
   final String title;
@@ -253,12 +267,14 @@ class _NotifDropdown extends StatelessWidget {
     required this.link,
     required this.notifications,
     required this.onDismiss,
+    required this.onDismissOne,
     this.onClear,
   });
 
   final LayerLink link;
   final List<_Notif> notifications;
   final VoidCallback onDismiss;
+  final ValueChanged<String> onDismissOne;
   final VoidCallback? onClear;
 
   @override
@@ -280,6 +296,7 @@ class _NotifDropdown extends StatelessWidget {
             color: Colors.transparent,
             child: _DropdownCard(
               notifications: notifications,
+              onDismissOne: onDismissOne,
               onClear: onClear,
             ),
           ),
@@ -290,8 +307,13 @@ class _NotifDropdown extends StatelessWidget {
 }
 
 class _DropdownCard extends StatelessWidget {
-  const _DropdownCard({required this.notifications, this.onClear});
+  const _DropdownCard({
+    required this.notifications,
+    required this.onDismissOne,
+    this.onClear,
+  });
   final List<_Notif> notifications;
+  final ValueChanged<String> onDismissOne;
   final VoidCallback? onClear;
 
   @override
@@ -390,7 +412,7 @@ class _DropdownCard extends StatelessWidget {
             )
           else
             for (int i = 0; i < notifications.length; i++) ...[
-              _NotifRow(notif: notifications[i]),
+              _NotifRow(notif: notifications[i], onDismiss: onDismissOne),
               if (i < notifications.length - 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -409,8 +431,9 @@ class _DropdownCard extends StatelessWidget {
 }
 
 class _NotifRow extends StatelessWidget {
-  const _NotifRow({required this.notif});
+  const _NotifRow({required this.notif, required this.onDismiss});
   final _Notif notif;
+  final ValueChanged<String> onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -456,6 +479,20 @@ class _NotifRow extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => onDismiss(notif.id),
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: BoxDecoration(
+                          color: AppColors.glassLight,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close_rounded,
+                            size: 11, color: AppColors.textTertiary),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 2),

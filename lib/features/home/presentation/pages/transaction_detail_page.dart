@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
@@ -17,6 +18,7 @@ class TransactionDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     final accounts = ref.watch(accountsProvider);
     final account = transaction.accountId != null
         ? accounts.where((a) => a.id == transaction.accountId).firstOrNull
@@ -94,7 +96,7 @@ class TransactionDetailPage extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.lg),
                   // Amount
                   Text(
-                    transaction.formattedAmount,
+                    transaction.formattedWith(currency),
                     style: AppTypography.displayM.copyWith(
                       color: amountColor,
                       fontWeight: FontWeight.w800,

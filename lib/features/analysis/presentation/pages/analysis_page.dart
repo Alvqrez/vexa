@@ -10,6 +10,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../../core/providers/settings_provider.dart';
 
 class AnalysisPage extends StatefulWidget {
   const AnalysisPage({super.key});
@@ -23,7 +24,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   late AnimationController _stagger;
   int _period = 1; // 0=Sem, 1=Mes, 2=Año
 
-  static const _sectionCount = 7;
+  static const _sectionCount = 8;
 
   @override
   void initState() {
@@ -95,7 +96,7 @@ class _AnalysisPageState extends State<AnalysisPage>
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(6, const _CategoryBreakdown()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(6, const _TopSpendsList()),
+                    _reveal(7, const _TopSpendsList()),
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
@@ -270,9 +271,9 @@ class _PeriodPills extends StatelessWidget {
 class _OverviewRow extends ConsumerWidget {
   const _OverviewRow();
 
-  String _fmt(double v) {
-    if (v >= 1000) return '\$${(v / 1000).toStringAsFixed(1)}k';
-    return '\$${v.toStringAsFixed(0)}';
+  String _fmt(double v, String sym) {
+    if (v >= 1000) return '$sym${(v / 1000).toStringAsFixed(1)}k';
+    return '$sym${v.toStringAsFixed(0)}';
   }
 
   @override
@@ -280,13 +281,14 @@ class _OverviewRow extends ConsumerWidget {
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     return Row(
       children: [
         Expanded(
           child: _StatTile(
             label: 'Ingresos',
-            value: _fmt(income),
+            value: _fmt(income, currency),
             icon: Icons.south_rounded,
             color: AppColors.positive,
           ),
@@ -295,7 +297,7 @@ class _OverviewRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Gastos',
-            value: _fmt(expenses),
+            value: _fmt(expenses, currency),
             icon: Icons.north_rounded,
             color: AppColors.negative,
           ),
@@ -304,7 +306,7 @@ class _OverviewRow extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Neto',
-            value: _fmt(savings),
+            value: _fmt(savings, currency),
             icon: Icons.savings_outlined,
             color: AppColors.petroleum,
           ),
@@ -556,29 +558,21 @@ class _BalanceLineChartCardState
   }
 }
 
-// ── Spending trend bar chart (custom) ─────────────────────────────────────────
+// ── Spending trend bar chart (real data) ─────────────────────────────────────
 
-class _SpendingTrendCard extends StatefulWidget {
+class _SpendingTrendCard extends ConsumerStatefulWidget {
   const _SpendingTrendCard({required this.stagger});
   final AnimationController stagger;
 
   @override
-  State<_SpendingTrendCard> createState() => _SpendingTrendCardState();
+  ConsumerState<_SpendingTrendCard> createState() =>
+      _SpendingTrendCardState();
 }
 
-class _SpendingTrendCardState extends State<_SpendingTrendCard>
+class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _bar;
   late Animation<double> _barAnim;
-
-  static const _data = [
-    (label: 'Dic', value: 1820.0),
-    (label: 'Ene', value: 1560.0),
-    (label: 'Feb', value: 2100.0),
-    (label: 'Mar', value: 1750.0),
-    (label: 'Abr', value: 1930.0),
-    (label: 'May', value: 1200.0),
-  ];
 
   @override
   void initState() {
@@ -599,6 +593,10 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
 
   @override
   Widget build(BuildContext context) {
+    final data = ref.watch(monthlySpendingTrendProvider);
+    final now = DateTime.now();
+    final currentLabel = _monthAbbr(now.month);
+
     return _SectionCard(
       title: 'Tendencia de gastos',
       badge: '6 meses',
@@ -611,7 +609,7 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
               height: 120,
               child: CustomPaint(
                 painter: _BarChartPainter(
-                    data: _data, progress: _barAnim.value),
+                    data: data, progress: _barAnim.value),
                 size: Size.infinite,
               ),
             ),
@@ -619,8 +617,8 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
           const SizedBox(height: AppSpacing.lg),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: _data.map((d) {
-              final isCurrent = d.label == 'May';
+            children: data.map((d) {
+              final isCurrent = d.label == currentLabel;
               return Text(
                 d.label,
                 style: AppTypography.labelS.copyWith(
@@ -636,6 +634,14 @@ class _SpendingTrendCardState extends State<_SpendingTrendCard>
         ],
       ),
     );
+  }
+
+  String _monthAbbr(int month) {
+    const abbrs = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    ];
+    return abbrs[(month - 1).clamp(0, 11)];
   }
 }
 
@@ -1074,6 +1080,7 @@ class _CategoryBreakdown extends ConsumerWidget {
     final total = breakdown.values.fold(0.0, (a, b) => a + b);
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+    final currency = ref.watch(currencySymbolProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1094,6 +1101,7 @@ class _CategoryBreakdown extends ConsumerWidget {
                   category: entries[i].key,
                   spent: entries[i].value,
                   total: total,
+                  currency: currency,
                 ),
                 if (i < entries.length - 1)
                   Padding(
@@ -1118,10 +1126,12 @@ class _CatBar extends StatefulWidget {
   const _CatBar(
       {required this.category,
       required this.spent,
-      required this.total});
+      required this.total,
+      required this.currency});
   final TransactionCategory category;
   final double spent;
   final double total;
+  final String currency;
 
   @override
   State<_CatBar> createState() => _CatBarState();
@@ -1175,7 +1185,7 @@ class _CatBarState extends State<_CatBar>
                   Text(widget.category.label,
                       style: AppTypography.labelM
                           .copyWith(color: AppColors.textSecondary)),
-                  Text('\$${widget.spent.toStringAsFixed(2)}',
+                  Text('${widget.currency}${widget.spent.toStringAsFixed(2)}',
                       style: AppTypography.labelL
                           .copyWith(color: AppColors.textPrimary)),
                 ],
@@ -1217,6 +1227,7 @@ class _TopSpendsList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final transactions = ref.watch(transactionsProvider);
+    final currency = ref.watch(currencySymbolProvider);
     final expenses = transactions.where((t) => !t.isIncome).toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
     final top = expenses.take(4).toList();
@@ -1265,7 +1276,7 @@ class _TopSpendsList extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      Text('-\$${top[i].amount.toStringAsFixed(2)}',
+                      Text('-$currency${top[i].amount.toStringAsFixed(2)}',
                           style: AppTypography.labelL
                               .copyWith(color: AppColors.negative)),
                     ],

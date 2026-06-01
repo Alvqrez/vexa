@@ -347,7 +347,6 @@ class _CategoryList extends ConsumerWidget {
           AppSpacing.screenPadding, 0,
           AppSpacing.screenPadding, AppSpacing.xxxl),
       onReorderItem: (oldIndex, newIndex) {
-        if (newIndex >= cats.length) return;
         ref
             .read(walletCategoriesProvider.notifier)
             .reorder(oldIndex, newIndex, type);

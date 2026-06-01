@@ -27,6 +27,8 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell>
     with SingleTickerProviderStateMixin {
   late AnimationController _fabCtrl;
+  bool _fabOpen = false;
+  final _fabKey = GlobalKey<ExpandableFabState>();
 
   static const _pages = [
     HomePage(),
@@ -52,11 +54,14 @@ class _MainShellState extends ConsumerState<MainShell>
     super.dispose();
   }
 
+  void _closeFab() => _fabKey.currentState?.close();
+
   @override
   Widget build(BuildContext context) {
     final index = ref.watch(selectedNavIndexProvider);
 
     ref.listen<int>(selectedNavIndexProvider, (_, next) {
+      _closeFab(); // Close FAB on tab switch
       if (next == 4) {
         _fabCtrl.reverse();
       } else {
@@ -78,6 +83,17 @@ class _MainShellState extends ConsumerState<MainShell>
           children: [
             // ── Animated tab content ───────────────────────────────────
             _FadeIndexedStack(index: index, children: _pages),
+
+            // ── Dismissal barrier — sits ABOVE pages but BELOW nav and FAB.
+            // Visible only when the FAB menu is open. Tapping it closes the FAB.
+            if (_fabOpen)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: _closeFab,
+                  behavior: HitTestBehavior.opaque,
+                  child: const ColoredBox(color: Colors.transparent),
+                ),
+              ),
 
             // ── Bottom nav ─────────────────────────────────────────────
             const Positioned(
@@ -103,7 +119,12 @@ class _MainShellState extends ConsumerState<MainShell>
                     parent: _fabCtrl,
                     curve: Curves.easeOut,
                   ),
-                  child: ExpandableFab(actions: _buildActions(context)),
+                  child: ExpandableFab(
+                    key: _fabKey,
+                    actions: _buildActions(context),
+                    onOpenChanged: (open) =>
+                        setState(() => _fabOpen = open),
+                  ),
                 ),
               ),
             ),
@@ -170,20 +191,10 @@ void showTransactionSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => DraggableScrollableSheet(
-      initialChildSize: existing != null ? 0.82 : 0.62,
-      minChildSize: 0.40,
-      maxChildSize: 0.95,
-      snap: true,
-      snapSizes: existing != null
-          ? const [0.82, 0.95]
-          : const [0.62, 0.95],
-      expand: false,
-      builder: (ctx, scrollCtrl) => AddTransactionSheet(
-        existing: existing,
-        defaultType: defaultType,
-        scrollController: scrollCtrl,
-      ),
+    useSafeArea: true,
+    builder: (_) => AddTransactionSheet(
+      existing: existing,
+      defaultType: defaultType,
     ),
   );
 }

@@ -21,7 +21,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   late AnimationController _stagger;
 
   // State
-  bool _darkMode = true;
   bool _haptics = true;
   bool _analytics = false;
   String _language = 'Español';
@@ -143,10 +142,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               color: AppColors.petroleum,
                               title: 'Modo oscuro',
                               subtitle: 'Tema oscuro de la app.',
-                              value: _darkMode,
+                              value: ref.watch(themeModeProvider) == ThemeMode.dark,
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
-                                setState(() => _darkMode = v);
+                                ref.read(themeModeProvider.notifier).state =
+                                    v ? ThemeMode.dark : ThemeMode.light;
                               },
                             ),
                             _ActionItem(

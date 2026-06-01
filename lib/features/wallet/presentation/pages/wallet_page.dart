@@ -4,7 +4,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../subscriptions/domain/models/subscription.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
 import '../providers/wallet_provider.dart';
@@ -174,6 +176,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
     final accounts = ref.watch(accountsProvider);
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     return Container(
       padding: const EdgeInsets.all(3),
@@ -221,7 +224,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                             .copyWith(color: AppColors.textTertiary)),
                     const SizedBox(height: 4),
                     Text(
-                      '\$${total.toStringAsFixed(2)}',
+                      '$currency${total.toStringAsFixed(2)}',
                       style: AppTypography.headingL
                           .copyWith(color: AppColors.textPrimary),
                     ),
@@ -247,7 +250,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                 Expanded(
                   child: _MiniKpi(
                     label: 'Ingresos',
-                    value: '\$${income.toStringAsFixed(0)}',
+                    value: '$currency${income.toStringAsFixed(0)}',
                     color: AppColors.positive,
                     icon: Icons.south_rounded,
                   ),
@@ -256,7 +259,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                 Expanded(
                   child: _MiniKpi(
                     label: 'Gastos',
-                    value: '\$${expenses.toStringAsFixed(0)}',
+                    value: '$currency${expenses.toStringAsFixed(0)}',
                     color: AppColors.negative,
                     icon: Icons.north_rounded,
                   ),
@@ -366,10 +369,11 @@ class _SubscriptionsPreviewSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final upcoming = ref.watch(upcomingSubscriptionsProvider).take(3).toList();
     final total = ref.watch(monthlySubscriptionsTotalProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     return _WalletSection(
       title: 'Suscripciones',
-      subtitle: '\$${total.toStringAsFixed(2)}/mes',
+      subtitle: '$currency${total.toStringAsFixed(2)}/mes',
       icon: Icons.subscriptions_rounded,
       onTap: () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const SubscriptionsPage())),
@@ -394,12 +398,13 @@ class _SubscriptionsPreviewSection extends ConsumerWidget {
   }
 }
 
-class _SubsPreviewTile extends StatelessWidget {
+class _SubsPreviewTile extends ConsumerWidget {
   const _SubsPreviewTile({required this.subscription});
-  final dynamic subscription;
+  final Subscription subscription;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     return Row(
       children: [
         Container(
@@ -417,7 +422,7 @@ class _SubsPreviewTile extends StatelessWidget {
               style:
                   AppTypography.labelL.copyWith(color: AppColors.textPrimary)),
         ),
-        Text('-\$${subscription.amount.toStringAsFixed(2)}',
+        Text('-$currency${subscription.amount.toStringAsFixed(2)}',
             style: AppTypography.labelM.copyWith(
                 color: AppColors.negative, fontWeight: FontWeight.w600)),
         const SizedBox(width: AppSpacing.sm),

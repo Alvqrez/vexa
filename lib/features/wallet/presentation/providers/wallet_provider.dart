@@ -1,7 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:isar/isar.dart';
 import '../../domain/models/wallet_category.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/providers/isar_provider.dart';
+import '../../../../core/data/isar_service.dart';
+
+// ── Isar converters ───────────────────────────────────────────────────────────
+
+IsarWalletCategory _catToIsar(WalletCategory c) => IsarWalletCategory()
+  ..categoryId = c.id
+  ..name = c.name
+  ..colorValue = c.color.toARGB32()
+  ..iconCodePoint = c.icon.codePoint
+  ..typeStr = c.type.name
+  ..sortOrder = c.sortOrder
+  ..isDefault = c.isDefault;
+
+WalletCategory _isarToCat(IsarWalletCategory ic) => WalletCategory(
+      id: ic.categoryId,
+      name: ic.name,
+      color: Color(ic.colorValue),
+      icon: IconData(ic.iconCodePoint, fontFamily: 'MaterialIcons'),
+      type: WalletCategoryType.values.firstWhere(
+        (t) => t.name == ic.typeStr,
+        orElse: () => WalletCategoryType.expense,
+      ),
+      sortOrder: ic.sortOrder,
+      isDefault: ic.isDefault,
+    );
 
 final _defaultCategories = [
   const WalletCategory(
@@ -79,23 +106,53 @@ final _defaultCategories = [
 ];
 
 class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
-  WalletCategoriesNotifier() : super(_defaultCategories);
+  WalletCategoriesNotifier(this._isar) : super(_defaultCategories) {
+    _load();
+  }
+
+  final Isar _isar;
+  bool _isLoaded = false;
+
+  Future<void> _load() async {
+    final records = await _isar.isarWalletCategorys.where().findAll();
+    if (_isLoaded) return;
+    if (records.isEmpty) {
+      await _isar.writeTxn(() => _isar.isarWalletCategorys
+          .putAll(state.map(_catToIsar).toList()));
+    } else {
+      state = records.map(_isarToCat).toList();
+    }
+    _isLoaded = true;
+  }
+
+  Future<void> _persistAll() => _isar.writeTxn(() async {
+        await _isar.isarWalletCategorys.clear();
+        await _isar.isarWalletCategorys
+            .putAll(state.map(_catToIsar).toList());
+      });
 
   void add(WalletCategory category) {
+    _isLoaded = true;
     state = [...state, category];
+    _isar.writeTxn(() => _isar.isarWalletCategorys.put(_catToIsar(category)));
   }
 
   void update(WalletCategory updated) {
+    _isLoaded = true;
     state = [
       for (final c in state) if (c.id == updated.id) updated else c,
     ];
+    _persistAll();
   }
 
   void delete(String id) {
-    state = state.where((c) => c.id != id && c.isDefault == false).toList();
+    _isLoaded = true;
+    state = state.where((c) => c.id != id).toList();
+    _isar.writeTxn(() => _isar.isarWalletCategorys.deleteByCategoryId(id));
   }
 
   void reorder(int oldIndex, int newIndex, WalletCategoryType type) {
+    _isLoaded = true;
     final filtered = state
         .where((c) => c.type == type)
         .toList()
@@ -112,12 +169,13 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
       ...state.where((c) => c.type != type),
       ...reordered,
     ];
+    _persistAll();
   }
 }
 
 final walletCategoriesProvider =
     StateNotifierProvider<WalletCategoriesNotifier, List<WalletCategory>>(
-  (ref) => WalletCategoriesNotifier(),
+  (ref) => WalletCategoriesNotifier(ref.watch(isarProvider)),
 );
 
 final expenseCategoriesProvider = Provider<List<WalletCategory>>((ref) {

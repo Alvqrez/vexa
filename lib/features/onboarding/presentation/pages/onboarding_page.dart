@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 
 // Provider to track if onboarding was shown this session
@@ -62,6 +63,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   void _finish() {
     HapticFeedback.mediumImpact();
     ref.read(onboardingDoneProvider.notifier).state = true;
+    LocalPrefsService.setBool('onboarding_done', true);
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (ctx, anim, secondary) => const MainShell(),

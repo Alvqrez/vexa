@@ -6,6 +6,8 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../providers/home_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
+import '../../../../core/providers/settings_provider.dart';
 
 class SpendingCard extends ConsumerStatefulWidget {
   const SpendingCard({super.key});
@@ -45,8 +47,9 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
   Widget build(BuildContext context) {
     final expenses = ref.watch(monthlyExpensesProvider);
     final income = ref.watch(monthlyIncomeProvider);
-    final ratio = ref.watch(spendingRatioProvider);
-    const limit = 2000.0;
+    final ratio = ref.watch(budgetSpendingRatioProvider);
+    final limit = ref.watch(totalBudgetLimitProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     // ── Double-Bezel outer tray ─────────────────────────────────────────────
     return Container(
@@ -157,13 +160,13 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: '\$${expenses.toStringAsFixed(0)}',
+                          text: '$currency${expenses.toStringAsFixed(0)}',
                           style: AppTypography.headingL.copyWith(
                             color: AppColors.textPrimary,
                           ),
                         ),
                         TextSpan(
-                          text: ' / \$${limit.toStringAsFixed(0)}',
+                          text: ' / $currency${limit.toStringAsFixed(0)}',
                           style: AppTypography.bodyM.copyWith(
                             color: AppColors.textTertiary,
                           ),
@@ -174,14 +177,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                   const SizedBox(height: AppSpacing.lg),
                   _StatRow(
                     label: 'Ingresos',
-                    value: '\$${income.toStringAsFixed(0)}',
+                    value: '$currency${income.toStringAsFixed(0)}',
                     color: AppColors.positive,
                     icon: Icons.south_rounded,
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   _StatRow(
                     label: 'Gastos',
-                    value: '\$${expenses.toStringAsFixed(0)}',
+                    value: '$currency${expenses.toStringAsFixed(0)}',
                     color: AppColors.negative,
                     icon: Icons.north_rounded,
                   ),

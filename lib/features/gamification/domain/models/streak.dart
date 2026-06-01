@@ -26,10 +26,10 @@ class Streak {
   }
 
   static Streak get initial => Streak(
-        currentStreak: 1,
-        longestStreak: 7,
-        lastActiveDate: DateTime.now(),
-        lastTransactionDate: DateTime.now(),
+        currentStreak: 0,
+        longestStreak: 0,
+        lastActiveDate: DateTime(2000),
+        lastTransactionDate: DateTime(2000),
       );
 
   Streak copyWith({

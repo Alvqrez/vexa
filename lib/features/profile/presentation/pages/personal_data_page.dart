@@ -360,7 +360,7 @@ class _SubPageHeader extends StatelessWidget {
                 color: AppColors.textPrimary),
           ),
         ),
-        ?trailing,
+        if (trailing != null) trailing!,
       ],
     );
   }

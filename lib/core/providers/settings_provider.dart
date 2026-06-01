@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Global toggle: when false, all UI animations are disabled (reduced motion).
@@ -8,3 +9,6 @@ final hideAmountsProvider = StateProvider<bool>((ref) => false);
 
 /// Currently selected currency symbol.
 final currencySymbolProvider = StateProvider<String>((ref) => '\$');
+
+/// App theme mode: dark, light, or follow system.
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);

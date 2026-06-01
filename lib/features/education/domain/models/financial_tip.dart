@@ -131,6 +131,48 @@ abstract final class FinancialTips {
           'Para pagar deudas, ordénalas de mayor a menor interés y ataca la más costosa primero. Ahorras más en intereses.',
       category: TipCategory.debt,
     ),
+    FinancialTip(
+      id: 't13',
+      title: 'Esconde dinero de ti mismo',
+      content:
+          'Si eres olvidadizo, deja pequeñas cantidades en lugares inusuales del hogar — el cajón del fondo, dentro de un libro, en un bolsillo viejo. Cuando el dinero apriete, esos "descubrimientos" pueden salvarte el día.',
+      category: TipCategory.saving,
+    ),
+    FinancialTip(
+      id: 't14',
+      title: 'Cuentas con rendimiento',
+      content:
+          'Muchos bancos digitales (Nubank, Mercado Pago, BBVA) ofrecen rendimientos del 8–15% anual sobre tu saldo diario. Abrir una de estas cuentas es gratuito y tu dinero trabaja mientras duermes.',
+      category: TipCategory.investing,
+    ),
+    FinancialTip(
+      id: 't15',
+      title: 'Paga primero, gasta después',
+      content:
+          'Antes de gastar un solo peso del sueldo, transfiere tu ahorro meta. No es lo que queda al final; es lo primero que sale. Así el ahorro deja de ser opcional.',
+      category: TipCategory.habits,
+    ),
+    FinancialTip(
+      id: 't16',
+      title: 'La trampa de las "pequeñas deudas"',
+      content:
+          'Una deuda de \$200 al 40% anual se convierte en \$280 en un año sin pagarla. Las deudas pequeñas con alto interés crecen rápido. Liquídalas antes que las grandes con interés bajo.',
+      category: TipCategory.debt,
+    ),
+    FinancialTip(
+      id: 't17',
+      title: 'Compara antes de renovar',
+      content:
+          'Cuando venza tu seguro, internet o plan celular, busca 3 cotizaciones antes de renovar. La lealtad raramente es recompensada; el mejor precio casi siempre se consigue cambiando o amenazando con hacerlo.',
+      category: TipCategory.saving,
+    ),
+    FinancialTip(
+      id: 't18',
+      title: 'El precio por uso',
+      content:
+          'Antes de comprar algo costoso, divide el precio entre las veces que lo usarás. Una chaqueta de \$300 que usas 100 veces cuesta \$3 por uso; una de \$80 que usas 5 veces, \$16. El costo real no es el precio de etiqueta.',
+      category: TipCategory.mindset,
+    ),
   ];
 
   static FinancialTip get daily {
