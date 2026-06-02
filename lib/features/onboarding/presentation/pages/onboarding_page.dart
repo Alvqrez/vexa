@@ -7,6 +7,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 
 // Provider to track if onboarding was shown this session
@@ -23,6 +24,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     with TickerProviderStateMixin {
   final _pageCtrl = PageController();
   int _page = 0;
+  int _selectedCurrencyIndex = 0;
 
   late AnimationController _bgCtrl;
   late AnimationController _contentCtrl;
@@ -50,20 +52,34 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
 
   void _next() {
     HapticFeedback.selectionClick();
-    if (_page < _slides.length - 1) {
+    if (_page < _slides.length) {
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 380),
         curve: const Cubic(0.22, 1.0, 0.36, 1.0),
       );
     } else {
-      _finish();
+      _complete();
     }
   }
 
-  void _finish() {
+  void _skipToCurrency() {
+    HapticFeedback.selectionClick();
+    _pageCtrl.animateToPage(
+      _slides.length,
+      duration: const Duration(milliseconds: 380),
+      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+    );
+  }
+
+  Future<void> _complete() async {
     HapticFeedback.mediumImpact();
+    final currency = _currencies[_selectedCurrencyIndex];
+    await LocalPrefsService.setString('currency_symbol', currency.symbol);
+    await LocalPrefsService.setString('currency_code', currency.code);
+    ref.read(currencySymbolProvider.notifier).state = currency.symbol;
     ref.read(onboardingDoneProvider.notifier).state = true;
-    LocalPrefsService.setBool('onboarding_done', true);
+    await LocalPrefsService.setBool('onboarding_done', true);
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (ctx, anim, secondary) => const MainShell(),
@@ -130,9 +146,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        if (_page < _slides.length - 1)
+                        if (_page < _slides.length)
                           GestureDetector(
-                            onTap: _finish,
+                            onTap: _skipToCurrency,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 7),
@@ -156,10 +172,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   Expanded(
                     child: PageView.builder(
                       controller: _pageCtrl,
-                      itemCount: _slides.length,
+                      itemCount: _slides.length + 1,
                       onPageChanged: (i) => setState(() => _page = i),
-                      itemBuilder: (context, i) =>
-                          _SlidePage(slide: _slides[i], index: i),
+                      itemBuilder: (context, i) {
+                        if (i < _slides.length) {
+                          return _SlidePage(slide: _slides[i], index: i);
+                        }
+                        return _CurrencySlide(
+                          selectedIndex: _selectedCurrencyIndex,
+                          onSelect: (idx) =>
+                              setState(() => _selectedCurrencyIndex = idx),
+                        );
+                      },
                     ),
                   ),
 
@@ -171,11 +195,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                     child: Column(
                       children: [
                         _PageIndicator(
-                            current: _page, count: _slides.length),
+                            current: _page, count: _slides.length + 1),
                         const SizedBox(height: AppSpacing.xxl),
                         _NextButton(
-                          isLast: _page == _slides.length - 1,
-                          accent: _slides[_page].accentColor,
+                          isLast: _page == _slides.length,
+                          accent: _page < _slides.length
+                              ? _slides[_page].accentColor
+                              : AppColors.emerald,
                           onTap: _next,
                         ),
                       ],
@@ -568,6 +594,187 @@ class _NextButtonState extends State<_NextButton>
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Currency data ─────────────────────────────────────────────────────────────
+
+class _Currency {
+  const _Currency({
+    required this.flag,
+    required this.code,
+    required this.name,
+    required this.symbol,
+  });
+  final String flag;
+  final String code;
+  final String name;
+  final String symbol;
+}
+
+const _currencies = [
+  _Currency(flag: '🇺🇸', code: 'USD', name: 'Dólar americano', symbol: '\$'),
+  _Currency(flag: '🇲🇽', code: 'MXN', name: 'Peso mexicano', symbol: '\$'),
+  _Currency(flag: '🇦🇷', code: 'ARS', name: 'Peso argentino', symbol: '\$'),
+  _Currency(flag: '🇨🇴', code: 'COP', name: 'Peso colombiano', symbol: '\$'),
+  _Currency(flag: '🇨🇱', code: 'CLP', name: 'Peso chileno', symbol: '\$'),
+  _Currency(flag: '🇧🇷', code: 'BRL', name: 'Real brasileño', symbol: 'R\$'),
+  _Currency(flag: '🇵🇪', code: 'PEN', name: 'Sol peruano', symbol: 'S/'),
+  _Currency(flag: '🇺🇾', code: 'UYU', name: 'Peso uruguayo', symbol: '\$U'),
+  _Currency(flag: '🇪🇺', code: 'EUR', name: 'Euro', symbol: '€'),
+  _Currency(flag: '🇬🇧', code: 'GBP', name: 'Libra esterlina', symbol: '£'),
+];
+
+// ── Currency slide ────────────────────────────────────────────────────────────
+
+class _CurrencySlide extends StatelessWidget {
+  const _CurrencySlide({
+    required this.selectedIndex,
+    required this.onSelect,
+  });
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.screenPadding),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.emerald.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.emerald.withValues(alpha: 0.20),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.18),
+                  blurRadius: 40,
+                  spreadRadius: -8,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.currency_exchange_rounded,
+                size: 40, color: AppColors.emerald),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          Text(
+            'Tu moneda',
+            textAlign: TextAlign.center,
+            style: AppTypography.displayM.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.15,
+              letterSpacing: -1.0,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Elige la moneda que usas en tu día a día.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyL.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Flexible(
+            child: ListView.separated(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              itemCount: _currencies.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: AppSpacing.sm),
+              itemBuilder: (context, i) {
+                final c = _currencies[i];
+                final selected = i == selectedIndex;
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    onSelect(i);
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? AppColors.emerald.withValues(alpha: 0.10)
+                          : AppColors.card,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      border: Border.all(
+                        color: selected
+                            ? AppColors.emerald.withValues(alpha: 0.40)
+                            : AppColors.glassBorder,
+                        width: selected ? 1.5 : 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(c.flag,
+                            style: const TextStyle(fontSize: 22)),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                c.name,
+                                style: AppTypography.labelL.copyWith(
+                                    color: AppColors.textPrimary),
+                              ),
+                              Text(
+                                c.code,
+                                style: AppTypography.labelS.copyWith(
+                                    color: AppColors.textTertiary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          c.symbol,
+                          style: AppTypography.headingS.copyWith(
+                            color: selected
+                                ? AppColors.emerald
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                        if (selected)
+                          Padding(
+                            padding:
+                                const EdgeInsets.only(left: AppSpacing.sm),
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: const BoxDecoration(
+                                color: AppColors.emerald,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.check_rounded,
+                                  size: 12,
+                                  color: AppColors.textInverse),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 20),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

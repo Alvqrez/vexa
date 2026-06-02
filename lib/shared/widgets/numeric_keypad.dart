@@ -19,6 +19,8 @@ class NumericKeypad extends StatelessWidget {
     required this.onConfirm,
     this.confirmColor = AppColors.emerald,
     this.currencySymbol = '\$',
+    this.keyHeight = 58,
+    this.confirmHeight = 58,
   });
 
   final String value;
@@ -26,6 +28,8 @@ class NumericKeypad extends StatelessWidget {
   final VoidCallback onConfirm;
   final Color confirmColor;
   final String currencySymbol;
+  final double keyHeight;
+  final double confirmHeight;
 
   static const _rows = [
     ['1', '2', '3'],
@@ -92,6 +96,7 @@ class NumericKeypad extends StatelessWidget {
                         : btnFg,
                     isDot: isDot,
                     isBackspace: isBackspace,
+                    height: keyHeight,
                     onTap: () => _press(key),
                   ),
                 ),
@@ -106,6 +111,7 @@ class NumericKeypad extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
           child: _ConfirmButton(
             color: confirmColor,
+            height: confirmHeight,
             onTap: () {
               HapticFeedback.mediumImpact();
               onConfirm();
@@ -126,6 +132,7 @@ class _KeyButton extends StatefulWidget {
     required this.fg,
     required this.isDot,
     required this.isBackspace,
+    required this.height,
     required this.onTap,
   });
 
@@ -134,6 +141,7 @@ class _KeyButton extends StatefulWidget {
   final Color fg;
   final bool isDot;
   final bool isBackspace;
+  final double height;
   final VoidCallback onTap;
 
   @override
@@ -172,7 +180,7 @@ class _KeyButtonState extends State<_KeyButton>
       child: ScaleTransition(
         scale: _press,
         child: Container(
-          height: 58,
+          height: widget.height,
           decoration: BoxDecoration(
             color: widget.bg,
             borderRadius: BorderRadius.circular(14),
@@ -207,8 +215,9 @@ class _KeyButtonState extends State<_KeyButton>
 // ── Confirm button ─────────────────────────────────────────────────────────────
 
 class _ConfirmButton extends StatefulWidget {
-  const _ConfirmButton({required this.color, required this.onTap});
+  const _ConfirmButton({required this.color, required this.height, required this.onTap});
   final Color color;
+  final double height;
   final VoidCallback onTap;
 
   @override
@@ -247,7 +256,7 @@ class _ConfirmButtonState extends State<_ConfirmButton>
       child: ScaleTransition(
         scale: _press,
         child: Container(
-          height: 58,
+          height: widget.height,
           width: double.infinity,
           decoration: BoxDecoration(
             gradient: LinearGradient(

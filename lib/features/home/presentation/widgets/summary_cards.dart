@@ -48,23 +48,40 @@ class SummaryBalanceCard extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.arrow_upward_rounded,
-              size: 12,
-              color: AppColors.emerald,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '+12% vs el mes anterior',
-              style: AppTypography.labelS.copyWith(
-                color: AppColors.emerald,
-                letterSpacing: 0.2,
-              ),
-            ),
-          ],
+        _MonthBadge(),
+      ],
+    );
+  }
+}
+
+// ── Month-over-month badge ────────────────────────────────────────────────────
+
+class _MonthBadge extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pct = ref.watch(monthOverMonthProvider);
+    if (pct == null) return const SizedBox.shrink();
+
+    final isUp = pct >= 0;
+    final color = isUp ? AppColors.emerald : AppColors.negative;
+    final sign = isUp ? '+' : '';
+    final label = '$sign${pct.toStringAsFixed(1)}% vs el mes anterior';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+          size: 12,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: AppTypography.labelS.copyWith(
+            color: color,
+            letterSpacing: 0.2,
+          ),
         ),
       ],
     );

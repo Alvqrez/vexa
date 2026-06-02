@@ -6,8 +6,13 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/providers/isar_provider.dart';
+import '../../../../core/data/isar_service.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/utils/export_utils.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../gamification/presentation/providers/gamification_provider.dart';
+import '../../../splash/presentation/pages/splash_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
@@ -77,8 +82,59 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
   }
 
-  void _showDeleteConfirm() {
-    showDialog(
+  Future<void> _showResetConfirm() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardElevated,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Reiniciar todos los datos',
+            style: AppTypography.headingS
+                .copyWith(color: AppColors.textPrimary)),
+        content: Text(
+          'Se eliminarán todas tus transacciones y se restaurarán las cuentas a sus valores iniciales. Esta acción no se puede deshacer.',
+          style: AppTypography.bodyM
+              .copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelL
+                    .copyWith(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Reiniciar',
+                style: AppTypography.labelL
+                    .copyWith(color: AppColors.negative)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    HapticFeedback.heavyImpact();
+
+    await ref.read(transactionsProvider.notifier).reset();
+    await ref.read(streakProvider.notifier).reset();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Datos reiniciados correctamente.',
+            style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.card,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+      ),
+    );
+  }
+
+  Future<void> _showDeleteConfirm() async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardElevated,
@@ -88,25 +144,56 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
             style: AppTypography.headingS
                 .copyWith(color: AppColors.textPrimary)),
         content: Text(
-          'Esta acción es irreversible. Se borrarán todos tus datos.',
+          'Esta acción es irreversible. Se borrarán todos tus datos y volverás a la pantalla inicial.',
           style: AppTypography.bodyM
               .copyWith(color: AppColors.textSecondary),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text('Cancelar',
                 style: AppTypography.labelL
                     .copyWith(color: AppColors.textSecondary)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text('Eliminar',
                 style: AppTypography.labelL
                     .copyWith(color: AppColors.negative)),
           ),
         ],
       ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    HapticFeedback.heavyImpact();
+
+    // Reset in-memory state
+    await ref.read(transactionsProvider.notifier).reset();
+    await ref.read(streakProvider.notifier).reset();
+
+    // Clear ALL remaining Isar collections
+    final isar = ref.read(isarProvider);
+    await isar.writeTxn(() async {
+      await isar.isarWalletCategorys.clear();
+      await isar.isarSubscriptions.clear();
+      await isar.isarFinancialGoals.clear();
+      await isar.isarBudgetItems.clear();
+      await isar.isarAccounts.clear();
+    });
+
+    // Wipe all local prefs (clears onboarding_done, transactions_seeded, currency, etc.)
+    await LocalPrefsService.clear();
+
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (ctx, anim, _) => const SplashPage(),
+        transitionsBuilder: (ctx, anim, _, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+      (route) => false,
     );
   }
 
@@ -262,36 +349,75 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                       _reveal(
                         4,
                         5,
-                        GestureDetector(
-                          onTap: _showDeleteConfirm,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.lg),
-                            decoration: BoxDecoration(
-                              color: AppColors.negativeSurface,
-                              borderRadius: BorderRadius.circular(
-                                  AppSpacing.cardRadius),
-                              border: Border.all(
-                                color: AppColors.negative
-                                    .withValues(alpha: 0.20),
-                                width: 0.5,
+                        Column(
+                          children: [
+                            // Reiniciar datos
+                            GestureDetector(
+                              onTap: _showResetConfirm,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF9800)
+                                      .withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(
+                                      AppSpacing.cardRadius),
+                                  border: Border.all(
+                                    color: const Color(0xFFFF9800)
+                                        .withValues(alpha: 0.25),
+                                    width: 0.5,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.restart_alt_rounded,
+                                        color: Color(0xFFFF9800), size: 18),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text(
+                                      'Reiniciar todos los datos',
+                                      style: AppTypography.labelL.copyWith(
+                                          color: const Color(0xFFFF9800)),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.delete_outline_rounded,
-                                    color: AppColors.negative, size: 18),
-                                const SizedBox(width: AppSpacing.sm),
-                                Text(
-                                  'Eliminar cuenta',
-                                  style: AppTypography.labelL.copyWith(
-                                      color: AppColors.negative),
+                            const SizedBox(height: AppSpacing.md),
+                            // Eliminar cuenta
+                            GestureDetector(
+                              onTap: _showDeleteConfirm,
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: AppSpacing.lg),
+                                decoration: BoxDecoration(
+                                  color: AppColors.negativeSurface,
+                                  borderRadius: BorderRadius.circular(
+                                      AppSpacing.cardRadius),
+                                  border: Border.all(
+                                    color: AppColors.negative
+                                        .withValues(alpha: 0.20),
+                                    width: 0.5,
+                                  ),
                                 ),
-                              ],
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.delete_outline_rounded,
+                                        color: AppColors.negative, size: 18),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Text(
+                                      'Eliminar cuenta',
+                                      style: AppTypography.labelL.copyWith(
+                                          color: AppColors.negative),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xxxl),

@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../onboarding/presentation/pages/onboarding_page.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/providers/settings_provider.dart';
 
-class SplashPage extends StatefulWidget {
+class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStateMixin {
   late final AnimationController _logoCtrl;
   late final AnimationController _textCtrl;
   late final AnimationController _exitCtrl;
@@ -71,7 +73,11 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     await _exitCtrl.forward();
     if (!mounted) return;
     final onboardingDone = await LocalPrefsService.getBool('onboarding_done');
+    final savedSymbol = await LocalPrefsService.getString('currency_symbol');
     if (!mounted) return;
+    if (savedSymbol != null) {
+      ref.read(currencySymbolProvider.notifier).state = savedSymbol;
+    }
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (ctx, a1, a2) =>

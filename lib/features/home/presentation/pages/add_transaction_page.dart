@@ -30,11 +30,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late TransactionCategory _category;
   String? _selectedAccountId;
 
-  // Amount managed as a string — driven by NumericKeypad
   String _amountStr = '';
 
-  final _merchantCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
+  final _noteFocusNode = FocusNode();
+  bool _noteExpanded = false;
 
   bool get _isEditing => widget.existing != null;
 
@@ -51,8 +51,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (e != null) {
       _amountStr = e.amount.toStringAsFixed(2);
       _selectedAccountId = e.accountId;
-      _merchantCtrl.text = e.merchant;
       _noteCtrl.text = e.note ?? '';
+      if (e.note != null && e.note!.isNotEmpty) _noteExpanded = true;
     } else {
       final accounts = ref.read(accountsProvider);
       final wallet =
@@ -63,14 +63,46 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   @override
   void dispose() {
-    _merchantCtrl.dispose();
     _noteCtrl.dispose();
+    _noteFocusNode.dispose();
     super.dispose();
   }
 
   double? get _parsedAmount {
     if (_amountStr.isEmpty) return null;
     return double.tryParse(_amountStr);
+  }
+
+  ({String integer, String decimal}) get _splitDisplay {
+    final raw = _amountStr;
+    if (raw.isEmpty) return (integer: '0', decimal: '.00');
+
+    String intPart;
+    String decPart;
+
+    if (raw.contains('.')) {
+      final idx = raw.indexOf('.');
+      intPart = raw.substring(0, idx).isEmpty ? '0' : raw.substring(0, idx);
+      final d = raw.substring(idx + 1);
+      if (d.isEmpty) {
+        decPart = '.';
+      } else if (d.length == 1) {
+        decPart = '.${d}0';
+      } else {
+        decPart = '.$d';
+      }
+    } else {
+      intPart = raw;
+      decPart = '.00';
+    }
+
+    final buf = StringBuffer();
+    for (int i = 0; i < intPart.length; i++) {
+      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
+      buf.write(intPart[i]);
+    }
+
+    return (integer: buf.toString(), decimal: decPart);
   }
 
   void _submit() {
@@ -86,14 +118,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       return;
     }
 
-    final merchant = _merchantCtrl.text.trim().isEmpty
-        ? _category.label
-        : _merchantCtrl.text.trim();
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
 
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
-        merchant: merchant,
+        merchant: _category.label,
         amount: amount,
         type: _type,
         category: _category,
@@ -105,7 +134,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     } else {
       final transaction = Transaction(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        merchant: merchant,
+        merchant: _category.label,
         amount: amount,
         type: _type,
         category: _category,
@@ -134,6 +163,50 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
   }
 
+  void _openCategorySheet() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _CategorySheet(
+        selected: _category,
+        type: _type,
+        onChanged: (c) {
+          setState(() => _category = c);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
+  void _openAccountSheet() {
+    HapticFeedback.selectionClick();
+    final accounts = ref.read(accountsProvider);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AccountSheet(
+        accounts: accounts,
+        selectedId: _selectedAccountId,
+        onChanged: (id) {
+          setState(() => _selectedAccountId = id);
+          Navigator.of(context).pop();
+        },
+      ),
+    );
+  }
+
+  void _toggleNote() {
+    setState(() => _noteExpanded = !_noteExpanded);
+    if (_noteExpanded) {
+      Future.microtask(() => _noteFocusNode.requestFocus());
+    } else {
+      _noteFocusNode.unfocus();
+    }
+  }
+
   Color get _typeColor =>
       _type == TransactionType.expense ? AppColors.negative : AppColors.positive;
 
@@ -143,15 +216,19 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final currency = ref.watch(currencySymbolProvider);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final selectedAccount =
+        accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+    final split = _splitDisplay;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surface : Theme.of(context).scaffoldBackgroundColor,
+        color: isDark
+            ? AppColors.surface
+            : Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppSpacing.cardRadiusL),
         ),
       ),
-      // Pad bottom so content clears safe area + any extra bottom inset
       padding: EdgeInsets.only(bottom: bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -162,138 +239,197 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           // ── Header ───────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenPadding, AppSpacing.xs,
+              AppSpacing.screenPadding, 8,
               AppSpacing.screenPadding, 0,
             ),
-            child: Row(
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                // Type badge (replaces toggle — type comes from FAB selection)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _typeColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-                    border: Border.all(
-                        color: _typeColor.withValues(alpha: 0.30), width: 0.5),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _type == TransactionType.expense
-                            ? Icons.arrow_downward_rounded
-                            : Icons.arrow_upward_rounded,
-                        size: 12,
-                        color: _typeColor,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _type == TransactionType.expense ? 'Gasto' : 'Ingreso',
-                        style: TextStyle(
-                          color: _typeColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
+                // Title — truly centered regardless of badge/button widths
                 Text(
                   _isEditing ? 'Editar transacción' : 'Nueva transacción',
                   style: TextStyle(
-                    color: isDark ? AppColors.textSecondary : const Color(0xFF5A5A7A),
+                    color: isDark
+                        ? AppColors.textSecondary
+                        : const Color(0xFF5A5A7A),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.of(context).pop(),
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: BoxDecoration(
-                      color: AppColors.glassMedium,
-                      shape: BoxShape.circle,
+                // Badge (left) + Close button (right)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _typeColor.withValues(alpha: 0.12),
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.pillRadius),
+                        border: Border.all(
+                            color: _typeColor.withValues(alpha: 0.30),
+                            width: 0.5),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _type == TransactionType.expense
+                                ? Icons.arrow_downward_rounded
+                                : Icons.arrow_upward_rounded,
+                            size: 12,
+                            color: _typeColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _type == TransactionType.expense
+                                ? 'Gasto'
+                                : 'Ingreso',
+                            style: TextStyle(
+                              color: _typeColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Icon(Icons.close_rounded,
-                        color: AppColors.textSecondary, size: 16),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: AppColors.glassMedium,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close_rounded,
+                            color: AppColors.textSecondary, size: 16),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // ── Compact row: [category + account] | [amount] ─────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding, 12,
+              AppSpacing.screenPadding, 0,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _CompactChip(
+                      icon: _category.icon,
+                      label: _category.label,
+                      color: _category.color,
+                      surface: _category.surface,
+                      onTap: _openCategorySheet,
+                    ),
+                    const SizedBox(height: 7),
+                    _CompactChip(
+                      icon: selectedAccount?.icon.iconData ??
+                          Icons.account_balance_wallet_rounded,
+                      label: selectedAccount?.name ?? 'Sin cuenta',
+                      color: selectedAccount?.color ?? AppColors.textTertiary,
+                      surface:
+                          (selectedAccount?.color ?? AppColors.textTertiary)
+                              .withValues(alpha: 0.10),
+                      onTap: _openAccountSheet,
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              currency,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: _typeColor.withValues(alpha: 0.65),
+                                height: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                split.integer,
+                                style: TextStyle(
+                                  fontSize: 44,
+                                  fontWeight: FontWeight.w800,
+                                  color: _typeColor,
+                                  letterSpacing: -1.5,
+                                  height: 1,
+                                ),
+                              ),
+                              Text(
+                                split.decimal,
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: _typeColor.withValues(alpha: 0.45),
+                                  letterSpacing: -0.5,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // ── Amount display ───────────────────────────────────────────────
+          // ── Nota toggle ───────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenPadding,
-              vertical: AppSpacing.lg,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding, 10,
+              AppSpacing.screenPadding, 0,
             ),
-            child: _AmountDisplay(
-              value: _amountStr,
-              typeColor: _typeColor,
-              currencySymbol: currency,
-            ),
-          ),
-
-          // ── Scrollable fields ─────────────────────────────────────────────
-          Flexible(
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenPadding,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Merchant / Description
-                  _SectionLabel('Descripción'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _FormField(
-                    controller: _merchantCtrl,
-                    hint: _category.label,
-                    icon: Icons.storefront_rounded,
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Category
-                  _SectionLabel('Categoría'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _CategoryPicker(
-                    selected: _category,
-                    type: _type,
-                    onChanged: (c) => setState(() => _category = c),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Account
-                  _SectionLabel('Cuenta'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _AccountPicker(
-                    accounts: accounts,
-                    selectedId: _selectedAccountId,
-                    onChanged: (id) =>
-                        setState(() => _selectedAccountId = id),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-
-                  // Notes
-                  _SectionLabel('Notas (opcional)'),
-                  const SizedBox(height: AppSpacing.sm),
-                  _NotesField(controller: _noteCtrl),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-              ),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              alignment: Alignment.topCenter,
+              child: _noteExpanded
+                  ? _ExpandedNote(
+                      controller: _noteCtrl,
+                      focusNode: _noteFocusNode,
+                      onCollapse: _toggleNote,
+                    )
+                  : _NoteButton(onTap: _toggleNote),
             ),
           ),
 
           // ── Keypad ────────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenPadding, 0,
-              AppSpacing.screenPadding, AppSpacing.md,
+              AppSpacing.screenPadding, 8,
+              AppSpacing.screenPadding, AppSpacing.sm,
             ),
             child: NumericKeypad(
               value: _amountStr,
@@ -301,6 +437,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               onConfirm: _submit,
               confirmColor: _typeColor,
               currencySymbol: currency,
+              keyHeight: 42,
+              confirmHeight: 46,
             ),
           ),
         ],
@@ -332,148 +470,231 @@ class _DragHandle extends StatelessWidget {
   }
 }
 
-// ── Amount display ────────────────────────────────────────────────────────────
+// ── Compact chip ──────────────────────────────────────────────────────────────
 
-class _AmountDisplay extends StatelessWidget {
-  const _AmountDisplay({
-    required this.value,
-    required this.typeColor,
-    required this.currencySymbol,
-  });
-
-  final String value;
-  final Color typeColor;
-  final String currencySymbol;
-
-  @override
-  Widget build(BuildContext context) {
-    final display = value.isEmpty ? '0' : value;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
-      children: [
-        Text(
-          currencySymbol,
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
-            color: typeColor.withValues(alpha: 0.70),
-            height: 1,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          display,
-          style: TextStyle(
-            fontSize: 52,
-            fontWeight: FontWeight.w800,
-            color: typeColor,
-            letterSpacing: -2,
-            height: 1,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        color: AppColors.textTertiary,
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0.4,
-      ),
-    );
-  }
-}
-
-// ── Form field (merchant) ─────────────────────────────────────────────────────
-
-class _FormField extends StatelessWidget {
-  const _FormField({
-    required this.controller,
-    required this.hint,
+class _CompactChip extends StatelessWidget {
+  const _CompactChip({
     required this.icon,
+    required this.label,
+    required this.color,
+    required this.surface,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color surface;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 3),
+            Icon(Icons.expand_more_rounded,
+                size: 13, color: color.withValues(alpha: 0.70)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Note button ("+ Nota") ────────────────────────────────────────────────────
+
+class _NoteButton extends StatelessWidget {
+  const _NoteButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: 13, color: AppColors.textTertiary),
+              SizedBox(width: 3),
+              Text(
+                'Nota',
+                style: TextStyle(
+                  color: AppColors.textTertiary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Expanded note input ───────────────────────────────────────────────────────
+
+class _ExpandedNote extends StatelessWidget {
+  const _ExpandedNote({
+    required this.controller,
+    required this.focusNode,
+    required this.onCollapse,
   });
 
   final TextEditingController controller;
-  final String hint;
+  final FocusNode focusNode;
+  final VoidCallback onCollapse;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 12, top: 11),
+            child: Icon(Icons.notes_rounded,
+                size: 15, color: AppColors.textTertiary),
+          ),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              maxLines: 3,
+              minLines: 1,
+              style: const TextStyle(
+                  color: AppColors.textPrimary, fontSize: 13),
+              decoration: const InputDecoration(
+                hintText: 'Añade una nota…',
+                hintStyle:
+                    TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                border: InputBorder.none,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                alignLabelWithHint: true,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: onCollapse,
+            child: const Padding(
+              padding: EdgeInsets.only(right: 8, top: 8),
+              child: Icon(Icons.close_rounded,
+                  size: 15, color: AppColors.textTertiary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Sheet item ────────────────────────────────────────────────────────────────
+
+class _SheetItem extends StatelessWidget {
+  const _SheetItem({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.surface,
+    required this.isSelected,
+    required this.onTap,
+  });
+
   final IconData icon;
+  final String label;
+  final Color color;
+  final Color surface;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder),
-      ),
-      child: TextField(
-        controller: controller,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle:
-              const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.screenPadding,
+          vertical: 3,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: isSelected ? surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(
+            color: isSelected
+                ? color.withValues(alpha: 0.30)
+                : Colors.transparent,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: color),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? color : AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight:
+                      isSelected ? FontWeight.w600 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(Icons.check_circle_rounded, size: 20, color: color),
+          ],
         ),
       ),
     );
   }
 }
 
-// ── Notes field ───────────────────────────────────────────────────────────────
+// ── Category bottom sheet ─────────────────────────────────────────────────────
 
-class _NotesField extends StatelessWidget {
-  const _NotesField({required this.controller});
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder),
-      ),
-      child: TextField(
-        controller: controller,
-        maxLines: 3,
-        minLines: 1,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-        decoration: const InputDecoration(
-          hintText: 'ej. Comida con amigos, pago de libros…',
-          hintStyle:
-              TextStyle(color: AppColors.textTertiary, fontSize: 14),
-          prefixIcon: Icon(Icons.notes_rounded, size: 18, color: AppColors.textTertiary),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-          alignLabelWithHint: true,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Category picker ───────────────────────────────────────────────────────────
-
-class _CategoryPicker extends StatelessWidget {
-  const _CategoryPicker({
+class _CategorySheet extends StatelessWidget {
+  const _CategorySheet({
     required this.selected,
     required this.type,
     required this.onChanged,
@@ -492,60 +713,62 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: _categories.map((c) {
-        final isSelected = c == selected;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(c);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            curve: Curves.easeOut,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.surface
+            : Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _DragHandle(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding,
+              AppSpacing.sm,
+              AppSpacing.screenPadding,
+              AppSpacing.md,
             ),
-            decoration: BoxDecoration(
-              color: isSelected ? c.surface : AppColors.card,
-              borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-              border: Border.all(
-                color: isSelected
-                    ? c.color.withValues(alpha: 0.40)
-                    : AppColors.glassBorder,
+            child: Text(
+              'Categoría',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(c.icon,
-                    size: 14,
-                    color: isSelected ? c.color : AppColors.textTertiary),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  c.label,
-                  style: TextStyle(
-                    color: isSelected ? c.color : AppColors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
           ),
-        );
-      }).toList(),
+          ..._categories.map((c) => _SheetItem(
+                icon: c.icon,
+                label: c.label,
+                color: c.color,
+                surface: c.surface,
+                isSelected: c == selected,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onChanged(c);
+                },
+              )),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ),
     );
   }
 }
 
-// ── Account picker ────────────────────────────────────────────────────────────
+// ── Account bottom sheet ──────────────────────────────────────────────────────
 
-class _AccountPicker extends StatelessWidget {
-  const _AccountPicker({
+class _AccountSheet extends StatelessWidget {
+  const _AccountSheet({
     required this.accounts,
     required this.selectedId,
     required this.onChanged,
@@ -557,66 +780,54 @@ class _AccountPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: accounts.map((account) {
-        final isSelected = account.id == selectedId;
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(
-              right: account == accounts.last ? 0 : AppSpacing.sm,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.surface
+            : Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _DragHandle(),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding,
+              AppSpacing.sm,
+              AppSpacing.screenPadding,
+              AppSpacing.md,
             ),
-            child: GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                onChanged(account.id);
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(
-                  vertical: AppSpacing.md,
-                  horizontal: AppSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? account.color.withValues(alpha: 0.12)
-                      : AppColors.card,
-                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                  border: Border.all(
-                    color: isSelected
-                        ? account.color.withValues(alpha: 0.40)
-                        : AppColors.glassBorder,
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      account.icon.iconData,
-                      size: 20,
-                      color: isSelected
-                          ? account.color
-                          : AppColors.textTertiary,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      account.name,
-                      style: TextStyle(
-                        color: isSelected
-                            ? account.color
-                            : AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+            child: Text(
+              'Cuenta',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-        );
-      }).toList(),
+          ...accounts.map((account) => _SheetItem(
+                icon: account.icon.iconData,
+                label: account.name,
+                color: account.color,
+                surface: account.color.withValues(alpha: 0.10),
+                isSelected: account.id == selectedId,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onChanged(account.id);
+                },
+              )),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+      ),
     );
   }
 }

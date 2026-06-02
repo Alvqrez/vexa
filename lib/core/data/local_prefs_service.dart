@@ -63,4 +63,12 @@ class LocalPrefsService {
     _cache![key] = value;
     await _flush();
   }
+
+  static Future<void> clear() async {
+    _cache = {};
+    try {
+      final file = await _getFile();
+      if (file.existsSync()) await file.delete();
+    } catch (_) {}
+  }
 }

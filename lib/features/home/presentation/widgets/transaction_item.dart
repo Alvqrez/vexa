@@ -74,11 +74,29 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
         .delete(widget.transaction);
   }
 
+  void _openNote() {
+    HapticFeedback.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _NoteSheet(note: widget.transaction.note!),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
     final cat = t.category;
     final isIncome = t.isIncome;
+
+    // Find the account matching this transaction
+    final accounts = ref.watch(accountsProvider);
+    final account = t.accountId != null
+        ? accounts.where((a) => a.id == t.accountId).firstOrNull
+        : null;
+
+    final hasNote = t.note != null && t.note!.isNotEmpty;
 
     Widget tile = GestureDetector(
       onTapDown: (_) => _press.reverse(),
@@ -126,18 +144,23 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          Text(cat.label,
-                              style: AppTypography.labelS
-                                  .copyWith(color: AppColors.textTertiary)),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 3, height: 3,
-                            decoration: const BoxDecoration(
-                              color: AppColors.textTertiary,
-                              shape: BoxShape.circle,
+                          if (account != null) ...[
+                            Text(
+                              account.name,
+                              style: AppTypography.labelS.copyWith(
+                                color: account.color,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 6),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 3, height: 3,
+                              decoration: const BoxDecoration(
+                                color: AppColors.textTertiary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           Text(_relativeDate(t.date),
                               style: AppTypography.labelS
                                   .copyWith(color: AppColors.textTertiary)),
@@ -167,15 +190,36 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      t.formattedAmount,
-                      style: AppTypography.labelL.copyWith(
-                        color: isIncome
-                            ? AppColors.positive
-                            : AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (hasNote)
+                          GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              _openNote();
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.only(right: 5),
+                              child: Icon(
+                                Icons.notes_rounded,
+                                size: 13,
+                                color: AppColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        Text(
+                          t.formattedAmount,
+                          style: AppTypography.labelL.copyWith(
+                            color: isIncome
+                                ? AppColors.positive
+                                : AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Container(
@@ -248,6 +292,80 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
     if (diff.inDays == 1) return 'Ayer';
     return 'Hace ${diff.inDays}d';
+  }
+}
+
+// ── Note sheet ────────────────────────────────────────────────────────────────
+
+class _NoteSheet extends StatelessWidget {
+  const _NoteSheet({required this.note});
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 32),
+      decoration: BoxDecoration(
+        color: AppColors.cardElevated,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(
+                  top: AppSpacing.md, bottom: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.xl,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.notes_rounded,
+                      size: 15,
+                      color: AppColors.textTertiary,
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text(
+                      'Nota',
+                      style: AppTypography.labelM.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  note,
+                  style: AppTypography.bodyM.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -71,10 +71,11 @@ class BudgetItemWithSpent {
   final BudgetItem item;
   final double spent;
 
-  double get ratio => (spent / item.limit).clamp(0.0, 1.0);
-  double get remaining => item.limit - spent;
-  bool get isWarning => ratio >= 0.80;
-  bool get isOver => spent > item.limit;
+  double get ratio =>
+      item.limit == 0 ? 0.0 : (spent / item.limit).clamp(0.0, 1.0);
+  double get remaining => item.limit == 0 ? 0.0 : item.limit - spent;
+  bool get isWarning => item.limit == 0 ? false : ratio >= 0.80;
+  bool get isOver => item.limit == 0 ? false : spent > item.limit;
 }
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
@@ -154,6 +155,14 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
     _isar.writeTxn(() => _isar.isarBudgetItems.put(_budgetToIsar(item)));
   }
 
+  void update(BudgetItem item) {
+    _isLoaded = true;
+    state = [
+      for (final b in state) if (b.id == item.id) item else b,
+    ];
+    _persistAll();
+  }
+
   void updateLimit(String id, double newLimit) {
     _isLoaded = true;
     state = [
@@ -189,7 +198,10 @@ final budgetWithSpentProvider = Provider<List<BudgetItemWithSpent>>((ref) {
 
 /// Total budget limit across all categories.
 final totalBudgetLimitProvider = Provider<double>((ref) {
-  return ref.watch(budgetProvider).fold(0.0, (sum, b) => sum + b.limit);
+  return ref
+      .watch(budgetProvider)
+      .where((b) => b.limit > 0)
+      .fold(0.0, (sum, b) => sum + b.limit);
 });
 
 /// Total spent this month across all budget categories.

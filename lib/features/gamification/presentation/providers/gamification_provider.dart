@@ -60,6 +60,16 @@ class StreakNotifier extends StateNotifier<Streak> {
     state = state.copyWith(lastTransactionDate: DateTime.now());
     _save();
   }
+
+  Future<void> reset() async {
+    state = Streak.initial;
+    await LocalPrefsService.setInt('streak_current', 0);
+    await LocalPrefsService.setInt('streak_longest', 0);
+    await LocalPrefsService.setString(
+        'streak_last_active', DateTime(2000).toIso8601String());
+    await LocalPrefsService.setString(
+        'streak_last_tx', DateTime(2000).toIso8601String());
+  }
 }
 
 final streakProvider = StateNotifierProvider<StreakNotifier, Streak>(

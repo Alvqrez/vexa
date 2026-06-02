@@ -300,9 +300,9 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                             AppSpacing.screenPadding,
                             120,
                           ),
-                          itemCount: _countItems(grouped),
+                          itemCount: grouped.length,
                           itemBuilder: (context, index) =>
-                              _buildItem(context, index, grouped),
+                              _buildGroup(context, index, grouped),
                         ),
                 ),
               ],
@@ -313,42 +313,52 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     );
   }
 
-  int _countItems(Map<String, List<Transaction>> groups) {
-    return groups.entries
-        .fold(0, (sum, e) => sum + 1 + e.value.length);
-  }
-
-  Widget _buildItem(
+  Widget _buildGroup(
     BuildContext context,
     int index,
     Map<String, List<Transaction>> groups,
   ) {
-    int offset = 0;
-    for (final entry in groups.entries) {
-      if (index == offset) {
-        // Date header
-        return Padding(
+    final entry = groups.entries.elementAt(index);
+    final txns = entry.value;
+    return Column(
+      key: ValueKey('group_${entry.key}'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
           padding: const EdgeInsets.only(
               top: AppSpacing.lg, bottom: AppSpacing.sm),
           child: _DateHeader(label: entry.key),
-        );
-      }
-      offset++;
-      for (int i = 0; i < entry.value.length; i++) {
-        if (index == offset) {
-          final t = entry.value[i];
-          final isFirst = i == 0;
-          final isLast = i == entry.value.length - 1;
-          return _TransactionGroupItem(
-            transaction: t,
-            isFirst: isFirst,
-            isLast: isLast,
-          );
-        }
-        offset++;
-      }
-    }
-    return const SizedBox.shrink();
+        ),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          ),
+          child: Column(
+            children: [
+              for (int i = 0; i < txns.length; i++) ...[
+                TransactionItem(
+                  key: ValueKey(txns[i].id),
+                  transaction: txns[i],
+                  isLast: i == txns.length - 1,
+                ),
+                if (i < txns.length - 1)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md),
+                    child: Divider(
+                      height: 1,
+                      thickness: 0.5,
+                      color: AppColors.glassBorder,
+                    ),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -624,48 +634,6 @@ class _DateHeader extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-// ── Transaction group item ────────────────────────────────────────────────────
-
-class _TransactionGroupItem extends StatelessWidget {
-  const _TransactionGroupItem({
-    required this.transaction,
-    required this.isFirst,
-    required this.isLast,
-  });
-  final Transaction transaction;
-  final bool isFirst;
-  final bool isLast;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-          top: isFirst ? const Radius.circular(AppSpacing.cardRadius) : Radius.zero,
-          bottom: isLast ? const Radius.circular(AppSpacing.cardRadius) : Radius.zero,
-        ),
-        border: Border(
-          left: BorderSide(color: AppColors.glassBorder, width: 0.5),
-          right: BorderSide(color: AppColors.glassBorder, width: 0.5),
-          top: isFirst
-              ? BorderSide(color: AppColors.glassBorder, width: 0.5)
-              : BorderSide.none,
-          bottom: isLast
-              ? BorderSide(color: AppColors.glassBorder, width: 0.5)
-              : BorderSide(
-                  color: AppColors.glassBorder.withValues(alpha: 0.5),
-                  width: 0.5),
-        ),
-      ),
-      child: TransactionItem(
-        transaction: transaction,
-        isLast: isLast,
-      ),
     );
   }
 }

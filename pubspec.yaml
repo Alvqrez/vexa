@@ -30,29 +30,29 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icon/vexa_icon.png"
+  image_path: "assets/icon/icon.png"
   min_sdk_android: 21
   adaptive_icon_background: "#09090F"
-  adaptive_icon_foreground: "assets/icon/vexa_icon.png"
+  adaptive_icon_foreground: "assets/icon/icon.png"
   web:
     generate: true
-    image_path: "assets/icon/vexa_icon.png"
+    image_path: "assets/icon/icon.png"
   windows:
     generate: true
-    image_path: "assets/icon/vexa_icon.png"
+    image_path: "assets/icon/icon.png"
   macos:
     generate: true
-    image_path: "assets/icon/vexa_icon.png"
+    image_path: "assets/icon/icon.png"
 
 flutter_native_splash:
   color: "#09090F"
-  image: assets/icon/vexa_icon.png
+  image: assets/icon/icon.png
   android: true
   ios: true
   web: false
   android_12:
     color: "#09090F"
-    image: assets/icon/vexa_icon.png
+    image: assets/icon/icon.png
     icon_background_color: "#09090F"
 
 flutter:

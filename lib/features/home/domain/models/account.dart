@@ -36,13 +36,18 @@ class Account {
   final Color color;
   final AccountIcon icon;
 
-  Account copyWith({double? balance}) {
+  Account copyWith({
+    String? name,
+    double? balance,
+    Color? color,
+    AccountIcon? icon,
+  }) {
     return Account(
       id: id,
-      name: name,
+      name: name ?? this.name,
       balance: balance ?? this.balance,
-      color: color,
-      icon: icon,
+      color: color ?? this.color,
+      icon: icon ?? this.icon,
     );
   }
 }

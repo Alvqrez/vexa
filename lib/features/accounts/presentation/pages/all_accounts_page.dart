@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,18 @@ import 'account_detail_page.dart';
 
 class AllAccountsPage extends ConsumerWidget {
   const AllAccountsPage({super.key});
+
+  void _showAddAccount(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _AddAccountSheet(
+        onSave: (account) =>
+            ref.read(accountsProvider.notifier).addAccount(account),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -80,6 +93,27 @@ class AllAccountsPage extends ConsumerWidget {
                                 .copyWith(color: AppColors.textPrimary),
                           ),
                           const Spacer(),
+                          // Add account button
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              _showAddAccount(context, ref);
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.emerald.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                    color: AppColors.emerald.withValues(alpha: 0.25),
+                                    width: 0.5),
+                              ),
+                              child: const Icon(Icons.add_rounded,
+                                  size: 18, color: AppColors.emerald),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
                           // Drag-to-reorder hint badge
                           Container(
                             padding: const EdgeInsets.symmetric(
@@ -298,6 +332,355 @@ class _AccountRow extends StatelessWidget {
                 size: 20, color: AppColors.textTertiary),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Add Account sheet ─────────────────────────────────────────────────────────
+
+const _accountColors = [
+  Color(0xFF1565C0),
+  Color(0xFF820AD1),
+  Color(0xFF00D68F),
+  Color(0xFFFF6B35),
+  Color(0xFFE91E63),
+  Color(0xFF00BCD4),
+  Color(0xFFFF9800),
+  Color(0xFF4CAF50),
+  Color(0xFF9C27B0),
+  Color(0xFFF44336),
+];
+
+class _AddAccountSheet extends StatefulWidget {
+  const _AddAccountSheet({required this.onSave});
+  final ValueChanged<Account> onSave;
+
+  @override
+  State<_AddAccountSheet> createState() => _AddAccountSheetState();
+}
+
+class _AddAccountSheetState extends State<_AddAccountSheet> {
+  final _nameCtrl = TextEditingController();
+  final _balanceCtrl = TextEditingController(text: '0');
+  AccountIcon _icon = AccountIcon.bank;
+  int _colorIndex = 0;
+
+  static const _icons = AccountIcon.values;
+  static const _iconLabels = [
+    'Banco', 'Tarjeta', 'Cartera', 'Ahorros', 'Inversión', 'Efectivo'
+  ];
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _balanceCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    final balance = double.tryParse(
+            _balanceCtrl.text.replaceAll(',', '.')) ??
+        0.0;
+    final account = Account(
+      id: DateTime.now().millisecondsSinceEpoch.toString() +
+          Random().nextInt(9999).toString(),
+      name: name,
+      balance: balance,
+      color: _accountColors[_colorIndex],
+      icon: _icon,
+    );
+    widget.onSave(account);
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 24 + bottom),
+      decoration: BoxDecoration(
+        color: AppColors.cardElevated,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle + title
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.glassMedium,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
+            child: Text('Nueva cuenta',
+                style: AppTypography.headingS
+                    .copyWith(color: AppColors.textPrimary)),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name field
+                _Label('Nombre'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _nameCtrl,
+                  autofocus: true,
+                  style: AppTypography.labelL
+                      .copyWith(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: 'Ej. BBVA, Efectivo…',
+                    hintStyle: AppTypography.labelL
+                        .copyWith(color: AppColors.textTertiary),
+                    filled: true,
+                    fillColor: AppColors.glassLight,
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.glassBorder, width: 0.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.glassBorder, width: 0.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.emerald, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Balance field
+                _Label('Saldo inicial'),
+                const SizedBox(height: AppSpacing.sm),
+                TextField(
+                  controller: _balanceCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true),
+                  style: AppTypography.labelL
+                      .copyWith(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    prefixText: '\$ ',
+                    prefixStyle: AppTypography.labelL
+                        .copyWith(color: AppColors.textSecondary),
+                    filled: true,
+                    fillColor: AppColors.glassLight,
+                    border: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.glassBorder, width: 0.5),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.glassBorder, width: 0.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      borderSide: BorderSide(
+                          color: AppColors.emerald, width: 1.5),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Icon selector
+                _Label('Tipo'),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 68,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _icons.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: AppSpacing.sm),
+                    itemBuilder: (context, i) {
+                      final selected = _icon == _icons[i];
+                      final color = _accountColors[_colorIndex];
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _icon = _icons[i]);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? color.withValues(alpha: 0.15)
+                                : AppColors.glassLight,
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.cardRadius),
+                            border: Border.all(
+                              color: selected
+                                  ? color.withValues(alpha: 0.40)
+                                  : AppColors.glassBorder,
+                              width: selected ? 1.5 : 0.5,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _icons[i].iconData,
+                                size: 20,
+                                color: selected
+                                    ? color
+                                    : AppColors.textTertiary,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _iconLabels[i],
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: selected
+                                      ? color
+                                      : AppColors.textTertiary,
+                                  fontWeight: selected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Color selector
+                _Label('Color'),
+                const SizedBox(height: AppSpacing.sm),
+                SizedBox(
+                  height: 36,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _accountColors.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(width: AppSpacing.sm),
+                    itemBuilder: (context, i) {
+                      final selected = i == _colorIndex;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _colorIndex = i);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _accountColors[i],
+                            shape: BoxShape.circle,
+                            border: selected
+                                ? Border.all(
+                                    color: AppColors.textPrimary, width: 2.5)
+                                : null,
+                            boxShadow: selected
+                                ? [
+                                    BoxShadow(
+                                      color: _accountColors[i]
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 8,
+                                      spreadRadius: -2,
+                                    )
+                                  ]
+                                : null,
+                          ),
+                          child: selected
+                              ? const Icon(Icons.check_rounded,
+                                  size: 16, color: Colors.white)
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
+
+                // Save button
+                GestureDetector(
+                  onTap: _save,
+                  child: Container(
+                    width: double.infinity,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppColors.emerald,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.emerald.withValues(alpha: 0.30),
+                          blurRadius: 20,
+                          spreadRadius: -4,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Crear cuenta',
+                        style: AppTypography.labelL.copyWith(
+                          color: AppColors.textInverse,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Label extends StatelessWidget {
+  const _Label(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.labelS.copyWith(
+        color: AppColors.textSecondary,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

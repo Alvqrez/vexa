@@ -106,29 +106,38 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
   }
 }
 
-class _MonthlyBadge extends StatelessWidget {
+class _MonthlyBadge extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pct = ref.watch(monthOverMonthProvider);
+    if (pct == null) return const SizedBox.shrink();
+
+    final isUp = pct >= 0;
+    final color = isUp ? AppColors.emerald : AppColors.negative;
+    final surface = isUp ? AppColors.emeraldSurface : AppColors.negativeSurface;
+    final glow = isUp ? AppColors.emeraldGlow : AppColors.negative.withValues(alpha: 0.25);
+    final sign = isUp ? '+' : '';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.emeraldSurface,
+        color: surface,
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: AppColors.emeraldGlow, width: 0.5),
+        border: Border.all(color: glow, width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            Icons.arrow_upward_rounded,
+          Icon(
+            isUp ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
             size: 11,
-            color: AppColors.emerald,
+            color: color,
           ),
           const SizedBox(width: 4),
           Text(
-            '12.1% vs el mes anterior.',
+            '$sign${pct.toStringAsFixed(1)}% vs el mes anterior.',
             style: AppTypography.labelS.copyWith(
-              color: AppColors.emerald,
+              color: color,
               letterSpacing: 0.2,
             ),
           ),

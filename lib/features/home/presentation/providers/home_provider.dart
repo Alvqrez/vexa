@@ -5,6 +5,7 @@ import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
+import '../../../../core/data/local_prefs_service.dart';
 
 // ── Account stats ─────────────────────────────────────────────────────────────
 
@@ -158,6 +159,29 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     state = list;
     _persistAll();
   }
+
+  Future<void> addAccount(Account account) async {
+    _isLoaded = true;
+    state = [...state, account];
+    await _persistAll();
+  }
+
+  Future<void> reset() async {
+    _isLoaded = true;
+    state = const [
+      Account(
+        id: 'wallet_default',
+        name: 'Cartera',
+        balance: 0,
+        color: Color(0xFF00D68F),
+        icon: AccountIcon.wallet,
+      ),
+    ];
+    await _isar.writeTxn(() async {
+      await _isar.isarAccounts.clear();
+      await _isar.isarAccounts.putAll(state.map(_accountToIsar).toList());
+    });
+  }
 }
 
 final accountsProvider =
@@ -178,12 +202,16 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
 
   Future<void> _load() async {
     final records = await _isar.isarTransactions.where().findAll();
-    if (_isLoaded) return; // don't overwrite if user added transactions first
+    if (_isLoaded) return;
     if (records.isEmpty) {
-      // First launch: seed DB with current state (not _initial,
-      // in case the user already added transactions before _load completed).
-      await _isar.writeTxn(() => _isar.isarTransactions
-          .putAll(state.map(_txToIsar).toList()));
+      final hasSeeded = await LocalPrefsService.getBool('transactions_seeded');
+      if (!hasSeeded) {
+        await LocalPrefsService.setBool('transactions_seeded', true);
+        await _isar.writeTxn(() => _isar.isarTransactions
+            .putAll(state.map(_txToIsar).toList()));
+      } else {
+        state = [];
+      }
     } else {
       state = records.map(_isarToTx).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
@@ -308,6 +336,13 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
     }
     _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
   }
+
+  Future<void> reset() async {
+    _isLoaded = true;
+    state = [];
+    await _isar.writeTxn(() => _isar.isarTransactions.clear());
+    await _ref.read(accountsProvider.notifier).reset();
+  }
 }
 
 final transactionsProvider =
@@ -354,6 +389,31 @@ final monthlySavingsProvider = Provider<double>((ref) {
   final income = ref.watch(monthlyIncomeProvider);
   final expenses = ref.watch(monthlyExpensesProvider);
   return income - expenses;
+});
+
+/// Percentage change in income vs the previous month.
+/// Returns null when there is no previous-month data to compare against.
+final monthOverMonthProvider = Provider<double?>((ref) {
+  final now = DateTime.now();
+  final transactions = ref.watch(transactionsProvider);
+  final thisIncome = ref.watch(monthlyIncomeProvider);
+
+  var lastYear = now.year;
+  var lastMonth = now.month - 1;
+  if (lastMonth == 0) {
+    lastMonth = 12;
+    lastYear--;
+  }
+
+  final lastIncome = transactions
+      .where((t) =>
+          t.isIncome &&
+          t.date.year == lastYear &&
+          t.date.month == lastMonth)
+      .fold(0.0, (s, t) => s + t.amount);
+
+  if (lastIncome == 0) return null;
+  return ((thisIncome - lastIncome) / lastIncome) * 100;
 });
 
 /// Updated by [totalBudgetLimitProvider] in budget_provider.dart.
