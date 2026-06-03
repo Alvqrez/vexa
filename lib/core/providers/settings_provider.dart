@@ -20,11 +20,18 @@ final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
 // ── User profile ──────────────────────────────────────────────────────────────
 
 class UserProfile {
-  const UserProfile({this.name = '', this.email = '', this.phone = '', this.birthdate = ''});
+  const UserProfile({
+    this.name = '',
+    this.email = '',
+    this.phone = '',
+    this.birthdate = '',
+    this.photoPath,
+  });
   final String name;
   final String email;
   final String phone;
   final String birthdate;
+  final String? photoPath;
 
   String get firstName {
     final n = name.trim();
@@ -36,12 +43,20 @@ class UserProfile {
     return n.isEmpty ? '?' : n[0].toUpperCase();
   }
 
-  UserProfile copyWith({String? name, String? email, String? phone, String? birthdate}) =>
+  UserProfile copyWith({
+    String? name,
+    String? email,
+    String? phone,
+    String? birthdate,
+    String? photoPath,
+    bool clearPhoto = false,
+  }) =>
       UserProfile(
         name: name ?? this.name,
         email: email ?? this.email,
         phone: phone ?? this.phone,
         birthdate: birthdate ?? this.birthdate,
+        photoPath: clearPhoto ? null : (photoPath ?? this.photoPath),
       );
 }
 
@@ -55,15 +70,25 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
     final email = await LocalPrefsService.getString('profile_email') ?? '';
     final phone = await LocalPrefsService.getString('profile_phone') ?? '';
     final birthdate = await LocalPrefsService.getString('profile_birthdate') ?? '';
-    state = UserProfile(name: name, email: email, phone: phone, birthdate: birthdate);
+    final photoPath = await LocalPrefsService.getString('profile_photo_path');
+    state = UserProfile(
+        name: name, email: email, phone: phone, birthdate: birthdate, photoPath: photoPath);
   }
 
-  Future<void> update({String? name, String? email, String? phone, String? birthdate}) async {
-    state = state.copyWith(name: name, email: email, phone: phone, birthdate: birthdate);
+  Future<void> update({
+    String? name,
+    String? email,
+    String? phone,
+    String? birthdate,
+    String? photoPath,
+  }) async {
+    state = state.copyWith(
+        name: name, email: email, phone: phone, birthdate: birthdate, photoPath: photoPath);
     if (name != null) await LocalPrefsService.setString('profile_name', name);
     if (email != null) await LocalPrefsService.setString('profile_email', email);
     if (phone != null) await LocalPrefsService.setString('profile_phone', phone);
     if (birthdate != null) await LocalPrefsService.setString('profile_birthdate', birthdate);
+    if (photoPath != null) await LocalPrefsService.setString('profile_photo_path', photoPath);
   }
 }
 

@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
@@ -34,12 +37,83 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
       duration: const Duration(milliseconds: 900),
     )..forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final p = ref.read(userProfileProvider);
-      _nameController.text = p.name;
-      _emailController.text = p.email;
-      _phoneController.text = p.phone;
-      _birthdateController.text = p.birthdate;
+      _populateControllers(ref.read(userProfileProvider));
     });
+  }
+
+  void _populateControllers(UserProfile p) {
+    _nameController.text = p.name;
+    _emailController.text = p.email;
+    _phoneController.text = p.phone;
+    _birthdateController.text = p.birthdate;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _pickPhoto() async {
+    HapticFeedback.selectionClick();
+    final source = await _showSourceSheet();
+    if (source == null) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: source,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+    if (picked == null || !mounted) return;
+
+    // Copy to app documents so the path survives gallery clean-ups
+    final dir = await getApplicationDocumentsDirectory();
+    final dest = File('${dir.path}/profile_photo.jpg');
+    await File(picked.path).copy(dest.path);
+
+    await ref.read(userProfileProvider.notifier).update(photoPath: dest.path);
+    if (mounted) setState(() {});
+  }
+
+  Future<ImageSource?> _showSourceSheet() async {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text('Foto de perfil',
+                style: AppTypography.headingS
+                    .copyWith(color: AppColors.textPrimary)),
+            const SizedBox(height: AppSpacing.xl),
+            _SourceOption(
+              icon: Icons.photo_library_outlined,
+              label: 'Elegir de la galería',
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            _SourceOption(
+              icon: Icons.camera_alt_outlined,
+              label: 'Tomar una foto',
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -86,6 +160,11 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
 
   @override
   Widget build(BuildContext context) {
+    // Re-populate controllers if the provider finishes loading after this page opens.
+    ref.listen<UserProfile>(userProfileProvider, (_, profile) {
+      if (!_editing) _populateControllers(profile);
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
@@ -136,34 +215,15 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
 
                       // Avatar
                       _reveal(1, Center(
-                        child: Stack(
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(24),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    AppColors.petroleum,
-                                    AppColors.emeraldDim
-                                  ],
-                                ),
+                        child: GestureDetector(
+                          onTap: _pickPhoto,
+                          child: Stack(
+                            children: [
+                              _ProfileAvatar(
+                                profile: ref.watch(userProfileProvider),
+                                size: 80,
+                                radius: 24,
                               ),
-                              child: Center(
-                                child: Text(
-                                  ref.watch(userProfileProvider).initial,
-                                  style: AppTypography.headingM.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 32,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (_editing)
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -185,7 +245,8 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
                                   ),
                                 ),
                               ),
-                          ],
+                            ],
+                          ),
                         ),
                       )),
                       const SizedBox(height: AppSpacing.xxl),
@@ -404,6 +465,103 @@ class _ProfileSubBg extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Reusable profile avatar (photo or gradient+initial) ───────────────────────
+
+class _ProfileAvatar extends StatelessWidget {
+  const _ProfileAvatar({
+    required this.profile,
+    this.size = 40,
+    this.radius = 12,
+  });
+
+  final UserProfile profile;
+  final double size;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final path = profile.photoPath;
+    final file = path != null ? File(path) : null;
+    final hasPhoto = file != null && file.existsSync();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: hasPhoto
+            ? Image.file(file, fit: BoxFit.cover)
+            : Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.petroleum, AppColors.emeraldDim],
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    profile.initial,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: size * 0.4,
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+// ── Source picker option row ──────────────────────────────────────────────────
+
+class _SourceOption extends StatelessWidget {
+  const _SourceOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.glassLight,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.emeraldSurface,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, size: 18, color: AppColors.emerald),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Text(label,
+                style: AppTypography.labelL
+                    .copyWith(color: AppColors.textPrimary)),
+          ],
+        ),
       ),
     );
   }

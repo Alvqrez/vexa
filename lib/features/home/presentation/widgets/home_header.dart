@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -540,7 +541,11 @@ class _AvatarButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final initial = ref.watch(userProfileProvider).initial;
+    final profile = ref.watch(userProfileProvider);
+    final path = profile.photoPath;
+    final file = path != null ? File(path) : null;
+    final hasPhoto = file != null && file.existsSync();
+
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -548,26 +553,32 @@ class _AvatarButton extends ConsumerWidget {
           MaterialPageRoute(builder: (_) => const ProfilePage()),
         );
       },
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.petroleum, AppColors.emeraldDim],
-          ),
-        ),
-        child: Center(
-          child: Text(
-            initial,
-            style: AppTypography.labelL.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-              fontSize: 15,
-            ),
-          ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          width: 40,
+          height: 40,
+          child: hasPhoto
+              ? Image.file(file, fit: BoxFit.cover)
+              : Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppColors.petroleum, AppColors.emeraldDim],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      profile.initial,
+                      style: AppTypography.labelL.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ),
         ),
       ),
     );
