@@ -23,7 +23,6 @@ class AnalysisPage extends StatefulWidget {
 class _AnalysisPageState extends State<AnalysisPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
-  int _period = 1; // 0=Sem, 1=Mes, 2=Año
 
   static const _sectionCount = 9;
 
@@ -77,13 +76,7 @@ class _AnalysisPageState extends State<AnalysisPage>
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const SizedBox(height: AppSpacing.lg),
-                    _reveal(
-                      0,
-                      _AnalysisHeader(
-                        period: _period,
-                        onPeriodChanged: (p) => setState(() => _period = p),
-                      ),
-                    ),
+                    _reveal(0, const _AnalysisHeader()),
                     const SizedBox(height: AppSpacing.xxl),
                     _reveal(1, const _OverviewRow()),
                     const SizedBox(height: AppSpacing.md),
@@ -166,10 +159,7 @@ class _AnalysisBg extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _AnalysisHeader extends StatelessWidget {
-  const _AnalysisHeader(
-      {required this.period, required this.onPeriodChanged});
-  final int period;
-  final ValueChanged<int> onPeriodChanged;
+  const _AnalysisHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +183,6 @@ class _AnalysisHeader extends StatelessWidget {
             ],
           ),
         ),
-        // Calendar shortcut
         GestureDetector(
           onTap: () => Navigator.push(
             context,
@@ -203,7 +192,6 @@ class _AnalysisHeader extends StatelessWidget {
           child: Container(
             width: 36,
             height: 36,
-            margin: const EdgeInsets.only(right: AppSpacing.sm),
             decoration: BoxDecoration(
               color: AppColors.glassLight,
               borderRadius: BorderRadius.circular(11),
@@ -214,57 +202,7 @@ class _AnalysisHeader extends StatelessWidget {
                 size: 17, color: AppColors.textSecondary),
           ),
         ),
-        _PeriodPills(selected: period, onChanged: onPeriodChanged),
       ],
-    );
-  }
-}
-
-class _PeriodPills extends StatelessWidget {
-  const _PeriodPills({required this.selected, required this.onChanged});
-  final int selected;
-  final ValueChanged<int> onChanged;
-
-  static const _labels = ['Sem', 'Mes', 'Año'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(_labels.length, (i) {
-          final active = i == selected;
-          return GestureDetector(
-            onTap: () => onChanged(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-              decoration: BoxDecoration(
-                color: active ? AppColors.emerald : Colors.transparent,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                _labels[i],
-                style: AppTypography.labelS.copyWith(
-                  color: active
-                      ? AppColors.textInverse
-                      : AppColors.textTertiary,
-                  fontWeight:
-                      active ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
     );
   }
 }
@@ -308,7 +246,7 @@ class _OverviewRow extends ConsumerWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _StatTile(
-            label: 'Neto',
+            label: 'Ahorrado',
             value: _fmt(savings, currency),
             icon: Icons.savings_outlined,
             color: AppColors.petroleum,
@@ -431,6 +369,7 @@ class _BalanceLineChartCardState
   @override
   Widget build(BuildContext context) {
     final transactions = ref.watch(transactionsProvider);
+    final currency = ref.watch(currencySymbolProvider);
     final spots = _buildSpots(transactions);
     final minY = spots.map((s) => s.y).reduce(math.min) - 50;
     final maxY = spots.map((s) => s.y).reduce(math.max) + 50;
@@ -506,7 +445,7 @@ class _BalanceLineChartCardState
                         AppColors.cardElevated,
                     getTooltipItems: (spots) => spots
                         .map((s) => LineTooltipItem(
-                              '\$${s.y.toStringAsFixed(0)}',
+                              '$currency${s.y.toStringAsFixed(0)}',
                               AppTypography.labelM.copyWith(
                                   color: AppColors.emerald,
                                   fontWeight: FontWeight.w600),
@@ -612,7 +551,7 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
               height: 120,
               child: CustomPaint(
                 painter: _BarChartPainter(
-                    data: data, progress: _barAnim.value),
+                    data: data, progress: _barAnim.value, currentLabel: currentLabel),
                 size: Size.infinite,
               ),
             ),
@@ -649,9 +588,14 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
 }
 
 class _BarChartPainter extends CustomPainter {
-  const _BarChartPainter({required this.data, required this.progress});
+  const _BarChartPainter({
+    required this.data,
+    required this.progress,
+    required this.currentLabel,
+  });
   final List<({String label, double value})> data;
   final double progress;
+  final String currentLabel;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -661,7 +605,7 @@ class _BarChartPainter extends CustomPainter {
 
     for (int i = 0; i < data.length; i++) {
       final d = data[i];
-      final isCurrent = d.label == 'May';
+      final isCurrent = d.label == currentLabel;
       final barH = (d.value / maxVal) * size.height * progress;
       final x = gap * i + gap / 2;
       final rect = RRect.fromRectAndRadius(
@@ -712,7 +656,8 @@ class _BarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BarChartPainter old) => old.progress != progress;
+  bool shouldRepaint(_BarChartPainter old) =>
+      old.progress != progress || old.currentLabel != currentLabel;
 }
 
 // ── Category pie chart (fl_chart) ─────────────────────────────────────────────
@@ -1390,13 +1335,16 @@ class _InterpretCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final income = ref.watch(monthlyIncomeProvider);
+    final expenses = ref.watch(monthlyExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
     final currency = ref.watch(currencySymbolProvider);
 
-    final isPositive = savings >= 0;
+    final net = income - expenses;
+    final isPositive = net >= 0;
     final preview = isPositive
         ? 'Estás ahorrando $currency${savings.toStringAsFixed(0)} este mes.'
-        : 'Tus gastos superan tus ingresos por $currency${(-savings).toStringAsFixed(0)}.';
+        : 'Tus gastos superan tus ingresos por $currency${(-net).toStringAsFixed(0)}.';
 
     return GestureDetector(
       onTap: () {
@@ -1482,7 +1430,6 @@ class _InterpretSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
-    final savings = ref.watch(monthlySavingsProvider);
     final txns = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
 
@@ -1507,8 +1454,10 @@ class _InterpretSheet extends ConsumerWidget {
         ? null
         : catTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
 
+    // net = income − expenses (real available cash); savings = transfers to savings accounts
+    final net = income - expenses;
     final savingsRate =
-        income > 0 ? ((savings / income) * 100).round() : 0;
+        income > 0 ? ((net / income) * 100).round() : 0;
     final expenseDelta = prevExpenses > 0
         ? (((expenses - prevExpenses) / prevExpenses) * 100).round()
         : null;
@@ -1516,7 +1465,7 @@ class _InterpretSheet extends ConsumerWidget {
         ? (((income - prevIncome) / prevIncome) * 100).round()
         : null;
 
-    final isPositive = savings >= 0;
+    final isPositive = net >= 0;
 
     final insights = <_InterpretInsight>[
       _InterpretInsight(
@@ -1526,8 +1475,8 @@ class _InterpretSheet extends ConsumerWidget {
         color: isPositive ? AppColors.positive : AppColors.negative,
         title: isPositive ? 'Balance positivo' : 'Balance negativo',
         body: isPositive
-            ? 'Este mes llevas ${_fmt(income, currency)} en ingresos y ${_fmt(expenses, currency)} en gastos. Estás ahorrando ${_fmt(savings, currency)}.'
-            : 'Este mes llevas ${_fmt(income, currency)} en ingresos pero ${_fmt(expenses, currency)} en gastos. Estás gastando ${_fmt(-savings, currency)} más de lo que ingresas.',
+            ? 'Este mes llevas ${_fmt(income, currency)} en ingresos y ${_fmt(expenses, currency)} en gastos. Neto disponible: ${_fmt(net, currency)}.'
+            : 'Este mes llevas ${_fmt(income, currency)} en ingresos pero ${_fmt(expenses, currency)} en gastos. Estás gastando ${_fmt(-net, currency)} más de lo que ingresas.',
       ),
       if (expenseDelta != null)
         _InterpretInsight(

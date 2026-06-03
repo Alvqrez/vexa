@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import '../../domain/models/subscription.dart';
 import '../../../home/domain/models/transaction.dart';
+import '../../../../core/utils/id_gen.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
@@ -97,7 +98,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
 
   void chargeSubscription(Subscription s) {
     final transaction = Transaction(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: generateId(),
       merchant: s.name,
       amount: s.amount,
       type: TransactionType.expense,

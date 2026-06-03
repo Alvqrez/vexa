@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/transaction.dart';
 import '../pages/transaction_detail_page.dart';
 import '../pages/add_transaction_page.dart';
@@ -120,6 +121,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     final t = widget.transaction;
     final cat = t.category;
     final isIncome = t.isIncome;
+    final currency = ref.watch(currencySymbolProvider);
 
     // Find the account matching this transaction
     final accounts = ref.watch(accountsProvider);
@@ -241,7 +243,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                             ),
                           ),
                         Text(
-                          t.formattedAmount,
+                          t.formattedWith(currency),
                           style: AppTypography.labelL.copyWith(
                             color: isIncome
                                 ? AppColors.positive

@@ -9,6 +9,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/subscription.dart';
 import '../providers/subscriptions_provider.dart';
+import '../../../../core/utils/id_gen.dart';
 import '../../../home/domain/models/transaction.dart';
 
 class SubscriptionsPage extends StatefulWidget {
@@ -885,7 +886,7 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
       return;
     }
     ref.read(subscriptionsProvider.notifier).add(Subscription(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: generateId(),
           name: name,
           amount: amount,
           nextBillingDate: _billingDate,

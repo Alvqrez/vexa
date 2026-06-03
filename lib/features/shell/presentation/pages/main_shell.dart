@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/utils/id_gen.dart';
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/widgets/expandable_fab.dart';
 import '../../../home/presentation/pages/home_page.dart';
@@ -20,6 +21,7 @@ import '../../../../core/providers/settings_provider.dart';
 import '../../../home/domain/models/account.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/recurring_transaction.dart';
+import '../../../home/domain/models/transfer_record.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -131,38 +133,44 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 
   Future<void> _processRecurring() async {
-    final all = await RecurringTransaction.loadAll();
-    if (all.isEmpty) return;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    bool changed = false;
-    final updated = <RecurringTransaction>[];
-    for (var r in all) {
-      if (!r.isActive) { updated.add(r); continue; }
-      var current = r;
-      while (!current.nextDate.isAfter(today)) {
-        final t = Transaction(
-          id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}',
-          merchant: current.merchant,
-          amount: current.amount,
-          type: TransactionType.values.firstWhere(
-              (v) => v.name == current.type,
-              orElse: () => TransactionType.expense),
-          category: TransactionCategory.values.firstWhere(
-              (v) => v.name == current.category,
-              orElse: () => TransactionCategory.other),
-          date: current.nextDate,
-          accountId: current.accountId,
-          note: current.note,
-        );
-        ref.read(transactionsProvider.notifier).add(t);
-        current = current.copyWith(
-            nextDate: current.frequency.nextDate(current.nextDate));
-        changed = true;
+    try {
+      final all = await RecurringTransaction.loadAll();
+      if (all.isEmpty) return;
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      bool changed = false;
+      final updated = <RecurringTransaction>[];
+      for (var r in all) {
+        if (!r.isActive) { updated.add(r); continue; }
+        var current = r;
+        try {
+          while (!current.nextDate.isAfter(today)) {
+            final t = Transaction(
+              id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}',
+              merchant: current.merchant,
+              amount: current.amount,
+              type: TransactionType.values.firstWhere(
+                  (v) => v.name == current.type,
+                  orElse: () => TransactionType.expense),
+              category: TransactionCategory.values.firstWhere(
+                  (v) => v.name == current.category,
+                  orElse: () => TransactionCategory.other),
+              date: current.nextDate,
+              accountId: current.accountId,
+              note: current.note,
+            );
+            ref.read(transactionsProvider.notifier).add(t);
+            current = current.copyWith(
+                nextDate: current.frequency.nextDate(current.nextDate));
+            changed = true;
+          }
+        } catch (_) {
+          // Skip this recurring entry if processing fails; keep its current state.
+        }
+        updated.add(current);
       }
-      updated.add(current);
-    }
-    if (changed) await RecurringTransaction.saveAll(updated);
+      if (changed) await RecurringTransaction.saveAll(updated);
+    } catch (_) {}
   }
 
   Future<void> _endTutorial() async {
@@ -466,7 +474,7 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
       return;
     }
     ref.read(goalsProvider.notifier).add(FinancialGoal(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: generateId(),
           title: title,
           icon: _icon,
           color: _color,
@@ -946,6 +954,15 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     if (toAccount.isSavings) {
       ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
     }
+    // Save audit record
+    final record = TransferRecord(
+      id: generateId(),
+      fromAccountId: _fromId!,
+      toAccountId: _toId!,
+      amount: amount,
+      date: DateTime.now(),
+    );
+    ref.read(transferHistoryProvider.notifier).add(record);
     Navigator.of(context).pop();
   }
 

@@ -9,6 +9,9 @@ import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/account.dart';
 import '../../../home/presentation/widgets/transaction_item.dart';
 import '../../../home/presentation/pages/add_transaction_page.dart';
+import '../../../../core/utils/id_gen.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../../../home/domain/models/transfer_record.dart';
 
 class AccountDetailPage extends ConsumerWidget {
   const AccountDetailPage({super.key, required this.accountId});
@@ -19,6 +22,11 @@ class AccountDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final stats = ref.watch(accountStatsProvider(accountId));
     final color = stats.account.color;
+    final currency = ref.watch(currencySymbolProvider);
+    final allTransfers = ref.watch(transferHistoryProvider);
+    final transfers = allTransfers
+        .where((r) => r.fromAccountId == accountId || r.toAccountId == accountId)
+        .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -162,7 +170,7 @@ class AccountDetailPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '\$${stats.balance.toStringAsFixed(2)}',
+                            '$currency${stats.balance.toStringAsFixed(2)}',
                             style: AppTypography.displayM
                                 .copyWith(color: AppColors.textPrimary),
                           ),
@@ -176,8 +184,7 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Ingresos',
-                              value:
-                                  '+\$${stats.income.toStringAsFixed(0)}',
+                              value: '+$currency${stats.income.toStringAsFixed(0)}',
                               color: AppColors.positive,
                               icon: Icons.arrow_downward_rounded,
                             ),
@@ -186,8 +193,7 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Egresos',
-                              value:
-                                  '-\$${stats.expenses.toStringAsFixed(0)}',
+                              value: '-$currency${stats.expenses.toStringAsFixed(0)}',
                               color: AppColors.negative,
                               icon: Icons.arrow_upward_rounded,
                             ),
@@ -197,8 +203,8 @@ class AccountDetailPage extends ConsumerWidget {
                             child: _StatCard(
                               label: 'Neto',
                               value: stats.net >= 0
-                                  ? '+\$${stats.net.toStringAsFixed(0)}'
-                                  : '-\$${stats.net.abs().toStringAsFixed(0)}',
+                                  ? '+$currency${stats.net.toStringAsFixed(0)}'
+                                  : '-$currency${stats.net.abs().toStringAsFixed(0)}',
                               color: stats.net >= 0
                                   ? AppColors.emerald
                                   : AppColors.negative,
@@ -239,6 +245,27 @@ class AccountDetailPage extends ConsumerWidget {
                                       bottom: AppSpacing.sm),
                                   child: TransactionItem(transaction: t),
                                 )),
+
+                      // Transfers section
+                      if (transfers.isNotEmpty) ...[
+                        const SizedBox(height: AppSpacing.xl),
+                        Text(
+                          'Transferencias',
+                          style: AppTypography.headingS
+                              .copyWith(color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        ...transfers.map((r) => Padding(
+                              padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm),
+                              child: _TransferRow(
+                                record: r,
+                                accountId: accountId,
+                                accounts: ref.read(accountsProvider),
+                                currency: currency,
+                              ),
+                            )),
+                      ],
 
                       const SizedBox(height: 120),
                     ]),
@@ -485,7 +512,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
     }
 
     final tx = Transaction(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: generateId(),
       merchant: 'Corrección de saldo',
       amount: diff.abs(),
       type: diff > 0 ? TransactionType.income : TransactionType.expense,
@@ -614,6 +641,115 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Transfer row ──────────────────────────────────────────────────────────────
+
+class _TransferRow extends StatelessWidget {
+  const _TransferRow({
+    required this.record,
+    required this.accountId,
+    required this.accounts,
+    required this.currency,
+  });
+
+  final TransferRecord record;
+  final String accountId;
+  final List<Account> accounts;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOutgoing = record.fromAccountId == accountId;
+    final otherAccountId =
+        isOutgoing ? record.toAccountId : record.fromAccountId;
+    final otherAccount =
+        accounts.where((a) => a.id == otherAccountId).firstOrNull;
+    final color =
+        isOutgoing ? AppColors.negative : AppColors.positive;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(
+        record.date.year, record.date.month, record.date.day);
+    final String dateLabel;
+    if (day == today) {
+      dateLabel = 'Hoy';
+    } else if (day == today.subtract(const Duration(days: 1))) {
+      dateLabel = 'Ayer';
+    } else {
+      dateLabel =
+          '${record.date.day}/${record.date.month}/${record.date.year}';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              isOutgoing
+                  ? Icons.arrow_outward_rounded
+                  : Icons.arrow_downward_rounded,
+              size: 18,
+              color: color,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isOutgoing
+                      ? 'Transferencia enviada'
+                      : 'Transferencia recibida',
+                  style: AppTypography.labelL
+                      .copyWith(color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isOutgoing
+                      ? 'A: ${otherAccount?.name ?? 'Cuenta desconocida'}'
+                      : 'De: ${otherAccount?.name ?? 'Cuenta desconocida'}',
+                  style: AppTypography.labelS
+                      .copyWith(color: AppColors.textTertiary),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isOutgoing ? '-' : '+'}$currency${record.amount.toStringAsFixed(2)}',
+                style: AppTypography.labelL.copyWith(
+                    color: color, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                dateLabel,
+                style:
+                    AppTypography.labelS.copyWith(color: AppColors.textTertiary),
+              ),
+            ],
           ),
         ],
       ),

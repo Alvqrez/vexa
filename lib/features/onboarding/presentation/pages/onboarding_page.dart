@@ -10,9 +10,6 @@ import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 
-// Provider to track if onboarding was shown this session
-final onboardingDoneProvider = StateProvider<bool>((ref) => false);
-
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
 
@@ -85,7 +82,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     await LocalPrefsService.setString('currency_code', currency.code);
     ref.read(currencySymbolProvider.notifier).state = currency.symbol;
     ref.read(currencyCodeProvider.notifier).state = currency.code;
-    ref.read(onboardingDoneProvider.notifier).state = true;
     await LocalPrefsService.setBool('onboarding_done', true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(

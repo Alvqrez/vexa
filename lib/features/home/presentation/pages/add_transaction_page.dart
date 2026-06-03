@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/utils/id_gen.dart';
 import '../../domain/models/recurring_transaction.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
@@ -36,6 +37,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   String _amountStr = '';
 
+  final _merchantCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final _noteFocusNode = FocusNode();
   bool _noteExpanded = false;
@@ -78,18 +80,24 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _selectedAccountId = e.accountId;
       _noteCtrl.text = e.note ?? '';
       if (e.note != null && e.note!.isNotEmpty) _noteExpanded = true;
+      // Pre-populate merchant only when it differs from the category label
+      // (avoids showing "Comida" as the editable text for old transactions)
+      _merchantCtrl.text =
+          e.merchant != e.category.label ? e.merchant : '';
     } else {
       final accounts = ref.read(accountsProvider);
       final wallet =
           accounts.where((a) => a.icon == AccountIcon.wallet).firstOrNull;
       _selectedAccountId = wallet?.id ?? accounts.firstOrNull?.id;
-      // Override with last-used account if still valid
+      // Override with last-used account — read accounts fresh after the async
+      // gap to avoid using the snapshot captured in initState.
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final lastId = await LocalPrefsService.getString('last_account_id');
-        if (lastId != null &&
-            accounts.any((a) => a.id == lastId) &&
-            mounted) {
-          setState(() => _selectedAccountId = lastId);
+        if (lastId != null && mounted) {
+          final currentAccounts = ref.read(accountsProvider);
+          if (currentAccounts.any((a) => a.id == lastId)) {
+            setState(() => _selectedAccountId = lastId);
+          }
         }
       });
     }
@@ -97,6 +105,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   @override
   void dispose() {
+    _merchantCtrl.dispose();
     _noteCtrl.dispose();
     _noteFocusNode.dispose();
     super.dispose();
@@ -181,10 +190,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     }
 
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
+    final merchantText = _merchantCtrl.text.trim();
+    final merchant = merchantText.isEmpty ? _category.label : merchantText;
 
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
-        merchant: _category.label,
+        merchant: merchant,
         amount: amount,
         type: _type,
         category: _category,
@@ -196,8 +207,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       ref.read(transactionsProvider.notifier).update(updated, widget.existing!);
     } else {
       final transaction = Transaction(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        merchant: _category.label,
+        id: generateId(),
+        merchant: merchant,
         amount: amount,
         type: _type,
         category: _category,
@@ -207,6 +218,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       );
       ref.read(transactionsProvider.notifier).add(transaction);
       ref.read(streakProvider.notifier).recordTransaction();
+      ref.read(achievementsProvider.notifier).checkAndUnlock();
     }
 
     if (_selectedAccountId != null) {
@@ -323,9 +335,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final next = _recurrenceFreq.nextDate(_selectedDate.isAfter(now)
         ? _selectedDate
         : DateTime(now.year, now.month, now.day, now.hour, now.minute));
+    final merchantText = _merchantCtrl.text.trim();
     existing.add(RecurringTransaction(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      merchant: _category.label,
+      id: generateId(),
+      merchant: merchantText.isEmpty ? _category.label : merchantText,
       amount: _parsedAmount!,
       type: _type.name,
       category: _category.name,
@@ -549,6 +562,43 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // ── Merchant / concept field ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding, 8,
+                AppSpacing.screenPadding, 0),
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: AppColors.glassLight,
+                borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+                border: Border.all(
+                    color: AppColors.glassBorder, width: 0.5),
+              ),
+              child: TextField(
+                controller: _merchantCtrl,
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500),
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: '¿Dónde? (opcional)',
+                  hintStyle: const TextStyle(
+                      color: AppColors.textTertiary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400),
+                  prefixIcon: const Icon(Icons.storefront_outlined,
+                      size: 15, color: AppColors.textTertiary),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 4),
+                ),
+              ),
             ),
           ),
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
 
 class QuickStats extends ConsumerWidget {
@@ -13,13 +14,14 @@ class QuickStats extends ConsumerWidget {
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     return Row(
       children: [
         Expanded(
           child: _StatTile(
             label: 'Ingresos',
-            value: _compact(income),
+            value: _compact(income, currency),
             icon: Icons.south_rounded,
             color: AppColors.positive,
             surface: AppColors.positiveSurface,
@@ -29,7 +31,7 @@ class QuickStats extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Gastos',
-            value: _compact(expenses),
+            value: _compact(expenses, currency),
             icon: Icons.north_rounded,
             color: AppColors.negative,
             surface: AppColors.negativeSurface,
@@ -39,7 +41,7 @@ class QuickStats extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Ahorrado',
-            value: _compact(savings),
+            value: _compact(savings, currency),
             icon: Icons.savings_outlined,
             color: AppColors.petroleum,
             surface: AppColors.petroleumSurface,
@@ -49,9 +51,9 @@ class QuickStats extends ConsumerWidget {
     );
   }
 
-  String _compact(double v) {
-    if (v >= 1000) return '\$${(v / 1000).toStringAsFixed(1)}k';
-    return '\$${v.toStringAsFixed(0)}';
+  String _compact(double v, String symbol) {
+    if (v >= 1000) return '$symbol${(v / 1000).toStringAsFixed(1)}k';
+    return '$symbol${v.toStringAsFixed(0)}';
   }
 }
 

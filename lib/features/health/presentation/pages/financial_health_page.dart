@@ -8,6 +8,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_health.dart';
 import '../providers/health_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../../core/providers/settings_provider.dart';
 
 class FinancialHealthPage extends ConsumerStatefulWidget {
   const FinancialHealthPage({super.key});
@@ -45,7 +46,9 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
     final health = ref.watch(financialHealthProvider);
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
-    final savings = ref.watch(monthlySavingsProvider);
+    final currency = ref.watch(currencySymbolProvider);
+    // Display net (income − expenses) as the saving metric on this page
+    final savings = income - expenses;
     final color = _colorFor(health.status);
 
     return Scaffold(
@@ -168,7 +171,7 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                           Expanded(
                             child: _MonthStat(
                               label: 'Ingresos',
-                              value: '\$${income.toStringAsFixed(0)}',
+                              value: '$currency${income.toStringAsFixed(0)}',
                               color: AppColors.positive,
                               icon: Icons.arrow_downward_rounded,
                             ),
@@ -177,7 +180,7 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                           Expanded(
                             child: _MonthStat(
                               label: 'Egresos',
-                              value: '\$${expenses.toStringAsFixed(0)}',
+                              value: '$currency${expenses.toStringAsFixed(0)}',
                               color: AppColors.negative,
                               icon: Icons.arrow_upward_rounded,
                             ),
@@ -185,10 +188,10 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                           const SizedBox(width: AppSpacing.md),
                           Expanded(
                             child: _MonthStat(
-                              label: 'Ahorro',
+                              label: 'Neto',
                               value: savings >= 0
-                                  ? '+\$${savings.toStringAsFixed(0)}'
-                                  : '-\$${savings.abs().toStringAsFixed(0)}',
+                                  ? '+$currency${savings.toStringAsFixed(0)}'
+                                  : '-$currency${savings.abs().toStringAsFixed(0)}',
                               color: savings >= 0
                                   ? AppColors.emerald
                                   : AppColors.negative,

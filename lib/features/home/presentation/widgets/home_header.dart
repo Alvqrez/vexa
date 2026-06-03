@@ -159,6 +159,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   Widget build(BuildContext context) {
     final prediction = ref.watch(predictionProvider);
     final txns = ref.watch(transactionsProvider);
+    final currency = ref.watch(currencySymbolProvider);
     final tip = _dailyTip();
 
     final now = DateTime.now();
@@ -173,7 +174,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
           color: prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
           title: 'Predicción del mes',
           body: prediction.isOnTrack
-              ? 'Vas bien. Ahorro estimado: +\$${prediction.predictedSavings.toStringAsFixed(0)}'
+              ? 'Vas bien. Ahorro estimado: +$currency${prediction.predictedSavings.toStringAsFixed(0)}'
               : 'Atención: gastos superarán ingresos este mes.',
           time: 'hoy',
           unread: true,

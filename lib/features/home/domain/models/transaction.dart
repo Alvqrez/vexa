@@ -80,8 +80,6 @@ class Transaction {
 
   bool get isIncome => type == TransactionType.income;
 
-  String get formattedAmount => formattedWith('\$');
-
   String formattedWith(String symbol) {
     final sign = isIncome ? '+' : '-';
     return '$sign$symbol${amount.toStringAsFixed(2)}';

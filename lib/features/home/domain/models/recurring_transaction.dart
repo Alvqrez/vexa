@@ -12,13 +12,22 @@ enum RecurrenceFrequency {
         yearly => 'Anual',
       };
 
-  DateTime nextDate(DateTime from) => switch (this) {
-        weekly => from.add(const Duration(days: 7)),
-        monthly => DateTime(from.year, from.month + 1, from.day,
-            from.hour, from.minute),
-        yearly => DateTime(from.year + 1, from.month, from.day,
-            from.hour, from.minute),
-      };
+  DateTime nextDate(DateTime from) {
+    switch (this) {
+      case weekly:
+        return from.add(const Duration(days: 7));
+      case monthly:
+        final nextMonth = from.month == 12 ? 1 : from.month + 1;
+        final nextYear = from.month == 12 ? from.year + 1 : from.year;
+        final lastDayOfNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
+        return DateTime(nextYear, nextMonth,
+            from.day.clamp(1, lastDayOfNextMonth), from.hour, from.minute);
+      case yearly:
+        final lastDayOfMonth = DateTime(from.year + 1, from.month + 1, 0).day;
+        return DateTime(from.year + 1, from.month,
+            from.day.clamp(1, lastDayOfMonth), from.hour, from.minute);
+    }
+  }
 }
 
 class RecurringTransaction {

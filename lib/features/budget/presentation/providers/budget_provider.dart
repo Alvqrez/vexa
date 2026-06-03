@@ -50,8 +50,6 @@ class BudgetItem {
   final TransactionCategory? category;
   final double limit;
 
-  double get surface => 0; // placeholder — use withValues in UI
-
   BudgetItem copyWith({double? limit}) => BudgetItem(
         id: id,
         name: name,

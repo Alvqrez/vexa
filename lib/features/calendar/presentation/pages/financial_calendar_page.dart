@@ -9,6 +9,7 @@ import '../../../../core/constants/app_curves.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../../core/providers/settings_provider.dart';
 
 class FinancialCalendarPage extends ConsumerStatefulWidget {
   const FinancialCalendarPage({super.key});
@@ -288,12 +289,13 @@ class _NavBtn extends StatelessWidget {
 
 // ── Month summary ─────────────────────────────────────────────────────────────
 
-class _MonthSummary extends StatelessWidget {
+class _MonthSummary extends ConsumerWidget {
   const _MonthSummary({required this.dayMap});
   final Map<int, List<Transaction>> dayMap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     final allTxns = dayMap.values.expand((l) => l).toList();
     final income =
         allTxns.where((t) => t.isIncome).fold(0.0, (s, t) => s + t.amount);
@@ -306,19 +308,19 @@ class _MonthSummary extends StatelessWidget {
         Expanded(
             child: _SummaryPill(
                 label: 'Ingresos',
-                value: '\$${income.toStringAsFixed(0)}',
+                value: '$currency${income.toStringAsFixed(0)}',
                 color: AppColors.positive)),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
             child: _SummaryPill(
                 label: 'Gastos',
-                value: '\$${expenses.toStringAsFixed(0)}',
+                value: '$currency${expenses.toStringAsFixed(0)}',
                 color: AppColors.negative)),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
             child: _SummaryPill(
                 label: 'Balance',
-                value: '\$${(income - expenses).toStringAsFixed(0)}',
+                value: '$currency${(income - expenses).toStringAsFixed(0)}',
                 color: income >= expenses
                     ? AppColors.positive
                     : AppColors.negative)),
@@ -557,7 +559,7 @@ class _Dot extends StatelessWidget {
 
 // ── Day detail panel ──────────────────────────────────────────────────────────
 
-class _DayDetailPanel extends StatelessWidget {
+class _DayDetailPanel extends ConsumerWidget {
   const _DayDetailPanel({
     required this.selectedDay,
     required this.transactions,
@@ -566,7 +568,8 @@ class _DayDetailPanel extends StatelessWidget {
   final List<Transaction> transactions;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     if (selectedDay == null) {
       return const Center(
           child: Text('Selecciona un día',
@@ -599,11 +602,11 @@ class _DayDetailPanel extends StatelessWidget {
               ),
               if (transactions.isNotEmpty) ...[
                 _DayBadge(
-                    value: '+\$${income.toStringAsFixed(0)}',
+                    value: '+$currency${income.toStringAsFixed(0)}',
                     color: AppColors.positive),
                 const SizedBox(width: AppSpacing.xs),
                 _DayBadge(
-                    value: '-\$${expenses.toStringAsFixed(0)}',
+                    value: '-$currency${expenses.toStringAsFixed(0)}',
                     color: AppColors.negative),
               ],
             ],
@@ -669,12 +672,13 @@ class _DayBadge extends StatelessWidget {
   }
 }
 
-class _CalTxnRow extends StatelessWidget {
+class _CalTxnRow extends ConsumerWidget {
   const _CalTxnRow({required this.transaction});
   final Transaction transaction;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     final t = transaction;
     return Row(
       children: [
@@ -703,8 +707,8 @@ class _CalTxnRow extends StatelessWidget {
         ),
         Text(
           t.isIncome
-              ? '+\$${t.amount.toStringAsFixed(2)}'
-              : '-\$${t.amount.toStringAsFixed(2)}',
+              ? '+$currency${t.amount.toStringAsFixed(2)}'
+              : '-$currency${t.amount.toStringAsFixed(2)}',
           style: AppTypography.labelL.copyWith(
             color: t.isIncome ? AppColors.positive : AppColors.negative,
             fontWeight: FontWeight.w600,

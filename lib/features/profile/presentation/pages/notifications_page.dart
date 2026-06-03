@@ -7,6 +7,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../education/domain/models/financial_tip.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
@@ -537,12 +538,13 @@ class _IntelRow extends StatelessWidget {
   }
 }
 
-class _PredictionDetail extends StatelessWidget {
+class _PredictionDetail extends ConsumerWidget {
   const _PredictionDetail({required this.prediction});
   final MonthlyPrediction prediction;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currency = ref.watch(currencySymbolProvider);
     final color =
         prediction.isOnTrack ? AppColors.emerald : AppColors.negative;
     return Container(
@@ -562,7 +564,7 @@ class _PredictionDetail extends StatelessWidget {
               Text('Gasto estimado',
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.textTertiary)),
-              Text('\$${prediction.predictedExpenses.toStringAsFixed(0)}',
+              Text('$currency${prediction.predictedExpenses.toStringAsFixed(0)}',
                   style: AppTypography.labelL
                       .copyWith(color: AppColors.negative)),
             ],
@@ -571,22 +573,26 @@ class _PredictionDetail extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Ahorro estimado',
+              Text(prediction.predictedIncome > 0 ? 'Neto estimado' : 'Gasto diario',
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.textTertiary)),
               Text(
-                prediction.predictedSavings >= 0
-                    ? '+\$${prediction.predictedSavings.toStringAsFixed(0)}'
-                    : '-\$${prediction.predictedSavings.abs().toStringAsFixed(0)}',
+                prediction.predictedIncome > 0
+                    ? (prediction.predictedSavings >= 0
+                        ? '+$currency${prediction.predictedSavings.toStringAsFixed(0)}'
+                        : '-$currency${prediction.predictedSavings.abs().toStringAsFixed(0)}')
+                    : '$currency${prediction.dailyAvgExpense.toStringAsFixed(0)}/día',
                 style: AppTypography.labelL.copyWith(color: color),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            prediction.isOnTrack
-                ? 'Vas bien este mes. Sigue así.'
-                : 'Tus gastos superarán tus ingresos si continúas así.',
+            prediction.predictedIncome > 0
+                ? (prediction.isOnTrack
+                    ? 'Vas bien este mes. Sigue así.'
+                    : 'Tus gastos superarán tus ingresos si continúas así.')
+                : 'Sin ingresos registrados aún este mes.',
             style: AppTypography.labelS.copyWith(color: color),
           ),
         ],

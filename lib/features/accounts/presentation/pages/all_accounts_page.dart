@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/animated_number.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../home/domain/models/account.dart';
+import '../../../../core/utils/id_gen.dart';
 import 'account_detail_page.dart';
 
 class AllAccountsPage extends ConsumerWidget {
@@ -396,8 +396,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
             _balanceCtrl.text.replaceAll(',', '.')) ??
         0.0;
     final account = Account(
-      id: DateTime.now().millisecondsSinceEpoch.toString() +
-          Random().nextInt(9999).toString(),
+      id: generateId(),
       name: name,
       balance: balance,
       color: _accountColors[_colorIndex],

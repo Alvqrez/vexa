@@ -7,6 +7,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/financial_goal.dart';
 import '../providers/goals_provider.dart';
+import '../../../../core/utils/id_gen.dart';
 import 'goal_detail_page.dart';
 
 class GoalsPage extends ConsumerWidget {
@@ -461,7 +462,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     if (target == null || target <= 0) return;
 
     final goal = FinancialGoal(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: generateId(),
       title: title,
       icon: _icons[_selectedIcon],
       color: _colors[_selectedColor],

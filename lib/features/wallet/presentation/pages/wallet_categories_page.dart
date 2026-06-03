@@ -7,6 +7,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/wallet_category.dart';
 import '../providers/wallet_provider.dart';
+import '../../../../core/utils/id_gen.dart';
 
 const _kIconOptions = [
   Icons.fork_right_rounded,
@@ -581,7 +582,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
 
     widget.onSave(WalletCategory(
       id: widget.existing?.id ??
-          DateTime.now().millisecondsSinceEpoch.toString(),
+          generateId(),
       name: name,
       color: _color,
       icon: _icon,

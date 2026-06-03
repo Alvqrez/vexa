@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
 
 class PredictionCard extends ConsumerWidget {
@@ -11,6 +12,50 @@ class PredictionCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = ref.watch(predictionProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    // No data yet — don't show misleading predictions
+    if (!p.hasData) {
+      return Container(
+        padding: const EdgeInsets.all(2.5),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+          color: Colors.white.withValues(alpha: 0.025),
+          border: Border.all(
+              color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.glassLight,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.auto_graph_rounded,
+                    size: 15, color: AppColors.textTertiary),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  'Registra ingresos y gastos para ver la predicción del mes.',
+                  style: AppTypography.labelM
+                      .copyWith(color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final color = p.isOnTrack ? AppColors.emerald : AppColors.negative;
 
     return Container(
@@ -55,7 +100,7 @@ class PredictionCard extends ConsumerWidget {
                 ),
                 const Spacer(),
                 Text(
-                  '${p.daysLeft} días left',
+                  '${p.daysLeft} días restantes',
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.textTertiary),
                 ),
@@ -67,7 +112,7 @@ class PredictionCard extends ConsumerWidget {
                 Expanded(
                   child: _PredItem(
                     label: 'Gasto estimado',
-                    value: '\$${p.predictedExpenses.toStringAsFixed(0)}',
+                    value: '$currency${p.predictedExpenses.toStringAsFixed(0)}',
                     color: AppColors.negative,
                     icon: Icons.arrow_upward_rounded,
                   ),
@@ -75,16 +120,24 @@ class PredictionCard extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: _PredItem(
-                    label: 'Ahorro estimado',
-                    value: p.predictedSavings >= 0
-                        ? '+\$${p.predictedSavings.toStringAsFixed(0)}'
-                        : '-\$${p.predictedSavings.abs().toStringAsFixed(0)}',
-                    color: p.predictedSavings >= 0
-                        ? AppColors.emerald
-                        : AppColors.negative,
-                    icon: p.predictedSavings >= 0
-                        ? Icons.savings_rounded
-                        : Icons.warning_rounded,
+                    label: p.predictedIncome > 0
+                        ? 'Neto estimado'
+                        : 'Gasto diario',
+                    value: p.predictedIncome > 0
+                        ? (p.predictedSavings >= 0
+                            ? '+$currency${p.predictedSavings.toStringAsFixed(0)}'
+                            : '-$currency${p.predictedSavings.abs().toStringAsFixed(0)}')
+                        : '$currency${p.dailyAvgExpense.toStringAsFixed(0)}/día',
+                    color: p.predictedIncome > 0
+                        ? (p.predictedSavings >= 0
+                            ? AppColors.emerald
+                            : AppColors.negative)
+                        : AppColors.warning,
+                    icon: p.predictedIncome > 0
+                        ? (p.predictedSavings >= 0
+                            ? Icons.savings_rounded
+                            : Icons.warning_rounded)
+                        : Icons.show_chart_rounded,
                   ),
                 ),
               ],
@@ -109,9 +162,11 @@ class PredictionCard extends ConsumerWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      p.isOnTrack
-                          ? 'A este ritmo cerrarás el mes con ahorro positivo.'
-                          : 'Atención: tus gastos superarán tus ingresos este mes.',
+                      p.predictedIncome > 0
+                          ? (p.isOnTrack
+                              ? 'A este ritmo cerrarás el mes con saldo positivo.'
+                              : 'Atención: tus gastos superarán tus ingresos este mes.')
+                          : 'Sin ingresos registrados aún este mes.',
                       style: AppTypography.labelS.copyWith(color: color),
                     ),
                   ),

@@ -8,6 +8,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/utils/id_gen.dart';
 import '../providers/budget_provider.dart';
 
 // ── Icon + Color options ──────────────────────────────────────────────────────
@@ -1219,7 +1220,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
         ? (double.tryParse(_limitCtrl.text.replaceAll(',', '.')) ?? 0.0)
         : 0.0;
     widget.onSave(BudgetItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: generateId(),
       name: name,
       icon: _icon,
       color: _color,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
+import '../../domain/models/transfer_record.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -412,7 +413,7 @@ final totalBalanceProvider = Provider<double>((ref) {
 final monthlyIncomeProvider = Provider<double>((ref) {
   final now = DateTime.now();
   return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (t.isIncome && t.date.month == now.month) return sum + t.amount;
+    if (t.isIncome && t.date.month == now.month && t.date.year == now.year) return sum + t.amount;
     return sum;
   });
 });
@@ -420,7 +421,7 @@ final monthlyIncomeProvider = Provider<double>((ref) {
 final monthlyExpensesProvider = Provider<double>((ref) {
   final now = DateTime.now();
   return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (!t.isIncome && t.date.month == now.month) return sum + t.amount;
+    if (!t.isIncome && t.date.month == now.month && t.date.year == now.year) return sum + t.amount;
     return sum;
   });
 });
@@ -442,7 +443,12 @@ class SavingsTransfersNotifier extends StateNotifier<double> {
   }
 
   Future<void> addTransfer(double amount) async {
-    state = state + amount;
+    state = (state + amount).clamp(0.0, double.infinity);
+    await LocalPrefsService.setDouble(_key, state);
+  }
+
+  Future<void> removeTransfer(double amount) async {
+    state = (state - amount).clamp(0.0, double.infinity);
     await LocalPrefsService.setDouble(_key, state);
   }
 }
@@ -481,16 +487,10 @@ final monthOverMonthProvider = Provider<double?>((ref) {
   return ((thisIncome - lastIncome) / lastIncome) * 100;
 });
 
-/// Updated by [totalBudgetLimitProvider] in budget_provider.dart.
-/// Use [budgetSpendingRatioProvider] from budget_provider for full accuracy.
-/// Kept here for widgets that only import home_provider.
-final spendingRatioProvider = Provider<double>((ref) {
-  // Deferred import to avoid circular dependency — budget_provider imports
-  // home_provider, not the other way. We keep a safe fallback.
-  final expenses = ref.watch(monthlyExpensesProvider);
-  const fallbackLimit = 800.0; // sum of initial budget categories
-  return (expenses / fallbackLimit).clamp(0.0, 1.0);
-});
+/// Fallback spending ratio for widgets that only import home_provider.
+/// Use [budgetSpendingRatioProvider] from budget_provider for full accuracy
+/// when a budget has been configured.
+final spendingRatioProvider = Provider<double>((ref) => 0.0);
 
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
 
@@ -501,7 +501,7 @@ final categoryBreakdownProvider =
   final now = DateTime.now();
   final transactions = ref
       .watch(transactionsProvider)
-      .where((t) => !t.isIncome && t.date.month == now.month)
+      .where((t) => !t.isIncome && t.date.month == now.month && t.date.year == now.year)
       .toList();
 
   final map = <TransactionCategory, double>{};
@@ -567,7 +567,10 @@ class MonthlyPrediction {
 
   double get predictedBalance => predictedIncome - predictedExpenses;
   double get predictedSavings => predictedIncome - predictedExpenses;
-  bool get isOnTrack => predictedExpenses <= predictedIncome;
+  /// Only meaningful when there is actual income data.
+  bool get isOnTrack =>
+      predictedIncome > 0 && predictedExpenses <= predictedIncome;
+  bool get hasData => predictedIncome > 0 || predictedExpenses > 0;
 }
 
 final predictionProvider = Provider<MonthlyPrediction>((ref) {
@@ -581,8 +584,8 @@ final predictionProvider = Provider<MonthlyPrediction>((ref) {
 
   final dailyAvg = daysElapsed > 0 ? currentExpenses / daysElapsed : 0.0;
   final predictedExpenses = currentExpenses + (dailyAvg * daysLeft);
-  final predictedIncome =
-      currentIncome > 0 ? currentIncome : currentExpenses * 1.3;
+  // Use real income only — never invent figures.
+  final predictedIncome = currentIncome;
 
   return MonthlyPrediction(
     predictedExpenses: predictedExpenses,
@@ -620,3 +623,30 @@ final accountStatsProvider =
     transactions: transactions,
   );
 });
+
+// ── Transfer history ──────────────────────────────────────────────────────────
+
+class TransferHistoryNotifier extends StateNotifier<List<TransferRecord>> {
+  TransferHistoryNotifier() : super(const []) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    state = await TransferRecord.loadAll();
+  }
+
+  Future<void> add(TransferRecord record) async {
+    state = [record, ...state];
+    await TransferRecord.saveAll(state);
+  }
+
+  Future<void> remove(String id) async {
+    state = state.where((r) => r.id != id).toList();
+    await TransferRecord.saveAll(state);
+  }
+}
+
+final transferHistoryProvider =
+    StateNotifierProvider<TransferHistoryNotifier, List<TransferRecord>>(
+  (ref) => TransferHistoryNotifier(),
+);
