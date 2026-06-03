@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../calendar/presentation/pages/financial_calendar_page.dart';
@@ -24,7 +25,7 @@ class _AnalysisPageState extends State<AnalysisPage>
   late AnimationController _stagger;
   int _period = 1; // 0=Sem, 1=Mes, 2=Año
 
-  static const _sectionCount = 8;
+  static const _sectionCount = 9;
 
   @override
   void initState() {
@@ -85,18 +86,20 @@ class _AnalysisPageState extends State<AnalysisPage>
                     ),
                     const SizedBox(height: AppSpacing.xxl),
                     _reveal(1, const _OverviewRow()),
+                    const SizedBox(height: AppSpacing.md),
+                    _reveal(2, const _InterpretCard()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(2, const _BalanceLineChartCard()),
+                    _reveal(3, const _BalanceLineChartCard()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, _SpendingTrendCard(stagger: _stagger)),
+                    _reveal(4, _SpendingTrendCard(stagger: _stagger)),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(4, const _CategoryPieChartCard()),
+                    _reveal(5, const _CategoryPieChartCard()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(5, const _FinancialIntelligenceSection()),
+                    _reveal(6, const _FinancialIntelligenceSection()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(6, const _CategoryBreakdown()),
+                    _reveal(7, const _CategoryBreakdown()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(7, const _TopSpendsList()),
+                    _reveal(8, const _TopSpendsList()),
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
@@ -1378,6 +1381,321 @@ class _SectionCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Interpret card ────────────────────────────────────────────────────────────
+
+class _InterpretCard extends ConsumerWidget {
+  const _InterpretCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final savings = ref.watch(monthlySavingsProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    final isPositive = savings >= 0;
+    final preview = isPositive
+        ? 'Estás ahorrando $currency${savings.toStringAsFixed(0)} este mes.'
+        : 'Tus gastos superan tus ingresos por $currency${(-savings).toStringAsFixed(0)}.';
+
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const _InterpretSheet(),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(
+              color: AppColors.petroleum.withValues(alpha: 0.30),
+              width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.petroleumSurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded,
+                  size: 18, color: AppColors.petroleumLight),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Interpretar análisis',
+                      style: AppTypography.labelL.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(preview,
+                      style: AppTypography.labelS
+                          .copyWith(color: AppColors.textSecondary),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Interpret sheet ───────────────────────────────────────────────────────────
+
+class _InterpretSheet extends ConsumerWidget {
+  const _InterpretSheet();
+
+  String _fmt(double v, String sym) =>
+      '$sym${v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0)}';
+
+  String _categoryName(TransactionCategory c) {
+    const names = {
+      TransactionCategory.food: 'Alimentación',
+      TransactionCategory.transport: 'Transporte',
+      TransactionCategory.entertainment: 'Entretenimiento',
+      TransactionCategory.shopping: 'Compras',
+      TransactionCategory.health: 'Salud',
+      TransactionCategory.salary: 'Ingresos',
+      TransactionCategory.other: 'Otros',
+    };
+    return names[c] ?? c.name;
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final income = ref.watch(monthlyIncomeProvider);
+    final expenses = ref.watch(monthlyExpensesProvider);
+    final savings = ref.watch(monthlySavingsProvider);
+    final txns = ref.watch(transactionsProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    final now = DateTime.now();
+    final prevMonth = now.month == 1 ? 12 : now.month - 1;
+    final prevYear = now.month == 1 ? now.year - 1 : now.year;
+
+    final prevTxns = txns.where(
+        (t) => t.date.month == prevMonth && t.date.year == prevYear);
+    final prevExpenses =
+        prevTxns.where((t) => !t.isIncome).fold(0.0, (s, t) => s + t.amount);
+    final prevIncome =
+        prevTxns.where((t) => t.isIncome).fold(0.0, (s, t) => s + t.amount);
+
+    final curTxns = txns.where(
+        (t) => t.date.month == now.month && t.date.year == now.year);
+    final catTotals = <TransactionCategory, double>{};
+    for (final t in curTxns.where((t) => !t.isIncome)) {
+      catTotals[t.category] = (catTotals[t.category] ?? 0) + t.amount;
+    }
+    final topCat = catTotals.isEmpty
+        ? null
+        : catTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
+
+    final savingsRate =
+        income > 0 ? ((savings / income) * 100).round() : 0;
+    final expenseDelta = prevExpenses > 0
+        ? (((expenses - prevExpenses) / prevExpenses) * 100).round()
+        : null;
+    final incomeDelta = prevIncome > 0
+        ? (((income - prevIncome) / prevIncome) * 100).round()
+        : null;
+
+    final isPositive = savings >= 0;
+
+    final insights = <_InterpretInsight>[
+      _InterpretInsight(
+        icon: isPositive
+            ? Icons.trending_up_rounded
+            : Icons.trending_down_rounded,
+        color: isPositive ? AppColors.positive : AppColors.negative,
+        title: isPositive ? 'Balance positivo' : 'Balance negativo',
+        body: isPositive
+            ? 'Este mes llevas ${_fmt(income, currency)} en ingresos y ${_fmt(expenses, currency)} en gastos. Estás ahorrando ${_fmt(savings, currency)}.'
+            : 'Este mes llevas ${_fmt(income, currency)} en ingresos pero ${_fmt(expenses, currency)} en gastos. Estás gastando ${_fmt(-savings, currency)} más de lo que ingresas.',
+      ),
+      if (expenseDelta != null)
+        _InterpretInsight(
+          icon: expenseDelta > 0
+              ? Icons.north_rounded
+              : Icons.south_rounded,
+          color: expenseDelta > 0 ? AppColors.negative : AppColors.positive,
+          title: expenseDelta > 0 ? 'Gastos en aumento' : 'Gastos a la baja',
+          body: expenseDelta == 0
+              ? 'Tus gastos son similares al mes anterior.'
+              : 'Tus gastos ${expenseDelta > 0 ? 'subieron' : 'bajaron'} un ${expenseDelta.abs()}% respecto al mes pasado (${_fmt(prevExpenses, currency)} → ${_fmt(expenses, currency)}).',
+        ),
+      if (incomeDelta != null)
+        _InterpretInsight(
+          icon: Icons.payments_outlined,
+          color: AppColors.petroleum,
+          title: 'Evolución de ingresos',
+          body: incomeDelta == 0
+              ? 'Tus ingresos se mantienen estables respecto al mes anterior.'
+              : 'Tus ingresos ${incomeDelta > 0 ? 'subieron' : 'bajaron'} un ${incomeDelta.abs()}% vs el mes pasado (${_fmt(prevIncome, currency)} → ${_fmt(income, currency)}).',
+        ),
+      if (topCat != null)
+        _InterpretInsight(
+          icon: Icons.category_outlined,
+          color: AppColors.catEntertainment,
+          title: 'Mayor gasto: ${_categoryName(topCat.key)}',
+          body: '${_categoryName(topCat.key)} representa ${_fmt(topCat.value, currency)} — el ${expenses > 0 ? ((topCat.value / expenses) * 100).round() : 0}% de tus gastos totales este mes.',
+        ),
+      _InterpretInsight(
+        icon: Icons.savings_outlined,
+        color: AppColors.emerald,
+        title: 'Tasa de ahorro: $savingsRate%',
+        body: savingsRate >= 20
+            ? 'Excelente. Estás superando el objetivo recomendado del 20% de ahorro.'
+            : savingsRate > 0
+                ? 'Vas bien, aunque hay margen de mejora. El objetivo es ahorrar al menos el 20% de tus ingresos.'
+                : income == 0
+                    ? 'Sin ingresos registrados este mes.'
+                    : 'Tus gastos superan tus ingresos. Revisa qué categorías puedes reducir.',
+      ),
+      _InterpretInsight(
+        icon: Icons.lightbulb_outline_rounded,
+        color: AppColors.warning,
+        title: 'Recomendación',
+        body: topCat != null && expenses > 0
+            ? 'Pon atención a ${_categoryName(topCat.key)}, que consume el ${((topCat.value / expenses) * 100).round()}% de tus gastos. Pequeñas reducciones ahí tendrán el mayor impacto.'
+            : 'Registra tus transacciones regularmente para obtener recomendaciones personalizadas.',
+      ),
+    ];
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius:
+              BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: AppSpacing.md),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.xxl, AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppColors.petroleumSurface,
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: const Icon(Icons.auto_awesome_rounded,
+                        size: 17, color: AppColors.petroleumLight),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Text('Interpretación del mes',
+                      style: AppTypography.headingS
+                          .copyWith(color: AppColors.textPrimary)),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.separated(
+                controller: scrollCtrl,
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xxl, 0, AppSpacing.xxl, AppSpacing.xxxl),
+                itemCount: insights.length,
+                separatorBuilder: (context2, i2) =>
+                    const SizedBox(height: AppSpacing.md),
+                itemBuilder: (_, i) {
+                  final ins = insights[i];
+                  return Container(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      color: ins.color.withValues(alpha: 0.05),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      border: Border.all(
+                          color: ins.color.withValues(alpha: 0.15),
+                          width: 0.5),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: ins.color.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(ins.icon, size: 16, color: ins.color),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(ins.title,
+                                  style: AppTypography.labelL.copyWith(
+                                      color: AppColors.textPrimary,
+                                      fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 4),
+                              Text(ins.body,
+                                  style: AppTypography.bodyS.copyWith(
+                                      color: AppColors.textSecondary,
+                                      height: 1.5)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InterpretInsight {
+  const _InterpretInsight({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.body,
+  });
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String body;
 }
 
 // ── Shared surface card ───────────────────────────────────────────────────────

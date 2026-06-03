@@ -1,17 +1,19 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 
-class FinancialCard extends StatefulWidget {
+class FinancialCard extends ConsumerStatefulWidget {
   const FinancialCard({super.key});
 
   @override
-  State<FinancialCard> createState() => _FinancialCardState();
+  ConsumerState<FinancialCard> createState() => _FinancialCardState();
 }
 
-class _FinancialCardState extends State<FinancialCard>
+class _FinancialCardState extends ConsumerState<FinancialCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnim;
@@ -38,6 +40,11 @@ class _FinancialCardState extends State<FinancialCard>
   void dispose() {
     _controller.dispose();
     super.dispose();
+  }
+
+  String _cardName(String name) {
+    final n = name.trim().toUpperCase();
+    return n.isEmpty ? 'USUARIO VEXA' : n;
   }
 
   @override
@@ -121,7 +128,7 @@ class _FinancialCardState extends State<FinancialCard>
                         const SizedBox(height: AppSpacing.lg),
                         // Card number
                         Text(
-                          '••••  ••••  ••••  4782',
+                          '••••  ••••  ••••  ••••',
                           style: AppTypography.monoL.copyWith(
                             color: Colors.white.withValues(alpha: 0.9),
                             letterSpacing: 2,
@@ -129,51 +136,25 @@ class _FinancialCardState extends State<FinancialCard>
                           ),
                         ),
                         const SizedBox(height: AppSpacing.lg),
-                        // Bottom row: holder + expiry
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        // Bottom row: holder name
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'TITULAR',
-                                  style: AppTypography.labelS.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                    letterSpacing: 1.2,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'Leonardo Alvarez',
-                                  style: AppTypography.labelL.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              'TITULAR',
+                              style: AppTypography.labelS.copyWith(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                letterSpacing: 1.2,
+                                fontSize: 9,
+                              ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'VENCE',
-                                  style: AppTypography.labelS.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.4),
-                                    letterSpacing: 1.2,
-                                    fontSize: 9,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  '08/28',
-                                  style: AppTypography.monoL.copyWith(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 3),
+                            Text(
+                              _cardName(ref.watch(userProfileProvider).name),
+                              style: AppTypography.labelL.copyWith(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                letterSpacing: 0.8,
+                              ),
                             ),
                           ],
                         ),

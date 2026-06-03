@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/data/local_prefs_service.dart';
+import '../../domain/models/recurring_transaction.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
@@ -29,12 +31,32 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late TransactionType _type;
   late TransactionCategory _category;
   String? _selectedAccountId;
+  late DateTime _selectedDate;
 
   String _amountStr = '';
 
   final _noteCtrl = TextEditingController();
   final _noteFocusNode = FocusNode();
   bool _noteExpanded = false;
+  bool _isRecurring = false;
+  RecurrenceFrequency _recurrenceFreq = RecurrenceFrequency.monthly;
+
+  static const _monthNames = [
+    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+  ];
+
+  String get _dateLabel {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final d = _selectedDate;
+    final dateOnly = DateTime(d.year, d.month, d.day);
+    if (dateOnly == today) return 'Hoy';
+    if (dateOnly == yesterday) return 'Ayer';
+    if (d.year == now.year) return '${d.day} ${_monthNames[d.month - 1]}';
+    return '${d.day} ${_monthNames[d.month - 1]} ${d.year}';
+  }
 
   bool get _isEditing => widget.existing != null;
 
@@ -48,6 +70,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ? TransactionCategory.salary
             : TransactionCategory.other);
 
+    _selectedDate = e?.date ?? DateTime.now();
+
     if (e != null) {
       _amountStr = e.amount.toStringAsFixed(2);
       _selectedAccountId = e.accountId;
@@ -58,6 +82,15 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final wallet =
           accounts.where((a) => a.icon == AccountIcon.wallet).firstOrNull;
       _selectedAccountId = wallet?.id ?? accounts.firstOrNull?.id;
+      // Override with last-used account if still valid
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final lastId = await LocalPrefsService.getString('last_account_id');
+        if (lastId != null &&
+            accounts.any((a) => a.id == lastId) &&
+            mounted) {
+          setState(() => _selectedAccountId = lastId);
+        }
+      });
     }
   }
 
@@ -105,6 +138,34 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     return (integer: buf.toString(), decimal: decPart);
   }
 
+  Future<void> _openDatePicker() async {
+    HapticFeedback.selectionClick();
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate.isAfter(now) ? now : _selectedDate,
+      firstDate: DateTime(now.year - 5),
+      lastDate: now,
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppColors.emerald,
+            onPrimary: Colors.white,
+            surface: AppColors.card,
+            onSurface: AppColors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() => _selectedDate = DateTime(
+            picked.year, picked.month, picked.day,
+            _selectedDate.hour, _selectedDate.minute,
+          ));
+    }
+  }
+
   void _submit() {
     final amount = _parsedAmount;
     if (amount == null || amount <= 0) {
@@ -126,6 +187,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         amount: amount,
         type: _type,
         category: _category,
+        date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
         tags: const [],
@@ -138,7 +200,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         amount: amount,
         type: _type,
         category: _category,
-        date: DateTime.now(),
+        date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
       );
@@ -146,6 +208,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       ref.read(streakProvider.notifier).recordTransaction();
     }
 
+    if (_selectedAccountId != null) {
+      LocalPrefsService.setString('last_account_id', _selectedAccountId!);
+    }
+    if (!_isEditing && _isRecurring) {
+      _saveRecurring();
+    }
     HapticFeedback.mediumImpact();
     Navigator.of(context).pop();
   }
@@ -196,6 +264,26 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         },
       ),
     );
+  }
+
+  Future<void> _saveRecurring() async {
+    final existing = await RecurringTransaction.loadAll();
+    final now = DateTime.now();
+    final next = _recurrenceFreq.nextDate(_selectedDate.isAfter(now)
+        ? _selectedDate
+        : DateTime(now.year, now.month, now.day, now.hour, now.minute));
+    existing.add(RecurringTransaction(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      merchant: _category.label,
+      amount: _parsedAmount!,
+      type: _type.name,
+      category: _category.name,
+      accountId: _selectedAccountId,
+      note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+      frequency: _recurrenceFreq,
+      nextDate: next,
+    ));
+    await RecurringTransaction.saveAll(existing);
   }
 
   void _toggleNote() {
@@ -345,6 +433,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                               .withValues(alpha: 0.10),
                       onTap: _openAccountSheet,
                     ),
+                    const SizedBox(height: 7),
+                    _CompactChip(
+                      icon: Icons.calendar_today_rounded,
+                      label: _dateLabel,
+                      color: AppColors.textSecondary,
+                      surface: AppColors.glassLight,
+                      onTap: _openDatePicker,
+                    ),
                   ],
                 ),
                 const SizedBox(width: 12),
@@ -404,6 +500,95 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               ],
             ),
           ),
+
+          // ── Recurring toggle ──────────────────────────────────────────────
+          if (!_isEditing)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 6,
+                  AppSpacing.screenPadding, 0),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                alignment: Alignment.topCenter,
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.repeat_rounded,
+                            size: 14, color: AppColors.textTertiary),
+                        const SizedBox(width: 5),
+                        const Text('Repetir',
+                            style: TextStyle(
+                                color: AppColors.textTertiary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500)),
+                        const Spacer(),
+                        Transform.scale(
+                          scale: 0.78,
+                          child: Switch.adaptive(
+                            value: _isRecurring,
+                            onChanged: (v) =>
+                                setState(() => _isRecurring = v),
+                            activeThumbColor: AppColors.emerald,
+                            activeTrackColor: AppColors.emeraldSurface,
+                            inactiveThumbColor: AppColors.textTertiary,
+                            inactiveTrackColor: AppColors.glassLight,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_isRecurring)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 2),
+                        child: Row(
+                          children: RecurrenceFrequency.values.map((f) {
+                            final sel = f == _recurrenceFreq;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() => _recurrenceFreq = f);
+                                },
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 150),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: sel
+                                        ? AppColors.emeraldSurface
+                                        : AppColors.glassLight,
+                                    borderRadius: BorderRadius.circular(
+                                        AppSpacing.pillRadius),
+                                    border: Border.all(
+                                      color: sel
+                                          ? AppColors.emerald
+                                              .withValues(alpha: 0.4)
+                                          : AppColors.glassBorder,
+                                      width: 0.5,
+                                    ),
+                                  ),
+                                  child: Text(f.label,
+                                      style: TextStyle(
+                                        color: sel
+                                            ? AppColors.emerald
+                                            : AppColors.textTertiary,
+                                        fontSize: 11,
+                                        fontWeight: sel
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      )),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
 
           // ── Nota toggle ───────────────────────────────────────────────────
           Padding(

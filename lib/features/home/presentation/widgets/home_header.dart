@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../gamification/presentation/pages/streak_page.dart';
@@ -22,6 +23,8 @@ class HomeHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final streak = ref.watch(streakProvider);
+    final profile = ref.watch(userProfileProvider);
+    final displayName = profile.firstName.isEmpty ? 'Usuario' : profile.firstName;
     const flameColor = Color(0xFFFF6B35);
 
     return Row(
@@ -39,7 +42,7 @@ class HomeHeader extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Leo',
+                displayName,
                 style: AppTypography.headingM.copyWith(
                   color: AppColors.textPrimary,
                 ),
@@ -123,7 +126,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   void _clearAll() {
     HapticFeedback.mediumImpact();
     setState(() {
-      _dismissed.addAll(['n1', 'n2', 'n3', 'n4']);
+      _dismissed.addAll(['n1', 'n2']);
     });
     _overlayController.hide();
   }
@@ -131,20 +134,26 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   @override
   Widget build(BuildContext context) {
     final prediction = ref.watch(predictionProvider);
+    final txns = ref.watch(transactionsProvider);
     final tip = _dailyTip();
 
+    final now = DateTime.now();
+    final hasTransactionsThisMonth = txns.any(
+        (t) => t.date.month == now.month && t.date.year == now.year);
+
     final allNotifs = [
-      _Notif(
-        id: 'n1',
-        icon: Icons.auto_graph_rounded,
-        color: prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
-        title: 'Predicción del mes',
-        body: prediction.isOnTrack
-            ? 'Vas bien. Ahorro estimado: +\$${prediction.predictedSavings.toStringAsFixed(0)}'
-            : 'Atención: gastos superarán ingresos este mes.',
-        time: 'hoy',
-        unread: true,
-      ),
+      if (hasTransactionsThisMonth)
+        _Notif(
+          id: 'n1',
+          icon: Icons.auto_graph_rounded,
+          color: prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
+          title: 'Predicción del mes',
+          body: prediction.isOnTrack
+              ? 'Vas bien. Ahorro estimado: +\$${prediction.predictedSavings.toStringAsFixed(0)}'
+              : 'Atención: gastos superarán ingresos este mes.',
+          time: 'hoy',
+          unread: true,
+        ),
       _Notif(
         id: 'n2',
         icon: tip.$2,
@@ -152,24 +161,6 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
         title: 'Consejo del día',
         body: tip.$1,
         time: 'hoy',
-        unread: true,
-      ),
-      const _Notif(
-        id: 'n3',
-        icon: Icons.receipt_long_outlined,
-        color: AppColors.petroleum,
-        title: 'Transacción registrada',
-        body: 'Zara · -\$89.95',
-        time: 'hace 3 días',
-        unread: false,
-      ),
-      const _Notif(
-        id: 'n4',
-        icon: Icons.bar_chart_rounded,
-        color: AppColors.emerald,
-        title: 'Resumen semanal',
-        body: 'Ahorraste \$1,550 esta semana. ¡Bien!',
-        time: 'hace 7 días',
         unread: false,
       ),
     ];
@@ -518,11 +509,12 @@ class _NotifRow extends StatelessWidget {
 
 // ── Avatar button → Profile page ─────────────────────────────────────────────
 
-class _AvatarButton extends StatelessWidget {
+class _AvatarButton extends ConsumerWidget {
   const _AvatarButton();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final initial = ref.watch(userProfileProvider).initial;
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
@@ -543,7 +535,7 @@ class _AvatarButton extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            'L',
+            initial,
             style: AppTypography.labelL.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w700,

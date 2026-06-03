@@ -69,9 +69,40 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
 
   void _delete() {
     HapticFeedback.heavyImpact();
-    ref
-        .read(transactionsProvider.notifier)
-        .delete(widget.transaction);
+    final t = widget.transaction;
+    ref.read(transactionsProvider.notifier).delete(t);
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Transacción eliminada',
+            style: AppTypography.labelM.copyWith(color: AppColors.textPrimary),
+          ),
+          backgroundColor: AppColors.card,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            0,
+            AppSpacing.screenPadding,
+            AppSpacing.bottomNavHeight +
+                AppSpacing.bottomNavBottomPadding +
+                AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+          action: SnackBarAction(
+            label: 'Deshacer',
+            textColor: AppColors.emerald,
+            onPressed: () {
+              ref.read(transactionsProvider.notifier).add(t);
+            },
+          ),
+        ),
+      );
   }
 
   void _openNote() {

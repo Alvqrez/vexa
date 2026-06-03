@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/providers/settings_provider.dart';
 
-class CurrencyPage extends StatefulWidget {
+class CurrencyPage extends ConsumerStatefulWidget {
   const CurrencyPage({super.key});
 
   @override
-  State<CurrencyPage> createState() => _CurrencyPageState();
+  ConsumerState<CurrencyPage> createState() => _CurrencyPageState();
 }
 
-class _CurrencyPageState extends State<CurrencyPage>
+class _CurrencyPageState extends ConsumerState<CurrencyPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
   String _selected = 'EUR';
@@ -35,6 +38,19 @@ class _CurrencyPageState extends State<CurrencyPage>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..forward();
+    _loadSaved();
+  }
+
+  Future<void> _loadSaved() async {
+    final code = await LocalPrefsService.getString('currency_code');
+    if (code != null && mounted) setState(() => _selected = code);
+  }
+
+  Future<void> _select(_Currency c) async {
+    setState(() => _selected = c.code);
+    await LocalPrefsService.setString('currency_code', c.code);
+    await LocalPrefsService.setString('currency_symbol', c.symbol);
+    ref.read(currencySymbolProvider.notifier).state = c.symbol;
   }
 
   @override
@@ -110,8 +126,7 @@ class _CurrencyPageState extends State<CurrencyPage>
                                     _currencies[i].code == _selected,
                                 onTap: () {
                                   HapticFeedback.selectionClick();
-                                  setState(() =>
-                                      _selected = _currencies[i].code);
+                                  _select(_currencies[i]);
                                 },
                               ),
                               if (i < _currencies.length - 1)

@@ -7,6 +7,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../education/domain/models/financial_tip.dart';
+import '../../../../core/data/local_prefs_service.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -34,7 +35,31 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..forward();
+    _loadSettings();
   }
+
+  Future<void> _loadSettings() async {
+    final transactions = await LocalPrefsService.getBool('notif_transactions', defaultValue: true);
+    final budgetAlerts = await LocalPrefsService.getBool('notif_budget_alerts', defaultValue: true);
+    final weeklySummary = await LocalPrefsService.getBool('notif_weekly_summary', defaultValue: true);
+    final marketing = await LocalPrefsService.getBool('notif_marketing', defaultValue: false);
+    final security = await LocalPrefsService.getBool('notif_security', defaultValue: true);
+    final prediction = await LocalPrefsService.getBool('notif_prediction', defaultValue: true);
+    final dailyTip = await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
+    if (!mounted) return;
+    setState(() {
+      _transactions = transactions;
+      _budgetAlerts = budgetAlerts;
+      _weeklySummary = weeklySummary;
+      _marketing = marketing;
+      _security = security;
+      _prediction = prediction;
+      _dailyTip = dailyTip;
+    });
+  }
+
+  Future<void> _save(String key, bool value) =>
+      LocalPrefsService.setBool(key, value);
 
   @override
   void dispose() {
@@ -93,10 +118,12 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                             onPredictionChanged: (v) {
                               HapticFeedback.selectionClick();
                               setState(() => _prediction = v);
+                              _save('notif_prediction', v);
                             },
                             onTipChanged: (v) {
                               HapticFeedback.selectionClick();
                               setState(() => _dailyTip = v);
+                              _save('notif_daily_tip', v);
                             },
                           )),
                       const SizedBox(height: AppSpacing.lg),
@@ -117,6 +144,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                                 onChanged: (v) {
                                   HapticFeedback.selectionClick();
                                   setState(() => _transactions = v);
+                                  _save('notif_transactions', v);
                                 },
                               ),
                               _NotifItem(
@@ -129,6 +157,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                                 onChanged: (v) {
                                   HapticFeedback.selectionClick();
                                   setState(() => _budgetAlerts = v);
+                                  _save('notif_budget_alerts', v);
                                 },
                               ),
                             ],
@@ -151,6 +180,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                                 onChanged: (v) {
                                   HapticFeedback.selectionClick();
                                   setState(() => _weeklySummary = v);
+                                  _save('notif_weekly_summary', v);
                                 },
                               ),
                             ],
@@ -173,6 +203,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                                 onChanged: (v) {
                                   HapticFeedback.selectionClick();
                                   setState(() => _security = v);
+                                  _save('notif_security', v);
                                 },
                               ),
                               _NotifItem(
@@ -184,6 +215,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                                 onChanged: (v) {
                                   HapticFeedback.selectionClick();
                                   setState(() => _marketing = v);
+                                  _save('notif_marketing', v);
                                 },
                               ),
                             ],

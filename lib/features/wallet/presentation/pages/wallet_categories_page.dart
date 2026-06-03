@@ -383,7 +383,12 @@ class _CategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onEdit();
+      },
+      child: Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
@@ -477,6 +482,7 @@ class _CategoryTile extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }
@@ -581,9 +587,58 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
       icon: _icon,
       type: _type,
       sortOrder: sortOrder,
+      isDefault: widget.existing?.isDefault ?? false,
     ));
     HapticFeedback.mediumImpact();
     Navigator.pop(context);
+  }
+
+  void _showIconPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setModalState) => Container(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+          decoration: const BoxDecoration(
+            color: AppColors.card,
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.cardRadiusL)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Elige un icono',
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary)),
+              const SizedBox(height: AppSpacing.lg),
+              _IconPickerGrid(
+                icons: _kIconOptions,
+                selected: _icon,
+                color: _color,
+                onChanged: (ic) {
+                  setState(() => _icon = ic);
+                  Navigator.pop(ctx);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -591,182 +646,201 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final isEdit = widget.existing != null;
 
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cardRadiusL)),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.56 + bottom,
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.lg + bottom),
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Text(isEdit ? 'Editar categoría' : 'Nueva categoría',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xxl),
-            _FormLabel('Nombre'),
-            const SizedBox(height: AppSpacing.sm),
-            _FormTextField(
-                controller: _nameCtrl,
-                hint: 'ej. Gimnasio, Suscripciones…',
-                icon: Icons.label_outline_rounded,
-                autofocus: true),
-            const SizedBox(height: AppSpacing.xl),
-            _FormLabel('Tipo'),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: WalletCategoryType.values.map((t) {
-                final active = t == _type;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                        right: t == WalletCategoryType.expense ? AppSpacing.sm : 0),
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.selectionClick();
-                        setState(() => _type = t);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 160),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: active
-                              ? AppColors.emeraldSurface
-                              : Colors.white.withValues(alpha: 0.04),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
-                          border: Border.all(
-                            color: active
-                                ? AppColors.emerald.withValues(alpha: 0.4)
-                                : Colors.white.withValues(alpha: 0.08),
-                          ),
-                        ),
-                        child: Text(t.label,
-                            textAlign: TextAlign.center,
-                            style: AppTypography.labelM.copyWith(
-                              color: active
-                                  ? AppColors.emerald
-                                  : AppColors.textTertiary,
-                              fontWeight: active
-                                  ? FontWeight.w600
-                                  : FontWeight.w400,
-                            )),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _FormLabel('Icono'),
-            const SizedBox(height: AppSpacing.sm),
-            _IconPickerGrid(
-                icons: _kIconOptions,
-                selected: _icon,
-                color: _color,
-                onChanged: (ic) => setState(() => _icon = ic)),
-            const SizedBox(height: AppSpacing.xl),
-            _FormLabel('Color'),
-            const SizedBox(height: AppSpacing.sm),
-            _ColorPickerRow(
-                colors: _kColorOptions,
-                selected: _color,
-                onChanged: (c) => setState(() => _color = c)),
-            const SizedBox(height: AppSpacing.xl),
-            _FormLabel('Vista previa'),
-            const SizedBox(height: AppSpacing.sm),
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.06), width: 0.5),
-              ),
-              child: Row(
+              Text(isEdit ? 'Editar categoría' : 'Nueva categoría',
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary)),
+              const SizedBox(height: AppSpacing.lg),
+              // Nombre + Icono en la misma fila
+              Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: _color.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: _showIconPicker,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: _color.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(_icon, color: _color, size: 22),
                     ),
-                    child: Icon(_icon, size: 18, color: _color),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Text(
-                    _nameCtrl.text.isEmpty ? 'Categoría' : _nameCtrl.text,
-                    style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _type == WalletCategoryType.expense
-                          ? AppColors.negativeSurface
-                          : AppColors.positiveSurface,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _FormTextField(
+                      controller: _nameCtrl,
+                      hint: 'ej. Gimnasio, Suscripciones…',
+                      autofocus: true,
                     ),
-                    child: Text(_type.label,
-                        style: AppTypography.eyebrow.copyWith(
-                          color: _type == WalletCategoryType.expense
-                              ? AppColors.negative
-                              : AppColors.positive,
-                        )),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: _submit,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                        colors: [AppColors.emerald, AppColors.emeraldDim]),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.emerald.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
+              const SizedBox(height: AppSpacing.md),
+              // Tipo
+              Row(
+                children: WalletCategoryType.values.map((t) {
+                  final active = t == _type;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                          right: t == WalletCategoryType.expense
+                              ? AppSpacing.sm
+                              : 0),
+                      child: GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _type = t);
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? AppColors.emeraldSurface
+                                : Colors.white.withValues(alpha: 0.04),
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.cardRadius),
+                            border: Border.all(
+                              color: active
+                                  ? AppColors.emerald.withValues(alpha: 0.4)
+                                  : Colors.white.withValues(alpha: 0.08),
+                            ),
+                          ),
+                          child: Text(t.label,
+                              textAlign: TextAlign.center,
+                              style: AppTypography.labelM.copyWith(
+                                color: active
+                                    ? AppColors.emerald
+                                    : AppColors.textTertiary,
+                                fontWeight: active
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                              )),
+                        ),
                       ),
-                    ],
-                  ),
-                  child: Text(isEdit ? 'Guardar cambios' : 'Crear categoría',
-                      style: AppTypography.labelL.copyWith(
-                        color: AppColors.textInverse,
-                        fontWeight: FontWeight.w700,
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              // Colores
+              _ColorPickerRow(
+                  colors: _kColorOptions,
+                  selected: _color,
+                  onChanged: (c) => setState(() => _color = c)),
+              const SizedBox(height: AppSpacing.md),
+              // Vista previa
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.03),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.06), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      textAlign: TextAlign.center),
+                      child: Icon(_icon, size: 18, color: _color),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Text(
+                      _nameCtrl.text.isEmpty ? 'Categoría' : _nameCtrl.text,
+                      style: AppTypography.labelL
+                          .copyWith(color: AppColors.textPrimary),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: _type == WalletCategoryType.expense
+                            ? AppColors.negativeSurface
+                            : AppColors.positiveSurface,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.pillRadius),
+                      ),
+                      child: Text(_type.label,
+                          style: AppTypography.eyebrow.copyWith(
+                            color: _type == WalletCategoryType.expense
+                                ? AppColors.negative
+                                : AppColors.positive,
+                          )),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              SizedBox(
+                width: double.infinity,
+                child: GestureDetector(
+                  onTap: _submit,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                          colors: [AppColors.emerald, AppColors.emeraldDim]),
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.emerald.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Text(isEdit ? 'Guardar cambios' : 'Crear categoría',
+                        style: AppTypography.labelL.copyWith(
+                          color: AppColors.textInverse,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        textAlign: TextAlign.center),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -775,25 +849,15 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
 
 // ── Form shared widgets ───────────────────────────────────────────────────────
 
-class _FormLabel extends StatelessWidget {
-  const _FormLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(text,
-      style: AppTypography.labelM.copyWith(color: AppColors.textTertiary));
-}
 
 class _FormTextField extends StatelessWidget {
   const _FormTextField({
     required this.controller,
     required this.hint,
-    required this.icon,
     this.autofocus = false,
   });
   final TextEditingController controller;
   final String hint;
-  final IconData icon;
   final bool autofocus;
 
   @override
@@ -813,8 +877,6 @@ class _FormTextField extends StatelessWidget {
           hintText: hint,
           hintStyle:
               AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),

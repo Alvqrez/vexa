@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 
@@ -81,7 +80,7 @@ class BudgetItemWithSpent {
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
-  BudgetNotifier(this._isar) : super(_initial) {
+  BudgetNotifier(this._isar) : super(const []) {
     _load();
   }
 
@@ -91,10 +90,7 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
   Future<void> _load() async {
     final records = await _isar.isarBudgetItems.where().findAll();
     if (_isLoaded) return;
-    if (records.isEmpty) {
-      await _isar.writeTxn(() => _isar.isarBudgetItems
-          .putAll(state.map(_budgetToIsar).toList()));
-    } else {
+    if (records.isNotEmpty) {
       state = records.map(_isarToBudget).toList();
     }
     _isLoaded = true;
@@ -106,48 +102,6 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
             .putAll(state.map(_budgetToIsar).toList());
       });
 
-  static final _initial = [
-    const BudgetItem(
-      id: 'b1',
-      name: 'Comida',
-      icon: Icons.fork_right_rounded,
-      color: AppColors.catFood,
-      category: TransactionCategory.food,
-      limit: 300,
-    ),
-    const BudgetItem(
-      id: 'b2',
-      name: 'Compras',
-      icon: Icons.shopping_bag_rounded,
-      color: AppColors.catShopping,
-      category: TransactionCategory.shopping,
-      limit: 200,
-    ),
-    const BudgetItem(
-      id: 'b3',
-      name: 'Salud',
-      icon: Icons.favorite_rounded,
-      color: AppColors.catHealth,
-      category: TransactionCategory.health,
-      limit: 100,
-    ),
-    const BudgetItem(
-      id: 'b4',
-      name: 'Entretenimiento',
-      icon: Icons.movie_rounded,
-      color: AppColors.catEntertainment,
-      category: TransactionCategory.entertainment,
-      limit: 50,
-    ),
-    const BudgetItem(
-      id: 'b5',
-      name: 'Transporte',
-      icon: Icons.directions_car_rounded,
-      color: AppColors.catTransport,
-      category: TransactionCategory.transport,
-      limit: 150,
-    ),
-  ];
 
   void add(BudgetItem item) {
     _isLoaded = true;

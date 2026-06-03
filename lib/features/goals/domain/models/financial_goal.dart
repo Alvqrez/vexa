@@ -41,18 +41,24 @@ class FinancialGoal {
   }
 
   FinancialGoal copyWith({
+    String? title,
+    IconData? icon,
+    Color? color,
     double? current,
+    double? target,
+    DateTime? deadline,
+    String? note,
     bool? completed,
   }) {
     return FinancialGoal(
       id: id,
-      title: title,
-      icon: icon,
-      color: color,
+      title: title ?? this.title,
+      icon: icon ?? this.icon,
+      color: color ?? this.color,
       current: current ?? this.current,
-      target: target,
-      deadline: deadline,
-      note: note,
+      target: target ?? this.target,
+      deadline: deadline ?? this.deadline,
+      note: note ?? this.note,
       completed: completed ?? this.completed,
     );
   }

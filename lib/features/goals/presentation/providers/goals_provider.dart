@@ -31,7 +31,7 @@ FinancialGoal _isarToGoal(IsarFinancialGoal ig) => FinancialGoal(
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
-  GoalsNotifier(this._isar) : super(_initial) {
+  GoalsNotifier(this._isar) : super(const []) {
     _load();
   }
 
@@ -41,10 +41,7 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
   Future<void> _load() async {
     final records = await _isar.isarFinancialGoals.where().findAll();
     if (_isLoaded) return;
-    if (records.isEmpty) {
-      await _isar.writeTxn(() => _isar.isarFinancialGoals
-          .putAll(state.map(_goalToIsar).toList()));
-    } else {
+    if (records.isNotEmpty) {
       state = records.map(_isarToGoal).toList();
     }
     _isLoaded = true;
@@ -56,35 +53,6 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
             .putAll(state.map(_goalToIsar).toList());
       });
 
-  static final _initial = [
-    FinancialGoal(
-      id: '1',
-      title: 'Fondo de emergencia',
-      icon: Icons.shield_outlined,
-      color: const Color(0xFF1A7A9A),
-      current: 1200,
-      target: 5000,
-      deadline: DateTime(2026, 12, 31),
-    ),
-    FinancialGoal(
-      id: '2',
-      title: 'Vacaciones Europa',
-      icon: Icons.flight_outlined,
-      color: const Color(0xFFCE93D8),
-      current: 650,
-      target: 2500,
-      deadline: DateTime(2026, 12, 30),
-    ),
-    FinancialGoal(
-      id: '3',
-      title: 'Laptop nueva',
-      icon: Icons.laptop_outlined,
-      color: const Color(0xFF64B5F6),
-      current: 980,
-      target: 1500,
-      deadline: DateTime(2027, 3, 31),
-    ),
-  ];
 
   void add(FinancialGoal goal) {
     _isLoaded = true;
@@ -102,6 +70,12 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
         completed: newCurrent >= g.target,
       );
     }).toList();
+    _persistAll();
+  }
+
+  void update(FinancialGoal updated) {
+    _isLoaded = true;
+    state = [for (final g in state) if (g.id == updated.id) updated else g];
     _persistAll();
   }
 

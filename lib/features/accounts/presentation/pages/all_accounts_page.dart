@@ -114,28 +114,20 @@ class AllAccountsPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          // Drag-to-reorder hint badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: AppColors.glassLight,
-                              borderRadius:
-                                  BorderRadius.circular(AppSpacing.pillRadius),
-                              border: Border.all(
-                                  color: AppColors.glassBorder, width: 0.5),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.swap_vert_rounded,
-                                    size: 13,
-                                    color: AppColors.textTertiary),
-                                const SizedBox(width: 4),
-                                Text('Arrastra para ordenar',
-                                    style: AppTypography.labelS.copyWith(
-                                        color: AppColors.textTertiary)),
-                              ],
+                          // Drag-to-reorder hint
+                          Tooltip(
+                            message: 'Arrastra para ordenar',
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: AppColors.glassLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: AppColors.glassBorder, width: 0.5),
+                              ),
+                              child: const Icon(Icons.swap_vert_rounded,
+                                  size: 16, color: AppColors.textTertiary),
                             ),
                           ),
                         ],

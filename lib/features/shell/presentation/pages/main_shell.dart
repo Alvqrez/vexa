@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../../shared/widgets/expandable_fab.dart';
 import '../../../home/presentation/pages/home_page.dart';
@@ -14,7 +16,10 @@ import '../../../goals/presentation/pages/goals_page.dart';
 import '../../../goals/domain/models/financial_goal.dart';
 import '../../../goals/presentation/providers/goals_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../../../home/domain/models/account.dart';
 import '../../../home/domain/models/transaction.dart';
+import '../../../home/domain/models/recurring_transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -24,11 +29,62 @@ class MainShell extends ConsumerStatefulWidget {
   ConsumerState<MainShell> createState() => _MainShellState();
 }
 
+// ── Tutorial step data ────────────────────────────────────────────────────────
+
+class _TutorialStep {
+  const _TutorialStep({
+    required this.navIndex,
+    required this.title,
+    required this.description,
+  });
+  final int navIndex; // -1 = FAB
+  final String title;
+  final String description;
+}
+
+const _kTutorialSteps = [
+  _TutorialStep(
+    navIndex: 0,
+    title: 'Inicio',
+    description: 'Ve tu saldo total, el resumen del mes y las últimas transacciones de todas tus cuentas.',
+  ),
+  _TutorialStep(
+    navIndex: 1,
+    title: 'Cartera',
+    description: 'Gestiona tus cuentas y organiza las categorías de gastos e ingresos.',
+  ),
+  _TutorialStep(
+    navIndex: 2,
+    title: 'Análisis',
+    description: 'Gráficas y reportes que muestran hacia dónde va tu dinero cada mes.',
+  ),
+  _TutorialStep(
+    navIndex: 3,
+    title: 'Presupuesto',
+    description: 'Asigna límites de gasto por categoría y controla que no te pases.',
+  ),
+  _TutorialStep(
+    navIndex: 4,
+    title: 'Metas',
+    description: 'Define objetivos de ahorro y sigue tu progreso hacia cada uno.',
+  ),
+  _TutorialStep(
+    navIndex: -1,
+    title: 'Agregar transacción',
+    description: 'Con este botón registras gastos, ingresos, nuevas metas y suscripciones de forma rápida.',
+  ),
+];
+
+// ── Main shell state ──────────────────────────────────────────────────────────
+
 class _MainShellState extends ConsumerState<MainShell>
     with SingleTickerProviderStateMixin {
   late AnimationController _fabCtrl;
   bool _fabOpen = false;
   final _fabKey = GlobalKey<ExpandableFabState>();
+
+  bool _showTutorial = false;
+  int _tutorialStep = 0;
 
   static const _pages = [
     HomePage(),
@@ -46,6 +102,11 @@ class _MainShellState extends ConsumerState<MainShell>
       duration: const Duration(milliseconds: 250),
       value: 1.0,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final shown = await LocalPrefsService.getBool('tutorial_shown');
+      if (!shown && mounted) setState(() => _showTutorial = true);
+      await _processRecurring();
+    });
   }
 
   @override
@@ -55,6 +116,59 @@ class _MainShellState extends ConsumerState<MainShell>
   }
 
   void _closeFab() => _fabKey.currentState?.close();
+
+  void _nextTutorialStep() {
+    if (_tutorialStep < _kTutorialSteps.length - 1) {
+      final next = _tutorialStep + 1;
+      final navIndex = _kTutorialSteps[next].navIndex;
+      if (navIndex >= 0) {
+        ref.read(selectedNavIndexProvider.notifier).state = navIndex;
+      }
+      setState(() => _tutorialStep = next);
+    } else {
+      _endTutorial();
+    }
+  }
+
+  Future<void> _processRecurring() async {
+    final all = await RecurringTransaction.loadAll();
+    if (all.isEmpty) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    bool changed = false;
+    final updated = <RecurringTransaction>[];
+    for (var r in all) {
+      if (!r.isActive) { updated.add(r); continue; }
+      var current = r;
+      while (!current.nextDate.isAfter(today)) {
+        final t = Transaction(
+          id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}',
+          merchant: current.merchant,
+          amount: current.amount,
+          type: TransactionType.values.firstWhere(
+              (v) => v.name == current.type,
+              orElse: () => TransactionType.expense),
+          category: TransactionCategory.values.firstWhere(
+              (v) => v.name == current.category,
+              orElse: () => TransactionCategory.other),
+          date: current.nextDate,
+          accountId: current.accountId,
+          note: current.note,
+        );
+        ref.read(transactionsProvider.notifier).add(t);
+        current = current.copyWith(
+            nextDate: current.frequency.nextDate(current.nextDate));
+        changed = true;
+      }
+      updated.add(current);
+    }
+    if (changed) await RecurringTransaction.saveAll(updated);
+  }
+
+  Future<void> _endTutorial() async {
+    setState(() => _showTutorial = false);
+    await LocalPrefsService.setBool('tutorial_shown', true);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +217,15 @@ class _MainShellState extends ConsumerState<MainShell>
               child: AppBottomNav(),
             ),
 
+            // ── Tutorial coach marks ───────────────────────────────────
+            if (_showTutorial)
+              _TutorialOverlay(
+                step: _tutorialStep,
+                steps: _kTutorialSteps,
+                onNext: _nextTutorialStep,
+                onSkip: _endTutorial,
+              ),
+
             // ── Expandable FAB ─────────────────────────────────────────
             Positioned(
               right: AppSpacing.screenPadding,
@@ -148,6 +271,17 @@ class _MainShellState extends ConsumerState<MainShell>
           color: AppColors.positive,
           onTap: () => showTransactionSheet(context,
               defaultType: TransactionType.income),
+        ),
+        FabAction(
+          icon: Icons.compare_arrows_rounded,
+          label: 'Transferencia',
+          color: AppColors.catTransport,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const _TransferSheet(),
+          ),
         ),
         FabAction(
           icon: Icons.flag_rounded,
@@ -497,6 +631,568 @@ class _GoalField extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         ),
+      ),
+    );
+  }
+}
+
+// ── Tutorial overlay ──────────────────────────────────────────────────────────
+
+class _TutorialOverlay extends StatefulWidget {
+  const _TutorialOverlay({
+    required this.step,
+    required this.steps,
+    required this.onNext,
+    required this.onSkip,
+  });
+  final int step;
+  final List<_TutorialStep> steps;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  @override
+  State<_TutorialOverlay> createState() => _TutorialOverlayState();
+}
+
+class _TutorialOverlayState extends State<_TutorialOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 320))
+      ..forward();
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+  }
+
+  @override
+  void didUpdateWidget(_TutorialOverlay old) {
+    super.didUpdateWidget(old);
+    if (old.step != widget.step) _ctrl.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final step = widget.steps[widget.step];
+    const sp = AppSpacing.screenPadding;
+    const navH = AppSpacing.bottomNavHeight;
+    const navBP = AppSpacing.bottomNavBottomPadding;
+
+    final navCenterY = size.height - navBP - navH / 2;
+    final tabW = (size.width - 2 * sp) / 5;
+
+    final Offset center;
+    final double radius;
+    if (step.navIndex >= 0) {
+      center = Offset(sp + (step.navIndex + 0.5) * tabW, navCenterY);
+      radius = 34;
+    } else {
+      // FAB
+      center = Offset(
+        size.width - sp - 28,
+        size.height - navH - navBP - AppSpacing.lg - 28,
+      );
+      radius = 36;
+    }
+
+    // Card sits above the spotlight, clamped within safe area
+    final cardTop =
+        (center.dy - radius - 20 - 190).clamp(16.0, size.height - 240.0);
+
+    return Positioned.fill(
+      child: FadeTransition(
+        opacity: _fade,
+        child: Stack(
+          children: [
+            CustomPaint(
+              size: size,
+              painter: _SpotlightPainter(center: center, radius: radius),
+            ),
+            Positioned(
+              left: 20,
+              right: 20,
+              top: cardTop,
+              child: _TutorialCard(
+                step: widget.step,
+                total: widget.steps.length,
+                title: step.title,
+                description: step.description,
+                isLast: widget.step == widget.steps.length - 1,
+                onNext: widget.onNext,
+                onSkip: widget.onSkip,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SpotlightPainter extends CustomPainter {
+  const _SpotlightPainter({required this.center, required this.radius});
+  final Offset center;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.saveLayer(
+        Rect.fromLTWH(0, 0, size.width, size.height), Paint());
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Paint()..color = Colors.black.withValues(alpha: 0.78),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()..blendMode = BlendMode.clear,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_SpotlightPainter old) =>
+      old.center != center || old.radius != radius;
+}
+
+class _TutorialCard extends StatelessWidget {
+  const _TutorialCard({
+    required this.step,
+    required this.total,
+    required this.title,
+    required this.description,
+    required this.isLast,
+    required this.onNext,
+    required this.onSkip,
+  });
+  final int step;
+  final int total;
+  final String title;
+  final String description;
+  final bool isLast;
+  final VoidCallback onNext;
+  final VoidCallback onSkip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        border: Border.all(
+            color: AppColors.glassBorderStrong, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 28,
+              offset: const Offset(0, 8)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldSurface,
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.pillRadius),
+                ),
+                child: Text('${step + 1} / $total',
+                    style: AppTypography.eyebrow
+                        .copyWith(color: AppColors.emerald)),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  onSkip();
+                },
+                child: Text('Omitir',
+                    style: AppTypography.labelM
+                        .copyWith(color: AppColors.textTertiary)),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(title,
+              style: AppTypography.headingS
+                  .copyWith(color: AppColors.textPrimary)),
+          const SizedBox(height: AppSpacing.sm),
+          Text(description,
+              style: AppTypography.bodyM.copyWith(
+                  color: AppColors.textSecondary, height: 1.5)),
+          const SizedBox(height: AppSpacing.lg),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onNext();
+            },
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [AppColors.emerald, AppColors.emeraldDim]),
+                borderRadius:
+                    BorderRadius.circular(AppSpacing.cardRadius),
+                boxShadow: [
+                  BoxShadow(
+                      color: AppColors.emerald.withValues(alpha: 0.30),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4)),
+                ],
+              ),
+              child: Text(isLast ? 'Comenzar' : 'Siguiente',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.labelL.copyWith(
+                    color: AppColors.textInverse,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Transfer sheet ────────────────────────────────────────────────────────────
+
+class _TransferSheet extends ConsumerStatefulWidget {
+  const _TransferSheet();
+
+  @override
+  ConsumerState<_TransferSheet> createState() => _TransferSheetState();
+}
+
+class _TransferSheetState extends ConsumerState<_TransferSheet> {
+  final _amountCtrl = TextEditingController();
+  String? _fromId;
+  String? _toId;
+
+  @override
+  void initState() {
+    super.initState();
+    final accounts = ref.read(accountsProvider);
+    if (accounts.length >= 2) {
+      _fromId = accounts.first.id;
+      _toId = accounts[1].id;
+    } else if (accounts.isNotEmpty) {
+      _fromId = accounts.first.id;
+    }
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  void _showError(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg,
+          style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
+      backgroundColor: AppColors.card,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+    ));
+  }
+
+  void _confirm() {
+    final amount =
+        double.tryParse(_amountCtrl.text.trim().replaceAll(',', '.'));
+    if (amount == null || amount <= 0) {
+      _showError('Ingresa un monto válido');
+      return;
+    }
+    if (_fromId == null || _toId == null) {
+      _showError('Selecciona ambas cuentas');
+      return;
+    }
+    if (_fromId == _toId) {
+      _showError('Las cuentas deben ser diferentes');
+      return;
+    }
+    final fromAccount =
+        ref.read(accountsProvider).firstWhere((a) => a.id == _fromId);
+    if (fromAccount.balance < amount) {
+      _showError('Saldo insuficiente en ${fromAccount.name}');
+      return;
+    }
+    HapticFeedback.mediumImpact();
+    final notifier = ref.read(accountsProvider.notifier);
+    notifier.adjustBalance(_fromId!, -amount);
+    notifier.adjustBalance(_toId!, amount);
+    Navigator.of(context).pop();
+  }
+
+  void _pickAccount({required bool isFrom}) {
+    HapticFeedback.selectionClick();
+    final accounts = ref.read(accountsProvider);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text(isFrom ? 'Cuenta origen' : 'Cuenta destino',
+                style: AppTypography.headingS
+                    .copyWith(color: AppColors.textPrimary)),
+            const SizedBox(height: AppSpacing.lg),
+            ...accounts.map((a) {
+              final sel = isFrom ? a.id == _fromId : a.id == _toId;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    if (isFrom) { _fromId = a.id; } else { _toId = a.id; }
+                  });
+                  Navigator.of(context).pop();
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? a.color.withValues(alpha: 0.12)
+                        : AppColors.glassLight,
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                    border: Border.all(
+                      color: sel
+                          ? a.color.withValues(alpha: 0.35)
+                          : AppColors.glassBorder,
+                      width: sel ? 1.5 : 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(a.icon.iconData, size: 18, color: a.color),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(a.name,
+                            style: AppTypography.labelL
+                                .copyWith(color: AppColors.textPrimary)),
+                      ),
+                      if (sel)
+                        Icon(Icons.check_circle_rounded,
+                            size: 18, color: a.color),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = ref.watch(accountsProvider);
+    final currency = ref.watch(currencySymbolProvider);
+    final fromAccount = accounts.where((a) => a.id == _fromId).firstOrNull;
+    final toAccount = accounts.where((a) => a.id == _toId).firstOrNull;
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      padding: EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md,
+          AppSpacing.xxl, AppSpacing.xxl + bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.catTransport.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(Icons.compare_arrows_rounded,
+                    size: 18, color: AppColors.catTransport),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text('Transferencia',
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.04),
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.10), width: 0.5),
+            ),
+            child: TextField(
+              controller: _amountCtrl,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              style: AppTypography.headingM
+                  .copyWith(color: AppColors.catTransport, fontSize: 28),
+              decoration: InputDecoration(
+                hintText: '${currency}0.00',
+                hintStyle: AppTypography.headingM.copyWith(
+                    color: AppColors.textTertiary, fontSize: 28),
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickAccount(isFrom: true),
+                  child: _TransferAccountChip(
+                    label: fromAccount?.name ?? 'Origen',
+                    color: fromAccount?.color ?? AppColors.textTertiary,
+                    icon: fromAccount?.icon.iconData ??
+                        Icons.account_balance_wallet_rounded,
+                  ),
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Icon(Icons.arrow_forward_rounded,
+                    size: 18, color: AppColors.textTertiary),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => _pickAccount(isFrom: false),
+                  child: _TransferAccountChip(
+                    label: toAccount?.name ?? 'Destino',
+                    color: toAccount?.color ?? AppColors.textTertiary,
+                    icon: toAccount?.icon.iconData ??
+                        Icons.account_balance_wallet_rounded,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+          GestureDetector(
+            onTap: _confirm,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              decoration: BoxDecoration(
+                color: AppColors.catTransport,
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.catTransport.withValues(alpha: 0.30),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Text('Confirmar transferencia',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.labelL.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TransferAccountChip extends StatelessWidget {
+  const _TransferAccountChip(
+      {required this.label, required this.color, required this.icon});
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: color.withValues(alpha: 0.30), width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(label,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.labelM.copyWith(
+                    color: color, fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.expand_more_rounded,
+              size: 14, color: color.withValues(alpha: 0.7)),
+        ],
       ),
     );
   }

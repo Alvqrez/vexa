@@ -116,51 +116,43 @@ class _NavButtonState extends ConsumerState<_NavButton>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 480),
+      duration: const Duration(milliseconds: 340),
     );
 
-    // Scale: squish → pop → settle (all tabs)
+    // Scale: smooth lift → settle (all tabs)
     _scale = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.80)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 20),
-      TweenSequenceItem(
-          tween: Tween(begin: 0.80, end: 1.16)
+          tween: Tween(begin: 1.0, end: 1.12)
               .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 40),
+          weight: 45),
       TweenSequenceItem(
-          tween: Tween(begin: 1.16, end: 1.0)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 40),
+          tween: Tween(begin: 1.12, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 55),
     ]).animate(_ctrl);
 
-    // Rotation for wallet (slight rock) and settings (cw turn)
+    // Vertical lift for wallet + goals (Y offset in logical pixels)
     _rotate = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 0.0, end: -0.18)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 25),
-      TweenSequenceItem(
-          tween: Tween(begin: -0.18, end: 0.12)
-              .chain(CurveTween(curve: Curves.easeOut)),
-          weight: 35),
-      TweenSequenceItem(
-          tween: Tween(begin: 0.12, end: 0.0)
+          tween: Tween(begin: 0.0, end: -4.0)
               .chain(CurveTween(curve: Curves.easeOut)),
           weight: 40),
+      TweenSequenceItem(
+          tween: Tween(begin: -4.0, end: 0.0)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 60),
     ]).animate(_ctrl);
 
-    // Bar pulse for analysis: 1 → 0.4 → 1
+    // Bar scale for analysis: subtle grow → settle
     _barHeight = TweenSequence<double>([
       TweenSequenceItem(
-          tween: Tween(begin: 1.0, end: 0.3)
-              .chain(CurveTween(curve: Curves.easeIn)),
-          weight: 30),
+          tween: Tween(begin: 1.0, end: 1.22)
+              .chain(CurveTween(curve: Curves.easeOut)),
+          weight: 38),
       TweenSequenceItem(
-          tween: Tween(begin: 0.3, end: 1.0)
-              .chain(CurveTween(curve: Curves.elasticOut)),
-          weight: 70),
+          tween: Tween(begin: 1.22, end: 1.0)
+              .chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 62),
     ]).animate(_ctrl);
 
     // Arc progress for budget: 0 → 1 → 0
@@ -256,7 +248,7 @@ class _NavButtonState extends ConsumerState<_NavButton>
       _NavTabType.wallet => _WalletIcon(color: color, rotate: _rotate, animated: widget.animated),
       _NavTabType.analysis => _AnalysisBarsIcon(color: color, barHeight: _barHeight, animated: widget.animated),
       _NavTabType.budget => _BudgetCircleIcon(color: color, arcProgress: _arcProgress, animated: widget.animated),
-      _NavTabType.goals => _GoalsIcon(color: color, ctrl: _ctrl, animated: widget.animated),
+      _NavTabType.goals => _GoalsIcon(color: color, lift: _rotate, animated: widget.animated),
     };
   }
 }
@@ -291,9 +283,8 @@ class _WalletIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: rotate,
-      builder: (_, child) => Transform.rotate(
-        angle: animated ? rotate.value : 0,
-        alignment: Alignment.center,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, animated ? rotate.value : 0),
         child: child,
       ),
       child: Icon(Icons.account_balance_wallet_rounded, size: 22, color: color),
@@ -350,7 +341,7 @@ class _BarsPainter extends CustomPainter {
 
     for (int i = 0; i < barCount; i++) {
       final targetH = _heights[i] * size.height;
-      final h = targetH * progress;
+      final h = (targetH * progress).clamp(0.0, size.height);
       if (h < 0.5) continue; // skip invisible bars
       final left = slot * i + leftPad;
       final top = size.height - h;
@@ -442,17 +433,24 @@ class _ArcIconPainter extends CustomPainter {
       old.progress != progress || old.color != color;
 }
 
-// ── Goals icon — flag with scale bounce ──────────────────────────────────────
+// ── Goals icon — flag with vertical lift ─────────────────────────────────────
 
 class _GoalsIcon extends StatelessWidget {
   const _GoalsIcon(
-      {required this.color, required this.ctrl, required this.animated});
+      {required this.color, required this.lift, required this.animated});
   final Color color;
-  final AnimationController ctrl;
+  final Animation<double> lift;
   final bool animated;
 
   @override
   Widget build(BuildContext context) {
-    return Icon(Icons.flag_rounded, size: 22, color: color);
+    return AnimatedBuilder(
+      animation: lift,
+      builder: (_, child) => Transform.translate(
+        offset: Offset(0, animated ? lift.value : 0),
+        child: child,
+      ),
+      child: Icon(Icons.flag_rounded, size: 22, color: color),
+    );
   }
 }

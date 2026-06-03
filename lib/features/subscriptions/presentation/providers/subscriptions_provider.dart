@@ -40,61 +40,8 @@ Subscription _isarToSubs(IsarSubscription is_) => Subscription(
       note: is_.note,
     );
 
-final _mockSubscriptions = [
-  Subscription(
-    id: 's1',
-    name: 'Netflix',
-    amount: 15.99,
-    nextBillingDate: DateTime.now().add(const Duration(days: 3)),
-    category: TransactionCategory.entertainment,
-    icon: Icons.play_circle_rounded,
-    color: const Color(0xFFE50914),
-    frequency: SubscriptionFrequency.monthly,
-  ),
-  Subscription(
-    id: 's2',
-    name: 'Spotify',
-    amount: 9.99,
-    nextBillingDate: DateTime.now().add(const Duration(days: 8)),
-    category: TransactionCategory.entertainment,
-    icon: Icons.music_note_rounded,
-    color: const Color(0xFF1DB954),
-    frequency: SubscriptionFrequency.monthly,
-  ),
-  Subscription(
-    id: 's3',
-    name: 'ChatGPT Plus',
-    amount: 20.00,
-    nextBillingDate: DateTime.now().add(const Duration(days: 15)),
-    category: TransactionCategory.other,
-    icon: Icons.smart_toy_rounded,
-    color: const Color(0xFF10A37F),
-    frequency: SubscriptionFrequency.monthly,
-  ),
-  Subscription(
-    id: 's4',
-    name: 'YouTube Premium',
-    amount: 13.99,
-    nextBillingDate: DateTime.now().add(const Duration(days: 22)),
-    category: TransactionCategory.entertainment,
-    icon: Icons.ondemand_video_rounded,
-    color: const Color(0xFFFF0000),
-    frequency: SubscriptionFrequency.monthly,
-  ),
-  Subscription(
-    id: 's5',
-    name: 'Amazon Prime',
-    amount: 4.99,
-    nextBillingDate: DateTime.now().add(const Duration(days: 28)),
-    category: TransactionCategory.shopping,
-    icon: Icons.local_shipping_rounded,
-    color: const Color(0xFFFF9900),
-    frequency: SubscriptionFrequency.monthly,
-  ),
-];
-
 class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
-  SubscriptionsNotifier(this._ref, this._isar) : super(_mockSubscriptions) {
+  SubscriptionsNotifier(this._ref, this._isar) : super(const []) {
     _load();
   }
 
@@ -105,10 +52,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   Future<void> _load() async {
     final records = await _isar.isarSubscriptions.where().findAll();
     if (_isLoaded) return;
-    if (records.isEmpty) {
-      await _isar.writeTxn(() => _isar.isarSubscriptions
-          .putAll(state.map(_subsToIsar).toList()));
-    } else {
+    if (records.isNotEmpty) {
       state = records.map(_isarToSubs).toList()
         ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
     }

@@ -5,7 +5,6 @@ import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
-import '../../../../core/data/local_prefs_service.dart';
 
 // ── Account stats ─────────────────────────────────────────────────────────────
 
@@ -104,7 +103,7 @@ Transaction _isarToTx(IsarTransaction it) => Transaction(
 // ── Notifiers ─────────────────────────────────────────────────────────────────
 
 class AccountsNotifier extends StateNotifier<List<Account>> {
-  AccountsNotifier(this._isar) : super(_mockAccounts) {
+  AccountsNotifier(this._isar) : super(const []) {
     _load();
   }
 
@@ -113,14 +112,31 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
 
   Future<void> _load() async {
     final records = await _isar.isarAccounts.where().findAll();
-    if (_isLoaded) return; // don't overwrite if mutations happened before load
-    if (records.isEmpty) {
-      await _isar.writeTxn(() => _isar.isarAccounts
-          .putAll(state.map(_accountToIsar).toList()));
-    } else {
+    if (_isLoaded) return;
+    if (records.isNotEmpty) {
       state = records.map(_isarToAccount).toList();
+    } else {
+      const defaultWallet = Account(
+        id: 'wallet_default',
+        name: 'Cartera',
+        balance: 0,
+        color: Color(0xFF00D68F),
+        icon: AccountIcon.wallet,
+      );
+      state = [defaultWallet];
+      await _isar.writeTxn(() =>
+          _isar.isarAccounts.putAll(state.map(_accountToIsar).toList()));
     }
     _isLoaded = true;
+  }
+
+  Future<void> seed() async {
+    _isLoaded = true;
+    state = _mockAccounts;
+    await _isar.writeTxn(() async {
+      await _isar.isarAccounts.clear();
+      await _isar.isarAccounts.putAll(state.map(_accountToIsar).toList());
+    });
   }
 
   // Full replace — safe because accounts are few.
@@ -192,7 +208,7 @@ final accountsProvider =
 // ── Transactions notifier ─────────────────────────────────────────────────────
 
 class TransactionsNotifier extends StateNotifier<List<Transaction>> {
-  TransactionsNotifier(this._ref, this._isar) : super(_initial) {
+  TransactionsNotifier(this._ref, this._isar) : super(const []) {
     _load();
   }
 
@@ -203,20 +219,20 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
   Future<void> _load() async {
     final records = await _isar.isarTransactions.where().findAll();
     if (_isLoaded) return;
-    if (records.isEmpty) {
-      final hasSeeded = await LocalPrefsService.getBool('transactions_seeded');
-      if (!hasSeeded) {
-        await LocalPrefsService.setBool('transactions_seeded', true);
-        await _isar.writeTxn(() => _isar.isarTransactions
-            .putAll(state.map(_txToIsar).toList()));
-      } else {
-        state = [];
-      }
-    } else {
+    if (records.isNotEmpty) {
       state = records.map(_isarToTx).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
     }
     _isLoaded = true;
+  }
+
+  Future<void> seed() async {
+    _isLoaded = true;
+    state = _initial;
+    await _isar.writeTxn(() async {
+      await _isar.isarTransactions.clear();
+      await _isar.isarTransactions.putAll(state.map(_txToIsar).toList());
+    });
   }
 
   // Full replace: clear all records, re-insert current state.

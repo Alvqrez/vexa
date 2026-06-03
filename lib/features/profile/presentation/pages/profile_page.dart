@@ -5,6 +5,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import 'package:intl/intl.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/widgets/streak_widget.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../gamification/presentation/pages/achievements_page.dart';
@@ -104,6 +107,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                     const SizedBox(height: AppSpacing.md),
                     _reveal(4, const _SupportSettings()),
                     const SizedBox(height: AppSpacing.xl),
+                    _reveal(5, const _UseSeedButton()),
+                    const SizedBox(height: AppSpacing.md),
                     _reveal(5, const _SignOutButton()),
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
@@ -218,11 +223,15 @@ class _ProfilePageHeader extends StatelessWidget {
 
 // ── Hero card ─────────────────────────────────────────────────────────────────
 
-class _ProfileHeroCard extends StatelessWidget {
+class _ProfileHeroCard extends ConsumerWidget {
   const _ProfileHeroCard();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(userProfileProvider);
+    final displayName = profile.name.isEmpty ? 'Usuario' : profile.name;
+    final displayEmail = profile.email.isEmpty ? 'Sin email' : profile.email;
+
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
@@ -278,7 +287,7 @@ class _ProfileHeroCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      'L',
+                      profile.initial,
                       style: AppTypography.headingM.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
@@ -311,38 +320,16 @@ class _ProfileHeroCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Leonardo Alvarez',
+                    displayName,
                     style: AppTypography.headingS.copyWith(
                       color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'leoo.azdz@gmail.com',
+                    displayEmail,
                     style: AppTypography.bodyS.copyWith(
                       color: AppColors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.petroleumSurface,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
-                      border: Border.all(
-                        color: AppColors.petroleum.withValues(alpha: 0.25),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Text(
-                      'VEXA PREMIUM',
-                      style: AppTypography.eyebrow.copyWith(
-                        color: AppColors.petroleumLight,
-                      ),
                     ),
                   ),
                 ],
@@ -357,16 +344,35 @@ class _ProfileHeroCard extends StatelessWidget {
 
 // ── Stats row ─────────────────────────────────────────────────────────────────
 
-class _StatsRow extends StatelessWidget {
+class _StatsRow extends ConsumerWidget {
   const _StatsRow();
 
+  String _fmtAmount(double v, String sym) =>
+      v >= 1000 ? '$sym${(v / 1000).toStringAsFixed(1)}k' : '$sym${v.toStringAsFixed(0)}';
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final txns = ref.watch(transactionsProvider);
+    final income = ref.watch(monthlyIncomeProvider);
+    final expenses = ref.watch(monthlyExpensesProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    final monthTxns = txns
+        .where((t) => t.date.month == now.month && t.date.year == now.year)
+        .length;
+    final savingsRate = income > 0
+        ? ((income - expenses) / income * 100).round().clamp(0, 100)
+        : 0;
+    final monthLabel =
+        DateFormat('MMM', 'es').format(now)[0].toUpperCase() +
+        DateFormat('MMM', 'es').format(now).substring(1);
+
     return Row(
       children: [
         Expanded(
           child: _MiniStat(
-            value: '7',
+            value: '$monthTxns',
             label: 'Transacciones',
             icon: Icons.receipt_long_outlined,
             color: AppColors.petroleum,
@@ -375,8 +381,8 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _MiniStat(
-            value: '\$249',
-            label: 'Gastos mayo',
+            value: _fmtAmount(expenses, currency),
+            label: 'Gastos $monthLabel',
             icon: Icons.north_rounded,
             color: AppColors.negative,
           ),
@@ -384,7 +390,7 @@ class _StatsRow extends StatelessWidget {
         const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: _MiniStat(
-            value: '86%',
+            value: '$savingsRate%',
             label: 'Tasa ahorro',
             icon: Icons.trending_up_rounded,
             color: AppColors.positive,
@@ -754,6 +760,84 @@ class _AchievementsSummary extends StatelessWidget {
               size: 18,
               color: AppColors.textTertiary,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Use seed ──────────────────────────────────────────────────────────────────
+
+class _UseSeedButton extends ConsumerWidget {
+  const _UseSeedButton();
+
+  Future<void> _load(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Cargar datos de ejemplo',
+            style: AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
+        content: Text(
+          'Se cargarán cuentas y transacciones de muestra. Los datos actuales serán reemplazados.',
+          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelL.copyWith(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Cargar',
+                style: AppTypography.labelL.copyWith(color: AppColors.petroleum)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+    HapticFeedback.mediumImpact();
+    await ref.read(accountsProvider.notifier).seed();
+    await ref.read(transactionsProvider.notifier).seed();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Datos de ejemplo cargados.',
+          style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
+      backgroundColor: AppColors.card,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => _load(context, ref),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.petroleumSurface,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(
+            color: AppColors.petroleum.withValues(alpha: 0.25),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.auto_awesome_rounded,
+                color: AppColors.petroleumLight, size: 18),
+            const SizedBox(width: AppSpacing.sm),
+            Text('Usar seed',
+                style: AppTypography.labelL
+                    .copyWith(color: AppColors.petroleumLight)),
           ],
         ),
       ),

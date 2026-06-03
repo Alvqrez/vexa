@@ -25,6 +25,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   final _pageCtrl = PageController();
   int _page = 0;
   int _selectedCurrencyIndex = 0;
+  final _nameCtrl = TextEditingController();
 
   late AnimationController _bgCtrl;
   late AnimationController _contentCtrl;
@@ -47,12 +48,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     _pageCtrl.dispose();
     _bgCtrl.dispose();
     _contentCtrl.dispose();
+    _nameCtrl.dispose();
     super.dispose();
   }
 
   void _next() {
     HapticFeedback.selectionClick();
-    if (_page < _slides.length) {
+    // _slides.length = name slide, _slides.length + 1 = currency (last)
+    if (_page < _slides.length + 1) {
       _pageCtrl.nextPage(
         duration: const Duration(milliseconds: 380),
         curve: const Cubic(0.22, 1.0, 0.36, 1.0),
@@ -65,7 +68,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   void _skipToCurrency() {
     HapticFeedback.selectionClick();
     _pageCtrl.animateToPage(
-      _slides.length,
+      _slides.length + 1,
       duration: const Duration(milliseconds: 380),
       curve: const Cubic(0.22, 1.0, 0.36, 1.0),
     );
@@ -73,6 +76,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
 
   Future<void> _complete() async {
     HapticFeedback.mediumImpact();
+    final name = _nameCtrl.text.trim();
+    if (name.isNotEmpty) {
+      await ref.read(userProfileProvider.notifier).update(name: name);
+    }
     final currency = _currencies[_selectedCurrencyIndex];
     await LocalPrefsService.setString('currency_symbol', currency.symbol);
     await LocalPrefsService.setString('currency_code', currency.code);
@@ -172,11 +179,14 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   Expanded(
                     child: PageView.builder(
                       controller: _pageCtrl,
-                      itemCount: _slides.length + 1,
+                      itemCount: _slides.length + 2,
                       onPageChanged: (i) => setState(() => _page = i),
                       itemBuilder: (context, i) {
                         if (i < _slides.length) {
                           return _SlidePage(slide: _slides[i], index: i);
+                        }
+                        if (i == _slides.length) {
+                          return _NameInputSlide(controller: _nameCtrl);
                         }
                         return _CurrencySlide(
                           selectedIndex: _selectedCurrencyIndex,
@@ -195,10 +205,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                     child: Column(
                       children: [
                         _PageIndicator(
-                            current: _page, count: _slides.length + 1),
+                            current: _page, count: _slides.length + 2),
                         const SizedBox(height: AppSpacing.xxl),
                         _NextButton(
-                          isLast: _page == _slides.length,
+                          isLast: _page == _slides.length + 1,
                           accent: _page < _slides.length
                               ? _slides[_page].accentColor
                               : AppColors.emerald,
@@ -257,7 +267,7 @@ class _OnboardingBg extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(colors: [
-                  slides[page].accentColor.withValues(alpha: 0.14),
+                  slides[page.clamp(0, slides.length - 1)].accentColor.withValues(alpha: 0.14),
                   Colors.transparent,
                 ]),
               ),
@@ -275,7 +285,7 @@ class _OnboardingBg extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(colors: [
-                  slides[page].accentColor.withValues(alpha: 0.07),
+                  slides[page.clamp(0, slides.length - 1)].accentColor.withValues(alpha: 0.07),
                   Colors.transparent,
                 ]),
               ),
@@ -626,6 +636,102 @@ const _currencies = [
   _Currency(flag: '🇪🇺', code: 'EUR', name: 'Euro', symbol: '€'),
   _Currency(flag: '🇬🇧', code: 'GBP', name: 'Libra esterlina', symbol: '£'),
 ];
+
+// ── Name input slide ──────────────────────────────────────────────────────────
+
+class _NameInputSlide extends StatelessWidget {
+  const _NameInputSlide({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: AppColors.emerald.withValues(alpha: 0.10),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppColors.emerald.withValues(alpha: 0.20),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.18),
+                  blurRadius: 40,
+                  spreadRadius: -8,
+                  offset: const Offset(0, 12),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.person_outline_rounded,
+                size: 40, color: AppColors.emerald),
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          Text(
+            '¿Cómo te llamas?',
+            textAlign: TextAlign.center,
+            style: AppTypography.displayM.copyWith(
+              color: AppColors.textPrimary,
+              height: 1.15,
+              letterSpacing: -1.0,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Así te saludaremos cada vez que abras Vexa.',
+            textAlign: TextAlign.center,
+            style: AppTypography.bodyL.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxxl),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              border: Border.all(
+                color: AppColors.emerald.withValues(alpha: 0.30),
+                width: 1,
+              ),
+            ),
+            child: TextField(
+              controller: controller,
+              autofocus: false,
+              textCapitalization: TextCapitalization.words,
+              style: AppTypography.headingS.copyWith(
+                color: AppColors.textPrimary,
+              ),
+              textAlign: TextAlign.center,
+              decoration: InputDecoration(
+                hintText: 'Tu nombre',
+                hintStyle: AppTypography.headingS.copyWith(
+                  color: AppColors.textTertiary,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Puedes cambiarlo después en tu perfil.',
+            textAlign: TextAlign.center,
+            style: AppTypography.labelS
+                .copyWith(color: AppColors.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Currency slide ────────────────────────────────────────────────────────────
 

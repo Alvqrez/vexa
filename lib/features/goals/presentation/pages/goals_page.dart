@@ -114,7 +114,7 @@ class GoalsPage extends ConsumerWidget {
                         Expanded(
                           child: _StatTile(
                             label: 'Total ahorrado',
-                            value: '\$${_fmt(totalSaved)}',
+                            value: _fmt(totalSaved),
                             icon: Icons.savings_outlined,
                             color: AppColors.catEntertainment,
                           ),
@@ -170,8 +170,12 @@ class GoalsPage extends ConsumerWidget {
                         ],
                       ],
 
-                      // Tip banner
-                      _TipBanner(),
+                      // Tip banners
+                      const _TipBanner(),
+                      const SizedBox(height: AppSpacing.md),
+                      const _TipBanner(
+                        text: '¿Cómo administrar tus metas? Preferiblemente, utiliza bolsos, carteras, cajas o algún otro recipiente donde puedas poner dinero y déjalos en un lugar donde sepas que ese dinero no lo puedes tomar — es un ahorro destinado a una meta.',
+                      ),
                     ],
 
                     const SizedBox(
@@ -206,15 +210,15 @@ class GoalsPage extends ConsumerWidget {
 
 // ── Goal card ─────────────────────────────────────────────────────────────────
 
-class _GoalCard extends StatefulWidget {
+class _GoalCard extends ConsumerStatefulWidget {
   const _GoalCard({required this.goal});
   final FinancialGoal goal;
 
   @override
-  State<_GoalCard> createState() => _GoalCardState();
+  ConsumerState<_GoalCard> createState() => _GoalCardState();
 }
 
-class _GoalCardState extends State<_GoalCard>
+class _GoalCardState extends ConsumerState<_GoalCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _bar;
   late Animation<double> _barAnim;
@@ -324,6 +328,32 @@ class _GoalCardState extends State<_GoalCard>
                     fontSize: 16,
                   ),
                 ),
+                const SizedBox(width: AppSpacing.sm),
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => _EditGoalSheet(
+                        goal: g,
+                        onSave: (updated) =>
+                            ref.read(goalsProvider.notifier).update(updated),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: AppColors.glassLight,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(Icons.edit_rounded,
+                        size: 13, color: AppColors.textTertiary),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: AppSpacing.md),
@@ -355,12 +385,12 @@ class _GoalCardState extends State<_GoalCard>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '\$${_fmt(g.current)} ahorrados',
+                  '${_fmt(g.current)} ahorrados',
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.textSecondary),
                 ),
                 Text(
-                  'Meta: \$${_fmt(g.target)}',
+                  'Meta: ${_fmt(g.target)}',
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.textTertiary),
                 ),
@@ -781,6 +811,9 @@ class _StatTile extends StatelessWidget {
 // ── Tip banner ────────────────────────────────────────────────────────────────
 
 class _TipBanner extends StatelessWidget {
+  const _TipBanner({this.text = 'Destina el 20% de tus ingresos a tus metas de ahorro cada mes.'});
+  final String text;
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -792,6 +825,7 @@ class _TipBanner extends StatelessWidget {
             color: AppColors.petroleum.withValues(alpha: 0.22), width: 0.5),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             width: 36,
@@ -816,7 +850,7 @@ class _TipBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Destina el 20% de tus ingresos a tus metas de ahorro cada mes.',
+                  text,
                   style: AppTypography.labelS
                       .copyWith(color: AppColors.petroleum),
                 ),
@@ -824,6 +858,296 @@ class _TipBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Edit goal sheet ───────────────────────────────────────────────────────────
+
+class _EditGoalSheet extends StatefulWidget {
+  const _EditGoalSheet({required this.goal, required this.onSave});
+  final FinancialGoal goal;
+  final void Function(FinancialGoal) onSave;
+
+  @override
+  State<_EditGoalSheet> createState() => _EditGoalSheetState();
+}
+
+class _EditGoalSheetState extends State<_EditGoalSheet> {
+  late final TextEditingController _titleCtrl;
+  late final TextEditingController _targetCtrl;
+  late final TextEditingController _currentCtrl;
+  late DateTime _deadline;
+  late int _iconIdx;
+  late int _colorIdx;
+
+  static const _icons = [
+    Icons.savings_outlined, Icons.flight_outlined, Icons.laptop_outlined,
+    Icons.home_outlined, Icons.directions_car_outlined, Icons.school_outlined,
+    Icons.favorite_outline, Icons.emoji_events_outlined,
+  ];
+  static const _colors = [
+    AppColors.petroleum, AppColors.catShopping, AppColors.catTransport,
+    AppColors.emerald, AppColors.catFood, AppColors.catEntertainment,
+    AppColors.catHealth, AppColors.negative,
+  ];
+
+  static const _monthNames = [
+    'ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final g = widget.goal;
+    _titleCtrl = TextEditingController(text: g.title);
+    _targetCtrl = TextEditingController(text: g.target.toStringAsFixed(0));
+    _currentCtrl = TextEditingController(text: g.current.toStringAsFixed(0));
+    _deadline = g.deadline;
+    _iconIdx = _icons.indexOf(g.icon).clamp(0, _icons.length - 1);
+    _colorIdx = _colors.indexWhere((c) => c.toARGB32() == g.color.toARGB32())
+        .clamp(0, _colors.length - 1);
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _targetCtrl.dispose();
+    _currentCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDeadline() async {
+    HapticFeedback.selectionClick();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _deadline.isAfter(DateTime.now()) ? _deadline : DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(DateTime.now().year + 10),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppColors.emerald,
+            onPrimary: Colors.white,
+            surface: AppColors.card,
+            onSurface: AppColors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null && mounted) setState(() => _deadline = picked);
+  }
+
+  void _submit() {
+    final title = _titleCtrl.text.trim();
+    final target = double.tryParse(_targetCtrl.text.trim());
+    final current = double.tryParse(_currentCtrl.text.trim());
+    if (title.isEmpty || target == null || target <= 0) {
+      HapticFeedback.heavyImpact();
+      return;
+    }
+    final safeCurrent = (current ?? widget.goal.current).clamp(0.0, target);
+    final updated = widget.goal.copyWith(
+      title: title,
+      icon: _icons[_iconIdx],
+      color: _colors[_colorIdx],
+      target: target,
+      current: safeCurrent,
+      deadline: _deadline,
+      completed: safeCurrent >= target,
+    );
+    HapticFeedback.mediumImpact();
+    widget.onSave(updated);
+    Navigator.of(context).pop();
+  }
+
+  String get _deadlineLabel {
+    final d = _deadline;
+    return '${d.day} ${_monthNames[d.month - 1]} ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Text('Editar meta',
+                style: AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
+            const SizedBox(height: AppSpacing.lg),
+            // Title
+            _GoalTextField(_titleCtrl, 'Nombre de la meta', Icons.label_outline_rounded),
+            const SizedBox(height: AppSpacing.md),
+            // Target & Current in a row
+            Row(
+              children: [
+                Expanded(child: _GoalTextField(_targetCtrl, 'Monto objetivo', Icons.flag_outlined, numeric: true)),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(child: _GoalTextField(_currentCtrl, 'Ahorrado hasta hoy', Icons.savings_outlined, numeric: true)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Deadline picker
+            GestureDetector(
+              onTap: _pickDeadline,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 16, color: AppColors.textTertiary),
+                    const SizedBox(width: AppSpacing.sm),
+                    Text('Fecha límite: $_deadlineLabel',
+                        style: AppTypography.bodyM
+                            .copyWith(color: AppColors.textSecondary)),
+                    const Spacer(),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 16, color: AppColors.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Icon selector
+            SizedBox(
+              height: 44,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _icons.length,
+                separatorBuilder: (_, i2) => const SizedBox(width: AppSpacing.sm),
+                itemBuilder: (_, i) {
+                  final sel = i == _iconIdx;
+                  final col = _colors[_colorIdx];
+                  return GestureDetector(
+                    onTap: () { HapticFeedback.selectionClick(); setState(() => _iconIdx = i); },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: sel ? col.withValues(alpha: 0.18) : AppColors.glassLight,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: sel ? col.withValues(alpha: 0.5) : AppColors.glassBorder,
+                          width: sel ? 1.5 : 0.5,
+                        ),
+                      ),
+                      child: Icon(_icons[i], size: 20,
+                          color: sel ? col : AppColors.textTertiary),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            // Color selector
+            Wrap(
+              spacing: AppSpacing.sm,
+              children: List.generate(_colors.length, (i) {
+                final sel = i == _colorIdx;
+                return GestureDetector(
+                  onTap: () { HapticFeedback.selectionClick(); setState(() => _colorIdx = i); },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: _colors[i],
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: sel ? Colors.white : Colors.transparent, width: 2.5),
+                    ),
+                    child: sel ? const Icon(Icons.check_rounded, size: 14, color: Colors.white) : null,
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            GestureDetector(
+              onTap: _submit,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                      colors: [AppColors.emerald, AppColors.emeraldDim]),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  boxShadow: [
+                    BoxShadow(
+                        color: AppColors.emerald.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: Text('Guardar cambios',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.labelL.copyWith(
+                        color: AppColors.textInverse, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GoalTextField extends StatelessWidget {
+  const _GoalTextField(this.ctrl, this.hint, this.icon, {this.numeric = false});
+  final TextEditingController ctrl;
+  final String hint;
+  final IconData icon;
+  final bool numeric;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+      ),
+      child: TextField(
+        controller: ctrl,
+        keyboardType: numeric
+            ? const TextInputType.numberWithOptions(decimal: true)
+            : null,
+        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
+          prefixIcon: Icon(icon, size: 16, color: AppColors.textTertiary),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        ),
       ),
     );
   }

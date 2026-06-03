@@ -1,30 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 
-class PersonalDataPage extends StatefulWidget {
+class PersonalDataPage extends ConsumerStatefulWidget {
   const PersonalDataPage({super.key});
 
   @override
-  State<PersonalDataPage> createState() => _PersonalDataPageState();
+  ConsumerState<PersonalDataPage> createState() => _PersonalDataPageState();
 }
 
-class _PersonalDataPageState extends State<PersonalDataPage>
+class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
   bool _editing = false;
 
-  final _nameController =
-      TextEditingController(text: 'Leonardo Alvarez');
-  final _emailController =
-      TextEditingController(text: 'leoo.azdz@gmail.com');
-  final _phoneController =
-      TextEditingController(text: '+52 55 1234 5678');
-  final _birthdateController =
-      TextEditingController(text: '15 / 03 / 1998');
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _birthdateController = TextEditingController();
 
   static const _sectionCount = 3;
 
@@ -35,6 +33,13 @@ class _PersonalDataPageState extends State<PersonalDataPage>
       vsync: this,
       duration: const Duration(milliseconds: 900),
     )..forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final p = ref.read(userProfileProvider);
+      _nameController.text = p.name;
+      _emailController.text = p.email;
+      _phoneController.text = p.phone;
+      _birthdateController.text = p.birthdate;
+    });
   }
 
   @override
@@ -67,8 +72,16 @@ class _PersonalDataPageState extends State<PersonalDataPage>
   }
 
   void _toggleEdit() {
+    if (_editing) {
+      ref.read(userProfileProvider.notifier).update(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        birthdate: _birthdateController.text.trim(),
+      );
+      HapticFeedback.lightImpact();
+    }
     setState(() => _editing = !_editing);
-    if (!_editing) HapticFeedback.lightImpact();
   }
 
   @override
@@ -141,7 +154,7 @@ class _PersonalDataPageState extends State<PersonalDataPage>
                               ),
                               child: Center(
                                 child: Text(
-                                  'L',
+                                  ref.watch(userProfileProvider).initial,
                                   style: AppTypography.headingM.copyWith(
                                     color: AppColors.textPrimary,
                                     fontWeight: FontWeight.w800,
