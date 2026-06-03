@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../providers/home_provider.dart';
+import '../../../budget/presentation/pages/budget_page.dart';
 import '../../../budget/presentation/providers/budget_provider.dart';
 import '../../../../core/providers/settings_provider.dart';
 
@@ -52,7 +54,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
     final currency = ref.watch(currencySymbolProvider);
 
     // ── Double-Bezel outer tray ─────────────────────────────────────────────
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const BudgetPage()),
+        );
+      },
+      child: Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
@@ -156,45 +165,77 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text: '$currency${expenses.toStringAsFixed(0)}',
-                          style: AppTypography.headingL.copyWith(
-                            color: AppColors.textPrimary,
+                  if (limit > 0) ...[
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: '$currency${expenses.toStringAsFixed(0)}',
+                            style: AppTypography.headingL.copyWith(
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
-                        TextSpan(
-                          text: ' / $currency${limit.toStringAsFixed(0)}',
-                          style: AppTypography.bodyM.copyWith(
-                            color: AppColors.textTertiary,
+                          TextSpan(
+                            text: ' / $currency${limit.toStringAsFixed(0)}',
+                            style: AppTypography.bodyM.copyWith(
+                              color: AppColors.textTertiary,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  _StatRow(
-                    label: 'Ingresos',
-                    value: '$currency${income.toStringAsFixed(0)}',
-                    color: AppColors.positive,
-                    icon: Icons.south_rounded,
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  _StatRow(
-                    label: 'Gastos',
-                    value: '$currency${expenses.toStringAsFixed(0)}',
-                    color: AppColors.negative,
-                    icon: Icons.north_rounded,
-                  ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _StatRow(
+                      label: 'Ingresos',
+                      value: '$currency${income.toStringAsFixed(0)}',
+                      color: AppColors.positive,
+                      icon: Icons.south_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _StatRow(
+                      label: 'Gastos',
+                      value: '$currency${expenses.toStringAsFixed(0)}',
+                      color: AppColors.negative,
+                      icon: Icons.north_rounded,
+                    ),
+                  ] else ...[
+                    Text(
+                      'Sin presupuesto',
+                      style: AppTypography.headingS.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Toca para configurar\nlímites de gasto.',
+                      style: AppTypography.labelM.copyWith(
+                        color: AppColors.textTertiary,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _StatRow(
+                      label: 'Ingresos',
+                      value: '$currency${income.toStringAsFixed(0)}',
+                      color: AppColors.positive,
+                      icon: Icons.south_rounded,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _StatRow(
+                      label: 'Gastos',
+                      value: '$currency${expenses.toStringAsFixed(0)}',
+                      color: AppColors.negative,
+                      icon: Icons.north_rounded,
+                    ),
+                  ],
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }
 

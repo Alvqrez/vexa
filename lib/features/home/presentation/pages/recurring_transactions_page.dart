@@ -13,7 +13,7 @@ import '../providers/home_provider.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
-final _recurringListProvider =
+final recurringListProvider =
     StateNotifierProvider<_RecurringListNotifier, List<RecurringTransaction>>(
   (ref) => _RecurringListNotifier(),
 );
@@ -48,7 +48,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(_recurringListProvider);
+    final items = ref.watch(recurringListProvider);
     final currency = ref.watch(currencySymbolProvider);
     final accounts = ref.watch(accountsProvider);
 
@@ -149,7 +149,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
                           account: account,
                           currency: currency,
                           onDelete: () => ref
-                              .read(_recurringListProvider.notifier)
+                              .read(recurringListProvider.notifier)
                               .remove(r.id),
                         );
                       },
@@ -171,7 +171,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
       useSafeArea: true,
       builder: (_) => _AddRecurringSheet(accounts: accounts),
     ).then((_) =>
-        ref.read(_recurringListProvider.notifier).refresh());
+        ref.read(recurringListProvider.notifier).refresh());
   }
 }
 

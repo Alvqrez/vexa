@@ -10,6 +10,8 @@ import '../../../subscriptions/domain/models/subscription.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
 import '../providers/wallet_provider.dart';
+import '../../../home/domain/models/transaction.dart';
+import '../../../home/domain/models/recurring_transaction.dart';
 import '../../../home/presentation/pages/recurring_transactions_page.dart';
 import 'wallet_categories_page.dart';
 
@@ -600,55 +602,93 @@ class _RecurringTransactionsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return GestureDetector(
+    final items = ref.watch(recurringListProvider);
+    final currency = ref.watch(currencySymbolProvider);
+    final accounts = ref.watch(accountsProvider);
+    final preview = items.take(3).toList();
+
+    return _WalletSection(
+      title: 'Recurrentes',
+      subtitle: '${items.length} configuradas',
+      icon: Icons.repeat_rounded,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-            builder: (_) => const RecurringTransactionsPage()),
+        MaterialPageRoute(builder: (_) => const RecurringTransactionsPage()),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.catTransport.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+      child: preview.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              child: Text(
+                'Sin transacciones recurrentes. Toca "Ver todo" para agregar.',
+                style: AppTypography.labelM
+                    .copyWith(color: AppColors.textTertiary),
               ),
-              child: const Icon(Icons.repeat_rounded,
-                  size: 20, color: AppColors.catTransport),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Transacciones recurrentes',
-                    style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary),
+            )
+          : Column(
+              children: preview.map((r) {
+                final cat = TransactionCategory.values.firstWhere(
+                  (c) => c.name == r.category,
+                  orElse: () => TransactionCategory.other,
+                );
+                final account =
+                    accounts.where((a) => a.id == r.accountId).firstOrNull;
+                final isIncome = r.type == TransactionType.income.name;
+                final freqShort = _freqShort(r);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: cat.surface,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(cat.icon, size: 15, color: cat.color),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(r.merchant,
+                                style: AppTypography.labelL
+                                    .copyWith(color: AppColors.textPrimary)),
+                            Text(
+                              '$freqShort${account != null ? ' · ${account.name}' : ''}',
+                              style: AppTypography.labelS
+                                  .copyWith(color: AppColors.textTertiary),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${isIncome ? '+' : '-'}$currency${r.amount.toStringAsFixed(2)}',
+                        style: AppTypography.labelL.copyWith(
+                          color: isIncome
+                              ? AppColors.positive
+                              : AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Diarias, semanales o mensuales con días y frecuencia',
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary),
-                  ),
-                ],
-              ),
+                );
+              }).toList(),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
-          ],
-        ),
-      ),
     );
+  }
+
+  String _freqShort(RecurringTransaction r) {
+    final base = r.frequency.label.toLowerCase();
+    final t = r.timesPerOccurrence > 1 ? ' × ${r.timesPerOccurrence}' : '';
+    final d = r.weekDays;
+    if (d != null) {
+      const n = ['', 'L', 'M', 'X', 'J', 'V', 'S', 'D'];
+      final days = d.map((i) => n[i]).join('');
+      return '$base$t ($days)';
+    }
+    return '$base$t';
   }
 }
 

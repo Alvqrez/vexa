@@ -118,6 +118,25 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     List<Account> accounts;
     if (records.isNotEmpty) {
       accounts = records.map(_isarToAccount).toList();
+      // Migration: wallet_default must always be named "Cartera" regardless
+      // of the name it was initially created with (e.g. user's first name).
+      bool renamed = false;
+      accounts = accounts.map((a) {
+        if (a.id == 'wallet_default' && a.name != 'Cartera') {
+          renamed = true;
+          return a.copyWith(name: 'Cartera');
+        }
+        return a;
+      }).toList();
+      if (renamed) {
+        // clear() + putAll is required — putAll alone with new IsarAccount()
+        // objects (id = autoIncrement) would insert duplicates and throw.
+        await _isar.writeTxn(() async {
+          await _isar.isarAccounts.clear();
+          await _isar.isarAccounts
+              .putAll(accounts.map(_accountToIsar).toList());
+        });
+      }
     } else {
       final defaultWallet = Account(
         id: 'wallet_default',
