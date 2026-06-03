@@ -19,10 +19,13 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
     super.key,
     this.existing,
     this.defaultType = TransactionType.expense,
+    this.defaultAccountId,
   });
 
   final Transaction? existing;
   final TransactionType defaultType;
+  /// When set, pre-selects this account without overriding with last-used.
+  final String? defaultAccountId;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -84,6 +87,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       // (avoids showing "Comida" as the editable text for old transactions)
       _merchantCtrl.text =
           e.merchant != e.category.label ? e.merchant : '';
+    } else if (widget.defaultAccountId != null) {
+      // Explicit account from caller — respect it, don't override with last-used.
+      _selectedAccountId = widget.defaultAccountId;
     } else {
       final accounts = ref.read(accountsProvider);
       final wallet =

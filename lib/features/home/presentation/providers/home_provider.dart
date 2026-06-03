@@ -130,9 +130,19 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
         color: const Color(0xFF00D68F),
         icon: AccountIcon.wallet,
       );
-      accounts = [defaultWallet];
+      const defaultSavings = Account(
+        id: 'savings_default',
+        name: 'Ahorro',
+        balance: 0,
+        color: Color(0xFF7C5CFC),
+        icon: AccountIcon.savings,
+        isSavings: true,
+      );
+      accounts = [defaultWallet, defaultSavings];
       await _isar.writeTxn(() =>
           _isar.isarAccounts.putAll(accounts.map(_accountToIsar).toList()));
+      // Mark the savings account in prefs
+      await LocalPrefsService.setBool('account_savings_savings_default', true);
     }
     // Load isSavings flags from prefs (avoids Isar schema change)
     final withFlags = await Future.wait(accounts.map((a) async {

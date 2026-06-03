@@ -106,7 +106,14 @@ class _MainShellState extends ConsumerState<MainShell>
     );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final shown = await LocalPrefsService.getBool('tutorial_shown');
-      if (!shown && mounted) setState(() => _showTutorial = true);
+      if (!shown && mounted) {
+        setState(() => _showTutorial = true);
+        // Savings explainer fires after the tutorial (_endTutorial handles it)
+      } else {
+        // Tutorial already done — show savings explainer once if not yet seen
+        await Future.delayed(const Duration(milliseconds: 600));
+        await _maybeShowSavingsExplainer();
+      }
       await _processRecurring();
     });
   }
@@ -176,6 +183,23 @@ class _MainShellState extends ConsumerState<MainShell>
   Future<void> _endTutorial() async {
     setState(() => _showTutorial = false);
     await LocalPrefsService.setBool('tutorial_shown', true);
+    await Future.delayed(const Duration(milliseconds: 400));
+    await _maybeShowSavingsExplainer();
+  }
+
+  Future<void> _maybeShowSavingsExplainer() async {
+    final already = await LocalPrefsService.getBool('savings_explained');
+    if (already || !mounted) return;
+    await LocalPrefsService.setBool('savings_explained', true);
+    if (!mounted) return;
+    final name = ref.read(userProfileProvider).firstName;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      isDismissible: true,
+      builder: (_) => _SavingsExplainerSheet(name: name),
+    );
   }
 
   @override
@@ -1216,6 +1240,160 @@ class _TransferAccountChip extends StatelessWidget {
               size: 14, color: color.withValues(alpha: 0.7)),
         ],
       ),
+    );
+  }
+}
+
+// ── Savings explainer sheet ───────────────────────────────────────────────────
+
+class _SavingsExplainerSheet extends StatelessWidget {
+  const _SavingsExplainerSheet({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    const savingsColor = Color(0xFF7C5CFC);
+    final greeting = name.isEmpty ? '' : '$name, ';
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Icon + title
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: savingsColor.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.savings_outlined,
+                    size: 24, color: savingsColor),
+              ),
+              const SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: Text(
+                  'Tu cuenta de Ahorro',
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Body text
+          _Paragraph(
+            'Lo más importante para una buena gestión de finanzas es el ahorro. '
+            'Hemos creado una cuenta especialmente para ello.',
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Tip card
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: savingsColor.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              border: Border.all(
+                  color: savingsColor.withValues(alpha: 0.22), width: 0.5),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('💡', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    '${greeting}en tu cuarto o en tu hogar, designa una botella '
+                    'con un corte, una cartera, una lata —cualquier recipiente '
+                    'donde puedas guardar monedas y billetes. Ponle "Ahorro" con plumón.',
+                    style: AppTypography.bodyM.copyWith(
+                        color: AppColors.textSecondary, height: 1.55),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          _Paragraph(
+            'Cada vez que metas dinero en ese recipiente, regístralo en esta cuenta. '
+            'Vexa usará ese dato para darte predicciones del mes y mostrarte '
+            'información financiera más precisa.',
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+
+          // CTA button
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(context).pop();
+            },
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                    colors: [Color(0xFF7C5CFC), Color(0xFF5A3FD4)]),
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF7C5CFC).withValues(alpha: 0.30),
+                    blurRadius: 20,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Text(
+                '¡Entendido!',
+                textAlign: TextAlign.center,
+                style: AppTypography.labelL.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Paragraph extends StatelessWidget {
+  const _Paragraph(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.bodyM
+          .copyWith(color: AppColors.textSecondary, height: 1.55),
     );
   }
 }

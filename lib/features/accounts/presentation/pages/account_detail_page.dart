@@ -80,7 +80,10 @@ class AccountDetailPage extends ConsumerWidget {
                         context: context,
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
-                        builder: (_) => const AddTransactionSheet(),
+                        useSafeArea: true,
+                        builder: (_) => AddTransactionSheet(
+                          defaultAccountId: accountId,
+                        ),
                       ),
                     ),
                   ),
@@ -518,6 +521,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
       type: diff > 0 ? TransactionType.income : TransactionType.expense,
       category: TransactionCategory.other,
       date: DateTime.now(),
+      accountId: widget.account.id,
       note: 'Ajuste manual de saldo',
     );
 
