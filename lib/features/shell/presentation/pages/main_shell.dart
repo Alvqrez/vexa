@@ -152,23 +152,33 @@ class _MainShellState extends ConsumerState<MainShell>
         var current = r;
         try {
           while (!current.nextDate.isAfter(today)) {
-            final t = Transaction(
-              id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}',
-              merchant: current.merchant,
-              amount: current.amount,
-              type: TransactionType.values.firstWhere(
+            // Skip days not in weekDays (if set)
+            final dayAllowed = current.weekDays == null ||
+                current.weekDays!.contains(current.nextDate.weekday);
+            if (dayAllowed) {
+              final baseType = TransactionType.values.firstWhere(
                   (v) => v.name == current.type,
-                  orElse: () => TransactionType.expense),
-              category: TransactionCategory.values.firstWhere(
+                  orElse: () => TransactionType.expense);
+              final baseCat = TransactionCategory.values.firstWhere(
                   (v) => v.name == current.category,
-                  orElse: () => TransactionCategory.other),
-              date: current.nextDate,
-              accountId: current.accountId,
-              note: current.note,
-            );
-            ref.read(transactionsProvider.notifier).add(t);
-            current = current.copyWith(
-                nextDate: current.frequency.nextDate(current.nextDate));
+                  orElse: () => TransactionCategory.other);
+              for (var i = 0; i < current.timesPerOccurrence; i++) {
+                final t = Transaction(
+                  id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}_$i',
+                  merchant: current.merchant,
+                  amount: current.amount,
+                  type: baseType,
+                  category: baseCat,
+                  date: current.nextDate,
+                  accountId: current.accountId,
+                  note: current.note,
+                );
+                ref.read(transactionsProvider.notifier).add(t);
+              }
+            }
+            final nextD = current.frequency.nextDateFrom(
+                current.nextDate, current.weekDays);
+            current = current.copyWith(nextDate: nextD);
             changed = true;
           }
         } catch (_) {

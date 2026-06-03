@@ -116,8 +116,10 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                       const SizedBox(height: AppSpacing.xxl),
 
                       // Main score hero
-                      Center(
+                      SizedBox(
+                        width: double.infinity,
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             AnimatedBuilder(
                               animation: _scoreAnim,
@@ -148,11 +150,15 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                               ),
                             ),
                             const SizedBox(height: AppSpacing.md),
-                            Text(
-                              health.status.description,
-                              style: AppTypography.bodyS.copyWith(
-                                  color: AppColors.textSecondary),
-                              textAlign: TextAlign.center,
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xl),
+                              child: Text(
+                                health.status.description,
+                                style: AppTypography.bodyS.copyWith(
+                                    color: AppColors.textSecondary),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ],
                         ),

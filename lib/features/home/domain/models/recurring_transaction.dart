@@ -2,31 +2,48 @@ import 'dart:convert';
 import '../../../../core/data/local_prefs_service.dart';
 
 enum RecurrenceFrequency {
+  daily,
   weekly,
   monthly,
   yearly;
 
   String get label => switch (this) {
+        daily => 'Diario',
         weekly => 'Semanal',
         monthly => 'Mensual',
         yearly => 'Anual',
       };
 
+  /// Returns the next date without weekday filtering.
+  /// Use [nextDateFrom] when weekDays restrictions apply.
   DateTime nextDate(DateTime from) {
     switch (this) {
+      case daily:
+        return from.add(const Duration(days: 1));
       case weekly:
         return from.add(const Duration(days: 7));
       case monthly:
-        final nextMonth = from.month == 12 ? 1 : from.month + 1;
-        final nextYear = from.month == 12 ? from.year + 1 : from.year;
-        final lastDayOfNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
-        return DateTime(nextYear, nextMonth,
-            from.day.clamp(1, lastDayOfNextMonth), from.hour, from.minute);
+        final nm = from.month == 12 ? 1 : from.month + 1;
+        final ny = from.month == 12 ? from.year + 1 : from.year;
+        final last = DateTime(ny, nm + 1, 0).day;
+        return DateTime(ny, nm, from.day.clamp(1, last),
+            from.hour, from.minute);
       case yearly:
-        final lastDayOfMonth = DateTime(from.year + 1, from.month + 1, 0).day;
+        final last = DateTime(from.year + 1, from.month + 1, 0).day;
         return DateTime(from.year + 1, from.month,
-            from.day.clamp(1, lastDayOfMonth), from.hour, from.minute);
+            from.day.clamp(1, last), from.hour, from.minute);
     }
+  }
+
+  /// Next date considering allowed weekdays (1=Mon…7=Sun). Null = every day.
+  DateTime nextDateFrom(DateTime from, List<int>? weekDays) {
+    if (weekDays == null || weekDays.isEmpty) return nextDate(from);
+    var next = from.add(const Duration(days: 1));
+    for (var i = 0; i < 8; i++) {
+      if (weekDays.contains(next.weekday)) return next;
+      next = next.add(const Duration(days: 1));
+    }
+    return next;
   }
 }
 
@@ -42,6 +59,8 @@ class RecurringTransaction {
     required this.nextDate,
     this.note,
     this.isActive = true,
+    this.timesPerOccurrence = 1,
+    this.weekDays,
   });
 
   final String id;
@@ -54,6 +73,10 @@ class RecurringTransaction {
   final RecurrenceFrequency frequency;
   final DateTime nextDate;
   final bool isActive;
+  /// How many transactions to post each time this fires (e.g., 2 for round-trip).
+  final int timesPerOccurrence;
+  /// Allowed weekdays (1=Mon…7=Sun). Null means every day.
+  final List<int>? weekDays;
 
   RecurringTransaction copyWith({DateTime? nextDate}) => RecurringTransaction(
         id: id,
@@ -66,6 +89,8 @@ class RecurringTransaction {
         frequency: frequency,
         nextDate: nextDate ?? this.nextDate,
         isActive: isActive,
+        timesPerOccurrence: timesPerOccurrence,
+        weekDays: weekDays,
       );
 
   Map<String, dynamic> toJson() => {
@@ -79,6 +104,8 @@ class RecurringTransaction {
         'frequency': frequency.name,
         'nextDate': nextDate.toIso8601String(),
         'isActive': isActive,
+        'timesPerOccurrence': timesPerOccurrence,
+        if (weekDays != null) 'weekDays': weekDays,
       };
 
   factory RecurringTransaction.fromJson(Map<String, dynamic> j) =>
@@ -95,6 +122,10 @@ class RecurringTransaction {
             orElse: () => RecurrenceFrequency.monthly),
         nextDate: DateTime.parse(j['nextDate'] as String),
         isActive: j['isActive'] as bool? ?? true,
+        timesPerOccurrence: (j['timesPerOccurrence'] as int?) ?? 1,
+        weekDays: (j['weekDays'] as List<dynamic>?)
+            ?.map((e) => e as int)
+            .toList(),
       );
 
   static const _key = 'recurring_transactions';

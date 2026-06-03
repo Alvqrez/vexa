@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
 import '../../domain/models/transaction.dart';
 
@@ -69,31 +70,40 @@ class SmartInsightsWidget extends ConsumerWidget {
     final transactions = ref.watch(transactionsProvider);
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
+    final savedToAccount = ref.watch(monthlySavingsProvider); // transfers to savings account
     final prediction = ref.watch(predictionProvider);
     final topCat = ref.watch(topCategoryProvider);
     final breakdown = ref.watch(categoryBreakdownProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     final now = DateTime.now();
     final insights = <_InsightData>[];
 
-    // 1. Savings rate insight
-    if (income > 0) {
-      final savingsRate = (income - expenses) / income;
-      if (savingsRate > 0.2) {
+    // 1. Savings insight — only counts money transferred to the savings account
+    if (income > 0 && savedToAccount > 0) {
+      final savingsRate = savedToAccount / income;
+      if (savingsRate >= 0.2) {
         insights.add(_InsightData(
           icon: Icons.savings_rounded,
           color: AppColors.positive,
           title: 'Buen ahorro',
           body: 'Ahorras el ${(savingsRate * 100).toStringAsFixed(0)}% de tus ingresos este mes.',
         ));
-      } else if (savingsRate < 0) {
+      } else {
         insights.add(_InsightData(
-          icon: Icons.warning_amber_rounded,
-          color: AppColors.warning,
-          title: 'Gastos altos',
-          body: 'Tus gastos superan tus ingresos este mes.',
+          icon: Icons.savings_rounded,
+          color: AppColors.petroleum,
+          title: 'Ahorro iniciado',
+          body: 'Llevas $currency${savedToAccount.toStringAsFixed(0)} ahorrados. ¡Sigue así!',
         ));
       }
+    } else if (income > 0 && expenses > income) {
+      insights.add(_InsightData(
+        icon: Icons.warning_amber_rounded,
+        color: AppColors.warning,
+        title: 'Gastos altos',
+        body: 'Tus gastos superan tus ingresos este mes.',
+      ));
     }
 
     // 2. Top category
@@ -103,7 +113,7 @@ class SmartInsightsWidget extends ConsumerWidget {
         icon: topCat.icon,
         color: topCat.color,
         title: topCat.label,
-        body: 'Mayor gasto: \$${topAmount.toStringAsFixed(0)} en ${topCat.label.toLowerCase()}.',
+        body: 'Mayor gasto: $currency${topAmount.toStringAsFixed(0)} en ${topCat.label.toLowerCase()}.',
       ));
     }
 
@@ -113,7 +123,7 @@ class SmartInsightsWidget extends ConsumerWidget {
         icon: Icons.today_rounded,
         color: AppColors.petroleum,
         title: 'Por día',
-        body: 'Gastas en promedio \$${prediction.dailyAvgExpense.toStringAsFixed(0)}/día.',
+        body: 'Gastas en promedio $currency${prediction.dailyAvgExpense.toStringAsFixed(0)}/día.',
       ));
     }
 
@@ -122,7 +132,8 @@ class SmartInsightsWidget extends ConsumerWidget {
         .where((t) =>
             !t.isIncome &&
             now.difference(t.date).inDays < 7 &&
-            t.date.month == now.month)
+            t.date.month == now.month &&
+            t.date.year == now.year)
         .fold(0.0, (s, t) => s + t.amount);
     final prevWeekExpenses = transactions
         .where((t) =>
@@ -157,7 +168,7 @@ class SmartInsightsWidget extends ConsumerWidget {
         icon: Icons.flag_rounded,
         color: AppColors.emerald,
         title: 'Proyección',
-        body: 'Finalizarás el mes con \$${prediction.predictedBalance.toStringAsFixed(0)} disponibles.',
+        body: 'Finalizarás el mes con $currency${prediction.predictedBalance.toStringAsFixed(0)} disponibles.',
       ));
     }
 
@@ -167,7 +178,7 @@ class SmartInsightsWidget extends ConsumerWidget {
         icon: Icons.account_balance_wallet_rounded,
         color: AppColors.petroleum,
         title: 'Ingresos',
-        body: '\$${income.toStringAsFixed(0)} ingresados este mes.',
+        body: '$currency${income.toStringAsFixed(0)} ingresados este mes.',
       ));
     }
 

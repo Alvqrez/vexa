@@ -119,13 +119,9 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     if (records.isNotEmpty) {
       accounts = records.map(_isarToAccount).toList();
     } else {
-      final profileName = await LocalPrefsService.getString('profile_name');
-      final accountName = (profileName != null && profileName.trim().isNotEmpty)
-          ? profileName.trim().split(' ').first
-          : 'Cartera';
       final defaultWallet = Account(
         id: 'wallet_default',
-        name: accountName,
+        name: 'Cartera',
         balance: 0,
         color: const Color(0xFF00D68F),
         icon: AccountIcon.wallet,
@@ -134,7 +130,7 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
         id: 'savings_default',
         name: 'Ahorro',
         balance: 0,
-        color: Color(0xFF7C5CFC),
+        color: Color(0xFFF59E0B),
         icon: AccountIcon.savings,
         isSavings: true,
       );

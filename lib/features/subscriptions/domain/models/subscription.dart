@@ -66,8 +66,27 @@ class Subscription {
   bool get isDueSoon => daysUntilBilling <= 7;
   bool get isDueToday => daysUntilBilling == 0;
 
-  DateTime get nextAfterCurrent =>
-      nextBillingDate.add(Duration(days: frequency.daysInterval));
+  DateTime get nextAfterCurrent {
+    final d = nextBillingDate;
+    switch (frequency) {
+      case SubscriptionFrequency.weekly:
+        return d.add(const Duration(days: 7));
+      case SubscriptionFrequency.monthly:
+        final nm = d.month == 12 ? 1 : d.month + 1;
+        final ny = d.month == 12 ? d.year + 1 : d.year;
+        final last = DateTime(ny, nm + 1, 0).day;
+        return DateTime(ny, nm, d.day.clamp(1, last));
+      case SubscriptionFrequency.quarterly:
+        final nm = d.month + 3;
+        final ny = d.year + (nm - 1) ~/ 12;
+        final m = ((nm - 1) % 12) + 1;
+        final last = DateTime(ny, m + 1, 0).day;
+        return DateTime(ny, m, d.day.clamp(1, last));
+      case SubscriptionFrequency.annual:
+        final last = DateTime(d.year + 1, d.month + 1, 0).day;
+        return DateTime(d.year + 1, d.month, d.day.clamp(1, last));
+    }
+  }
 
   Subscription copyWith({
     String? name,

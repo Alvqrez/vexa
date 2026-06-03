@@ -50,61 +50,6 @@ class AccountDetailPage extends ConsumerWidget {
               ),
             ),
           ),
-          // Bottom action bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenPadding,
-                AppSpacing.md,
-                AppSpacing.screenPadding,
-                AppSpacing.lg,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                border: Border(
-                  top: BorderSide(
-                      color: AppColors.glassBorder, width: 0.5),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Nueva transacción',
-                      icon: Icons.add_rounded,
-                      color: AppColors.emerald,
-                      onTap: () => showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        useSafeArea: true,
-                        builder: (_) => AddTransactionSheet(
-                          defaultAccountId: accountId,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Corrección',
-                      icon: Icons.tune_rounded,
-                      color: AppColors.warning,
-                      onTap: () => showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (_) => _CorrectionSheet(account: stats.account),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
           SafeArea(
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -275,6 +220,62 @@ class AccountDetailPage extends ConsumerWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+
+          // Bottom action bar — rendered last so it sits above the scroll view
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding,
+                AppSpacing.md,
+                AppSpacing.screenPadding,
+                AppSpacing.lg,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                border: Border(
+                  top: BorderSide(color: AppColors.glassBorder, width: 0.5),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _ActionButton(
+                      label: 'Nueva transacción',
+                      icon: Icons.add_rounded,
+                      color: AppColors.emerald,
+                      onTap: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        useSafeArea: true,
+                        builder: (_) => AddTransactionSheet(
+                          defaultAccountId: accountId,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _ActionButton(
+                      label: 'Corrección',
+                      icon: Icons.tune_rounded,
+                      color: AppColors.warning,
+                      onTap: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) =>
+                            _CorrectionSheet(account: stats.account),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

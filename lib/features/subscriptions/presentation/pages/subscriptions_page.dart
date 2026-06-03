@@ -842,7 +842,13 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
   final TransactionCategory _cat = TransactionCategory.entertainment;
   Color _color = const Color(0xFF6366F1);
   IconData _icon = Icons.subscriptions_rounded;
-  final DateTime _billingDate = DateTime.now().add(const Duration(days: 30));
+  late DateTime _billingDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _billingDate = DateTime.now().add(const Duration(days: 30));
+  }
 
   static const _iconOptions = [
     Icons.play_circle_rounded,
@@ -876,6 +882,14 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
     _amountCtrl.dispose();
     super.dispose();
   }
+
+  static const _months = [
+    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+  ];
+
+  String _formatDate(DateTime d) =>
+      '${d.day} ${_months[d.month - 1]} ${d.year}';
 
   void _submit() {
     final name = _nameCtrl.text.trim();
@@ -986,6 +1000,61 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
                   ),
                 );
               }).toList(),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            _SheetLabel('Próximo cobro'),
+            const SizedBox(height: AppSpacing.sm),
+            GestureDetector(
+              onTap: () async {
+                HapticFeedback.selectionClick();
+                final now = DateTime.now();
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: _billingDate.isAfter(now)
+                      ? _billingDate
+                      : now.add(const Duration(days: 1)),
+                  firstDate: now,
+                  lastDate: DateTime(now.year + 5),
+                  builder: (ctx, child) => Theme(
+                    data: Theme.of(ctx).copyWith(
+                      colorScheme: ColorScheme.dark(
+                        primary: AppColors.emerald,
+                        onPrimary: Colors.white,
+                        surface: AppColors.card,
+                        onSurface: AppColors.textPrimary,
+                      ),
+                    ),
+                    child: child!,
+                  ),
+                );
+                if (picked != null) setState(() => _billingDate = picked);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.04),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded,
+                        size: 16, color: AppColors.textTertiary),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        _formatDate(_billingDate),
+                        style: AppTypography.labelL
+                            .copyWith(color: AppColors.textPrimary),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        size: 16, color: AppColors.textTertiary),
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: AppSpacing.xl),
             _SheetLabel('Icono'),

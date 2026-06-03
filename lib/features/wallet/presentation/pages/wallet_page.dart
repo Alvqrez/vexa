@@ -10,6 +10,7 @@ import '../../../subscriptions/domain/models/subscription.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
 import '../providers/wallet_provider.dart';
+import '../../../home/presentation/pages/recurring_transactions_page.dart';
 import 'wallet_categories_page.dart';
 
 class WalletPage extends ConsumerStatefulWidget {
@@ -22,7 +23,7 @@ class WalletPage extends ConsumerStatefulWidget {
 class _WalletPageState extends ConsumerState<WalletPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
-  static const _sectionCount = 4;
+  static const _sectionCount = 5;
 
   @override
   void initState() {
@@ -79,7 +80,9 @@ class _WalletPageState extends ConsumerState<WalletPage>
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(2, const _SubscriptionsPreviewSection()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, const _CategoriesPreviewSection()),
+                    _reveal(3, const _RecurringTransactionsCard()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(4, const _CategoriesPreviewSection()),
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
@@ -583,6 +586,65 @@ class _WalletSection extends StatelessWidget {
             Divider(height: 1, thickness: 0.5, color: AppColors.glassBorder),
             const SizedBox(height: AppSpacing.lg),
             child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Recurring Transactions Card ───────────────────────────────────────────────
+
+class _RecurringTransactionsCard extends ConsumerWidget {
+  const _RecurringTransactionsCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+            builder: (_) => const RecurringTransactionsPage()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.card,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.catTransport.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.repeat_rounded,
+                  size: 20, color: AppColors.catTransport),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transacciones recurrentes',
+                    style: AppTypography.labelL
+                        .copyWith(color: AppColors.textPrimary),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Diarias, semanales o mensuales con días y frecuencia',
+                    style: AppTypography.labelS
+                        .copyWith(color: AppColors.textTertiary),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textTertiary),
           ],
         ),
       ),
