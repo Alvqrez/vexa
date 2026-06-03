@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -214,8 +215,58 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (!_isEditing && _isRecurring) {
       _saveRecurring();
     }
+
+    final currency = ref.read(currencySymbolProvider);
+    final isIncome = _type == TransactionType.income;
+    final label = isIncome ? 'Ingreso' : 'Gasto';
+    final color = isIncome ? AppColors.positive : AppColors.negative;
+    final amountStr = amount >= 1000
+        ? '$currency${(amount / 1000).toStringAsFixed(1)}k'
+        : '$currency${amount.toStringAsFixed(2)}';
+    final messenger = ScaffoldMessenger.of(context);
+
     HapticFeedback.mediumImpact();
     Navigator.of(context).pop();
+
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_rounded, size: 15, color: color),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(
+                '$label de $amountStr ${_isEditing ? 'actualizado' : 'registrado'}',
+                style: AppTypography.labelM
+                    .copyWith(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.card,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            0,
+            AppSpacing.screenPadding,
+            AppSpacing.bottomNavHeight +
+                AppSpacing.bottomNavBottomPadding +
+                AppSpacing.md,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+        ),
+      );
   }
 
   void _showError(String msg) {

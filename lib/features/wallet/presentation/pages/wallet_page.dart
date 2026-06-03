@@ -295,6 +295,11 @@ class _AccountsOverviewCard extends ConsumerWidget {
                         const SizedBox(width: 6),
                         Text(a.name,
                             style: AppTypography.labelS.copyWith(color: a.color)),
+                        if (a.isSavings) ...[
+                          const SizedBox(width: 4),
+                          Icon(Icons.savings_outlined,
+                              size: 10, color: a.color),
+                        ],
                       ],
                     ),
                   );

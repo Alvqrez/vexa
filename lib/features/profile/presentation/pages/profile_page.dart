@@ -9,8 +9,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/widgets/streak_widget.dart';
-import '../../../gamification/presentation/providers/gamification_provider.dart';
-import '../../../gamification/presentation/pages/achievements_page.dart';
 import '../../../education/presentation/pages/education_page.dart';
 import 'personal_data_page.dart';
 import 'currency_page.dart';
@@ -94,12 +92,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
                     _reveal(1, const _ProfileHeroCard()),
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(2, const StreakWidget()),
-                    const SizedBox(height: AppSpacing.md),
-                    _reveal(2, _AchievementsSummary(
-                      unlockedCount: ref.watch(unlockedAchievementsProvider).length,
-                      totalCount: ref.watch(achievementsProvider).length,
-                      xp: ref.watch(totalXpProvider),
-                    )),
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(3, const _StatsRow()),
                     const SizedBox(height: AppSpacing.xl),
@@ -467,7 +459,7 @@ class _MiniStat extends StatelessWidget {
 
 // ── Settings sections ─────────────────────────────────────────────────────────
 
-class _AccountSettings extends StatelessWidget {
+class _AccountSettings extends ConsumerWidget {
   const _AccountSettings();
 
   void _push(BuildContext context, Widget page) {
@@ -477,7 +469,8 @@ class _AccountSettings extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currencyCode = ref.watch(currencyCodeProvider);
     return _SettingsSection(
       title: 'Mi cuenta',
       items: [
@@ -490,7 +483,7 @@ class _AccountSettings extends StatelessWidget {
         _SettingsItem(
           icon: Icons.euro_rounded,
           label: 'Moneda',
-          trailing: 'EUR',
+          trailing: currencyCode,
           color: AppColors.emerald,
           onTap: () => _push(context, const CurrencyPage()),
         ),
@@ -539,7 +532,7 @@ class _SupportSettings extends StatelessWidget {
         ),
         _SettingsItem(
           icon: Icons.help_outline_rounded,
-          label: 'Centro de ayuda',
+          label: 'Preguntas frecuentes',
           color: AppColors.catShopping,
           onTap: () => _push(context, const HelpCenterPage()),
         ),
@@ -676,85 +669,6 @@ class _SettingsItem extends StatelessWidget {
                   ),
                 ),
               ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.textTertiary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Achievements summary ──────────────────────────────────────────────────────
-
-class _AchievementsSummary extends StatelessWidget {
-  const _AchievementsSummary({
-    required this.unlockedCount,
-    required this.totalCount,
-    required this.xp,
-  });
-
-  final int unlockedCount;
-  final int totalCount;
-  final int xp;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const AchievementsPage()),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(
-            color: AppColors.catEntertainment.withValues(alpha: 0.20),
-            width: 0.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: AppColors.catEntertainment.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: const Icon(
-                Icons.emoji_events_rounded,
-                size: 18,
-                color: AppColors.catEntertainment,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Logros',
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '$unlockedCount/$totalCount desbloqueados · $xp XP',
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary),
-                  ),
-                ],
-              ),
-            ),
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,

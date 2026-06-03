@@ -938,9 +938,14 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
       return;
     }
     HapticFeedback.mediumImpact();
+    final accounts = ref.read(accountsProvider);
+    final toAccount = accounts.firstWhere((a) => a.id == _toId);
     final notifier = ref.read(accountsProvider.notifier);
     notifier.adjustBalance(_fromId!, -amount);
     notifier.adjustBalance(_toId!, amount);
+    if (toAccount.isSavings) {
+      ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
+    }
     Navigator.of(context).pop();
   }
 

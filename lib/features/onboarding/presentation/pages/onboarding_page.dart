@@ -84,6 +84,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     await LocalPrefsService.setString('currency_symbol', currency.symbol);
     await LocalPrefsService.setString('currency_code', currency.code);
     ref.read(currencySymbolProvider.notifier).state = currency.symbol;
+    ref.read(currencyCodeProvider.notifier).state = currency.code;
     ref.read(onboardingDoneProvider.notifier).state = true;
     await LocalPrefsService.setBool('onboarding_done', true);
     if (!mounted) return;

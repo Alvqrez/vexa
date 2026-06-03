@@ -273,12 +273,30 @@ class _AccountRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    account.name,
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        account.name,
+                        style: AppTypography.labelL.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (account.isSavings) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.emerald.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text('Ahorro',
+                              style: AppTypography.labelS.copyWith(
+                                  color: AppColors.emerald, fontSize: 9)),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(
@@ -357,6 +375,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
   final _balanceCtrl = TextEditingController(text: '0');
   AccountIcon _icon = AccountIcon.bank;
   int _colorIndex = 0;
+  bool _isSavings = false;
 
   static const _icons = AccountIcon.values;
   static const _iconLabels = [
@@ -383,6 +402,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
       balance: balance,
       color: _accountColors[_colorIndex],
       icon: _icon,
+      isSavings: _isSavings,
     );
     widget.onSave(account);
     Navigator.of(context).pop();
@@ -621,6 +641,92 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                     },
                   ),
                 ),
+                const SizedBox(height: AppSpacing.lg),
+
+                // Savings account toggle
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() => _isSavings = !_isSavings);
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: _isSavings
+                          ? AppColors.emerald.withValues(alpha: 0.10)
+                          : AppColors.glassLight,
+                      borderRadius:
+                          BorderRadius.circular(AppSpacing.cardRadius),
+                      border: Border.all(
+                        color: _isSavings
+                            ? AppColors.emerald.withValues(alpha: 0.40)
+                            : AppColors.glassBorder,
+                        width: _isSavings ? 1.5 : 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            color: _isSavings
+                                ? AppColors.emerald.withValues(alpha: 0.15)
+                                : AppColors.glassMedium,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(
+                            Icons.savings_outlined,
+                            size: 16,
+                            color: _isSavings
+                                ? AppColors.emerald
+                                : AppColors.textTertiary,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Cuenta de ahorro',
+                                style: AppTypography.labelL.copyWith(
+                                  color: _isSavings
+                                      ? AppColors.textPrimary
+                                      : AppColors.textSecondary,
+                                ),
+                              ),
+                              Text(
+                                'Las transferencias a esta cuenta cuentan como ahorro',
+                                style: AppTypography.labelS.copyWith(
+                                    color: AppColors.textTertiary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: _isSavings
+                                ? AppColors.emerald
+                                : AppColors.glassMedium,
+                            shape: BoxShape.circle,
+                          ),
+                          child: _isSavings
+                              ? const Icon(Icons.check_rounded,
+                                  size: 13, color: Colors.white)
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
                 const SizedBox(height: AppSpacing.xl),
 
                 // Save button

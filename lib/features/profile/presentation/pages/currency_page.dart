@@ -51,6 +51,7 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
     await LocalPrefsService.setString('currency_code', c.code);
     await LocalPrefsService.setString('currency_symbol', c.symbol);
     ref.read(currencySymbolProvider.notifier).state = c.symbol;
+    ref.read(currencyCodeProvider.notifier).state = c.code;
   }
 
   @override

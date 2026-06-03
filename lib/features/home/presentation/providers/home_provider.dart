@@ -5,6 +5,7 @@ import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
+import '../../../../core/data/local_prefs_service.dart';
 
 // ── Account stats ─────────────────────────────────────────────────────────────
 
@@ -113,20 +114,31 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
   Future<void> _load() async {
     final records = await _isar.isarAccounts.where().findAll();
     if (_isLoaded) return;
+    List<Account> accounts;
     if (records.isNotEmpty) {
-      state = records.map(_isarToAccount).toList();
+      accounts = records.map(_isarToAccount).toList();
     } else {
-      const defaultWallet = Account(
+      final profileName = await LocalPrefsService.getString('profile_name');
+      final accountName = (profileName != null && profileName.trim().isNotEmpty)
+          ? profileName.trim().split(' ').first
+          : 'Cartera';
+      final defaultWallet = Account(
         id: 'wallet_default',
-        name: 'Cartera',
+        name: accountName,
         balance: 0,
-        color: Color(0xFF00D68F),
+        color: const Color(0xFF00D68F),
         icon: AccountIcon.wallet,
       );
-      state = [defaultWallet];
+      accounts = [defaultWallet];
       await _isar.writeTxn(() =>
-          _isar.isarAccounts.putAll(state.map(_accountToIsar).toList()));
+          _isar.isarAccounts.putAll(accounts.map(_accountToIsar).toList()));
     }
+    // Load isSavings flags from prefs (avoids Isar schema change)
+    final withFlags = await Future.wait(accounts.map((a) async {
+      final isSavings = await LocalPrefsService.getBool('account_savings_${a.id}');
+      return isSavings ? a.copyWith(isSavings: true) : a;
+    }));
+    state = withFlags;
     _isLoaded = true;
   }
 
@@ -179,7 +191,19 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
   Future<void> addAccount(Account account) async {
     _isLoaded = true;
     state = [...state, account];
+    if (account.isSavings) {
+      await LocalPrefsService.setBool('account_savings_${account.id}', true);
+    }
     await _persistAll();
+  }
+
+  Future<void> markAsSavings(String accountId, bool isSavings) async {
+    _isLoaded = true;
+    state = [
+      for (final a in state)
+        if (a.id == accountId) a.copyWith(isSavings: isSavings) else a,
+    ];
+    await LocalPrefsService.setBool('account_savings_$accountId', isSavings);
   }
 
   Future<void> reset() async {
@@ -401,10 +425,35 @@ final monthlyExpensesProvider = Provider<double>((ref) {
   });
 });
 
+// ── Savings transfers tracker ─────────────────────────────────────────────────
+
+class SavingsTransfersNotifier extends StateNotifier<double> {
+  SavingsTransfersNotifier() : super(0.0) {
+    _load();
+  }
+
+  String get _key {
+    final n = DateTime.now();
+    return 'savings_${n.year}_${n.month}';
+  }
+
+  Future<void> _load() async {
+    state = await LocalPrefsService.getDouble(_key);
+  }
+
+  Future<void> addTransfer(double amount) async {
+    state = state + amount;
+    await LocalPrefsService.setDouble(_key, state);
+  }
+}
+
+final savingsTransfersProvider =
+    StateNotifierProvider<SavingsTransfersNotifier, double>(
+  (ref) => SavingsTransfersNotifier(),
+);
+
 final monthlySavingsProvider = Provider<double>((ref) {
-  final income = ref.watch(monthlyIncomeProvider);
-  final expenses = ref.watch(monthlyExpensesProvider);
-  return income - expenses;
+  return ref.watch(savingsTransfersProvider);
 });
 
 /// Percentage change in income vs the previous month.

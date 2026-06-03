@@ -28,6 +28,7 @@ class Account {
     required this.balance,
     required this.color,
     required this.icon,
+    this.isSavings = false,
   });
 
   final String id;
@@ -35,12 +36,14 @@ class Account {
   final double balance;
   final Color color;
   final AccountIcon icon;
+  final bool isSavings;
 
   Account copyWith({
     String? name,
     double? balance,
     Color? color,
     AccountIcon? icon,
+    bool? isSavings,
   }) {
     return Account(
       id: id,
@@ -48,6 +51,7 @@ class Account {
       balance: balance ?? this.balance,
       color: color ?? this.color,
       icon: icon ?? this.icon,
+      isSavings: isSavings ?? this.isSavings,
     );
   }
 }

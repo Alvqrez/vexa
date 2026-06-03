@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import '../../../profile/presentation/pages/profile_page.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../gamification/presentation/pages/streak_page.dart';
@@ -113,6 +114,25 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   final _overlayController = OverlayPortalController();
   final _dismissed = <String>{};
 
+  @override
+  void initState() {
+    super.initState();
+    _loadClearedState();
+  }
+
+  Future<void> _loadClearedState() async {
+    final clearedDay = await LocalPrefsService.getInt('notif_cleared_day');
+    final today = _todayInt();
+    if (clearedDay == today) {
+      if (mounted) setState(() => _dismissed.addAll(['n1', 'n2']));
+    }
+  }
+
+  int _todayInt() {
+    final n = DateTime.now();
+    return n.year * 10000 + n.month * 100 + n.day;
+  }
+
   void _toggle() {
     HapticFeedback.lightImpact();
     _overlayController.toggle();
@@ -121,6 +141,9 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   void _dismissOne(String id) {
     HapticFeedback.selectionClick();
     setState(() => _dismissed.add(id));
+    if (_dismissed.containsAll(['n1', 'n2'])) {
+      LocalPrefsService.setInt('notif_cleared_day', _todayInt());
+    }
   }
 
   void _clearAll() {
@@ -128,6 +151,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
     setState(() {
       _dismissed.addAll(['n1', 'n2']);
     });
+    LocalPrefsService.setInt('notif_cleared_day', _todayInt());
     _overlayController.hide();
   }
 
@@ -198,18 +222,19 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
                   color: AppColors.textSecondary,
                   size: 20,
                 ),
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: AppColors.emerald,
-                      shape: BoxShape.circle,
+                if (notifications.any((n) => n.unread))
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: const BoxDecoration(
+                        color: AppColors.emerald,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ),

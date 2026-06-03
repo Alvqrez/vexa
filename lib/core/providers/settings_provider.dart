@@ -11,6 +11,9 @@ final hideAmountsProvider = StateProvider<bool>((ref) => false);
 /// Currently selected currency symbol.
 final currencySymbolProvider = StateProvider<String>((ref) => '\$');
 
+/// Currently selected currency code (e.g. 'USD', 'EUR').
+final currencyCodeProvider = StateProvider<String>((ref) => 'USD');
+
 /// App theme mode: dark, light, or follow system.
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
 

@@ -64,6 +64,19 @@ class LocalPrefsService {
     await _flush();
   }
 
+  static Future<double> getDouble(String key, {double defaultValue = 0.0}) async {
+    final data = await _read();
+    final v = data[key];
+    if (v == null) return defaultValue;
+    return (v as num).toDouble();
+  }
+
+  static Future<void> setDouble(String key, double value) async {
+    await _read();
+    _cache![key] = value;
+    await _flush();
+  }
+
   static Future<void> clear() async {
     _cache = {};
     try {

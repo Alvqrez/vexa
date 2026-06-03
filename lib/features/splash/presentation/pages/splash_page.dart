@@ -78,6 +78,11 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
     if (savedSymbol != null) {
       ref.read(currencySymbolProvider.notifier).state = savedSymbol;
     }
+    final savedCode = await LocalPrefsService.getString('currency_code');
+    if (!mounted) return;
+    if (savedCode != null) {
+      ref.read(currencyCodeProvider.notifier).state = savedCode;
+    }
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (ctx, a1, a2) =>

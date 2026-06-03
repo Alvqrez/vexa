@@ -95,44 +95,13 @@ class _HelpCenterPageState extends State<HelpCenterPage>
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
                       _reveal(
-                          0, 3, const _SubPageHeader(title: 'Centro de ayuda')),
+                          0, 2, const _SubPageHeader(title: 'Preguntas frecuentes')),
                       const SizedBox(height: AppSpacing.xxl),
-
-                      // Search hint
-                      _reveal(
-                        1,
-                        3,
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.lg,
-                              vertical: AppSpacing.md),
-                          decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.cardRadius),
-                            border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.search_rounded,
-                                  size: 18, color: AppColors.textTertiary),
-                              const SizedBox(width: AppSpacing.md),
-                              Text(
-                                'Buscar en la ayuda…',
-                                style: AppTypography.bodyM
-                                    .copyWith(color: AppColors.textTertiary),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xl),
 
                       // FAQ accordion
                       _reveal(
+                        1,
                         2,
-                        3,
                         Container(
                           decoration: BoxDecoration(
                             color: AppColors.card,
@@ -168,8 +137,8 @@ class _HelpCenterPageState extends State<HelpCenterPage>
 
                       // Contact button
                       _reveal(
+                        1,
                         2,
-                        3,
                         Container(
                           width: double.infinity,
                           padding:
