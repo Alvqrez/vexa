@@ -8,7 +8,6 @@ import '../widgets/accounts_carousel.dart';
 import '../widgets/categories_row.dart';
 import '../widgets/home_header.dart';
 import '../widgets/smart_insights_widget.dart';
-import '../widgets/spending_card.dart';
 import '../widgets/summary_cards.dart';
 import '../widgets/transactions_section.dart';
 import '../../../health/presentation/widgets/health_score_widget.dart';
@@ -103,10 +102,8 @@ class _HomePageState extends State<HomePage>
                         _section(3, const HealthScoreWidget()),
                         const SizedBox(height: AppSpacing.xl),
                         _section(4, const AccountsCarousel()),
-                        const SizedBox(height: AppSpacing.xl),
-                        _section(5, const SpendingCard()),
                         const SizedBox(height: AppSpacing.xxl),
-                        _section(6, _SectionLabel(label: 'Categorías')),
+                        _section(5, _SectionLabel(label: 'Categorías')),
                         const SizedBox(height: AppSpacing.md),
                         _section(6, const CategoriesRow()),
                         const SizedBox(height: AppSpacing.xxl),

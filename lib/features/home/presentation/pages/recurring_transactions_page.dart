@@ -200,7 +200,7 @@ class _RecurringItemRow extends StatelessWidget {
 
   String _daysStr(List<int> days) {
     const names = ['', 'L', 'M', 'X', 'J', 'V', 'S', 'D'];
-    return days.map((d) => names[d]).join('-');
+    return days.map((d) => (d >= 1 && d <= 7) ? names[d] : '?').join('-');
   }
 
   @override

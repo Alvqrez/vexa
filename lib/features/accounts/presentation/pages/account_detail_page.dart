@@ -172,7 +172,8 @@ class AccountDetailPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _CategoryBreakdown(
-                            transactions: stats.transactions),
+                            transactions: stats.transactions,
+                            currency: currency),
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
@@ -336,8 +337,9 @@ class _StatCard extends StatelessWidget {
 }
 
 class _CategoryBreakdown extends StatelessWidget {
-  const _CategoryBreakdown({required this.transactions});
+  const _CategoryBreakdown({required this.transactions, required this.currency});
   final List<Transaction> transactions;
+  final String currency;
 
   @override
   Widget build(BuildContext context) {
@@ -379,7 +381,7 @@ class _CategoryBreakdown extends StatelessWidget {
                         Text(e.key.label,
                             style: AppTypography.labelM
                                 .copyWith(color: AppColors.textSecondary)),
-                        Text('\$${e.value.toStringAsFixed(0)}',
+                        Text('$currency${e.value.toStringAsFixed(0)}',
                             style: AppTypography.labelM
                                 .copyWith(color: AppColors.textPrimary)),
                       ],

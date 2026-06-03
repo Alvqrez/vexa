@@ -139,7 +139,7 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const SizedBox(height: AppSpacing.lg),
-                    _reveal(0, _BudgetHeader(onAdd: _showAddSheet)),
+                    _reveal(0, const _BudgetHeader()),
                     const SizedBox(height: AppSpacing.xxl),
                     _reveal(1, _BudgetOverviewCard(currency: currency)),
                     const SizedBox(height: AppSpacing.xl),
@@ -220,8 +220,7 @@ class _BudgetBg extends StatelessWidget {
 // ── Header ────────────────────────────────────────────────────────────────────
 
 class _BudgetHeader extends StatelessWidget {
-  const _BudgetHeader({required this.onAdd});
-  final VoidCallback onAdd;
+  const _BudgetHeader();
 
   @override
   Widget build(BuildContext context) {
@@ -231,43 +230,20 @@ class _BudgetHeader extends StatelessWidget {
       return l[0].toUpperCase() + l.substring(1);
     }();
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Presupuesto',
-              style: AppTypography.headingM.copyWith(
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              monthLabel,
-              style: AppTypography.labelM.copyWith(
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ],
+        Text(
+          'Presupuesto',
+          style: AppTypography.headingM.copyWith(
+            color: AppColors.textPrimary,
+          ),
         ),
-        GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onAdd();
-          },
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.emeraldSurface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.emerald.withValues(alpha: 0.3), width: 0.5),
-            ),
-            child: const Icon(Icons.add_rounded,
-                color: AppColors.emerald, size: 18),
+        const SizedBox(height: 2),
+        Text(
+          monthLabel,
+          style: AppTypography.labelM.copyWith(
+            color: AppColors.textTertiary,
           ),
         ),
       ],

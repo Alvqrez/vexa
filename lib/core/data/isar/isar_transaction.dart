@@ -14,5 +14,5 @@ class IsarTransaction {
   late DateTime date;
   String? accountId;
   String? note;
-  late List<String> tags;
+  late List<String> tags = [];
 }

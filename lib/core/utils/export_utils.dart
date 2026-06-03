@@ -20,7 +20,7 @@ abstract final class ExportUtils {
         _escape(t.merchant),
         t.isIncome ? 'Ingreso' : 'Gasto',
         t.category.label,
-        t.isIncome ? t.amount : -t.amount,
+        (t.isIncome ? t.amount : -t.amount).toStringAsFixed(2),
         t.accountId ?? '',
         t.tags.join(' | '),
         _escape(t.note ?? ''),

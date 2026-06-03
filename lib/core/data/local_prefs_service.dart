@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Simple synchronous-friendly key-value store backed by a JSON file.
@@ -19,7 +20,8 @@ class LocalPrefsService {
       if (!file.existsSync()) return _cache = {};
       final content = await file.readAsString();
       return _cache = jsonDecode(content) as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('LocalPrefsService._read error: $e');
       return _cache = {};
     }
   }
@@ -28,7 +30,9 @@ class LocalPrefsService {
     try {
       final file = await _getFile();
       await file.writeAsString(jsonEncode(_cache));
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LocalPrefsService._flush error: $e');
+    }
   }
 
   static Future<bool> getBool(String key, {bool defaultValue = false}) async {
@@ -78,10 +82,12 @@ class LocalPrefsService {
   }
 
   static Future<void> clear() async {
-    _cache = {};
     try {
       final file = await _getFile();
       if (file.existsSync()) await file.delete();
-    } catch (_) {}
+      _cache = {};
+    } catch (e) {
+      debugPrint('LocalPrefsService.clear error: $e');
+    }
   }
 }

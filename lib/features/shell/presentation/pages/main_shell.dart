@@ -105,6 +105,7 @@ class _MainShellState extends ConsumerState<MainShell>
       value: 1.0,
     );
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final shown = await LocalPrefsService.getBool('tutorial_shown');
       if (!shown && mounted) {
         setState(() => _showTutorial = true);
@@ -112,8 +113,10 @@ class _MainShellState extends ConsumerState<MainShell>
       } else {
         // Tutorial already done — show savings explainer once if not yet seen
         await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
         await _maybeShowSavingsExplainer();
       }
+      if (!mounted) return;
       await _processRecurring();
     });
   }

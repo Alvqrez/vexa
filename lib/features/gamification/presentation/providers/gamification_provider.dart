@@ -79,15 +79,32 @@ final streakProvider = StateNotifierProvider<StreakNotifier, Streak>(
 // ── Achievements ──────────────────────────────────────────────────────────────
 
 class AchievementsNotifier extends StateNotifier<List<Achievement>> {
-  AchievementsNotifier(this.ref) : super(Achievements.all);
+  AchievementsNotifier(this.ref) : super(Achievements.all) {
+    _load();
+  }
 
   final Ref ref;
+
+  static const _key = 'achievements_unlocked';
+
+  Future<void> _load() async {
+    final raw = await LocalPrefsService.getString(_key);
+    if (raw == null || raw.isEmpty) return;
+    final ids = raw.split(',').toSet();
+    state = state.map((a) => ids.contains(a.id) ? a.unlock() : a).toList();
+  }
+
+  Future<void> _save() async {
+    final ids = state.where((a) => a.isUnlocked).map((a) => a.id).join(',');
+    await LocalPrefsService.setString(_key, ids);
+  }
 
   void checkAndUnlock() {
     final transactions = ref.read(transactionsProvider);
     final streak = ref.read(streakProvider);
 
     final updates = <Achievement>[];
+    bool changed = false;
 
     for (final a in state) {
       if (a.isUnlocked) {
@@ -104,14 +121,22 @@ class AchievementsNotifier extends StateNotifier<List<Achievement>> {
         _ => false,
       };
 
+      if (shouldUnlock) changed = true;
       updates.add(shouldUnlock ? a.unlock() : a);
     }
 
     state = updates;
+    if (changed) _save();
   }
 
   void unlockById(String id) {
     state = state.map((a) => a.id == id ? a.unlock() : a).toList();
+    _save();
+  }
+
+  Future<void> reset() async {
+    state = Achievements.all;
+    await LocalPrefsService.setString(_key, '');
   }
 }
 

@@ -140,7 +140,7 @@ class AchievementsPage extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '${(unlocked.length / achievements.length * 100).toStringAsFixed(0)}%',
+                                  achievements.isEmpty ? '0%' : '${(unlocked.length / achievements.length * 100).toStringAsFixed(0)}%',
                                   style: AppTypography.headingS.copyWith(
                                     color: AppColors.catEntertainment,
                                     fontWeight: FontWeight.w800,

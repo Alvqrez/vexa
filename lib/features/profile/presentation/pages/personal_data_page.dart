@@ -37,6 +37,7 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
       duration: const Duration(milliseconds: 900),
     )..forward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _populateControllers(ref.read(userProfileProvider));
     });
   }

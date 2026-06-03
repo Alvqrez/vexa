@@ -168,22 +168,31 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     if (confirmed != true || !mounted) return;
     HapticFeedback.heavyImpact();
 
-    // Reset in-memory state
-    await ref.read(transactionsProvider.notifier).reset();
-    await ref.read(streakProvider.notifier).reset();
+    try {
+      // Reset in-memory state
+      await ref.read(transactionsProvider.notifier).reset();
+      await ref.read(streakProvider.notifier).reset();
+      await ref.read(achievementsProvider.notifier).reset();
 
-    // Clear ALL remaining Isar collections
-    final isar = ref.read(isarProvider);
-    await isar.writeTxn(() async {
-      await isar.isarWalletCategorys.clear();
-      await isar.isarSubscriptions.clear();
-      await isar.isarFinancialGoals.clear();
-      await isar.isarBudgetItems.clear();
-      await isar.isarAccounts.clear();
-    });
+      // Clear ALL remaining Isar collections
+      final isar = ref.read(isarProvider);
+      await isar.writeTxn(() async {
+        await isar.isarWalletCategorys.clear();
+        await isar.isarSubscriptions.clear();
+        await isar.isarFinancialGoals.clear();
+        await isar.isarBudgetItems.clear();
+        await isar.isarAccounts.clear();
+      });
 
-    // Wipe all local prefs (clears onboarding_done, transactions_seeded, currency, etc.)
-    await LocalPrefsService.clear();
+      // Wipe all local prefs (clears onboarding_done, transactions_seeded, currency, etc.)
+      await LocalPrefsService.clear();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error al eliminar datos. Inténtalo de nuevo.')),
+      );
+      return;
+    }
 
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(

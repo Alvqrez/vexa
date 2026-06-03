@@ -591,7 +591,7 @@ class MonthlyPrediction {
   final double dailyAvgExpense;
 
   double get predictedBalance => predictedIncome - predictedExpenses;
-  double get predictedSavings => predictedIncome - predictedExpenses;
+  double get predictedSavings => (predictedIncome - predictedExpenses).clamp(0.0, double.infinity);
   /// Only meaningful when there is actual income data.
   bool get isOnTrack =>
       predictedIncome > 0 && predictedExpenses <= predictedIncome;
@@ -627,7 +627,15 @@ final accountStatsProvider =
   final accounts = ref.watch(accountsProvider);
   final account = accounts.firstWhere(
     (a) => a.id == accountId,
-    orElse: () => accounts.first,
+    orElse: () => accounts.isNotEmpty
+        ? accounts.first
+        : const Account(
+            id: '',
+            name: '',
+            balance: 0,
+            color: Color(0xFF00D68F),
+            icon: AccountIcon.wallet,
+          ),
   );
   final transactions = ref
       .watch(transactionsProvider)

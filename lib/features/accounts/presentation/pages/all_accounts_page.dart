@@ -203,7 +203,7 @@ class AllAccountsPage extends ConsumerWidget {
                         key: ValueKey(account.id),
                         padding:
                             const EdgeInsets.only(bottom: AppSpacing.md),
-                        child: _AccountRow(account: account),
+                        child: _AccountRow(account: account, totalBalance: totalBalance),
                       );
                     },
                   ),
@@ -220,8 +220,9 @@ class AllAccountsPage extends ConsumerWidget {
 // ── Account row ───────────────────────────────────────────────────────────────
 
 class _AccountRow extends StatelessWidget {
-  const _AccountRow({required this.account});
+  const _AccountRow({required this.account, required this.totalBalance});
   final Account account;
+  final double totalBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -302,7 +303,9 @@ class _AccountRow extends StatelessWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(3),
                     child: LinearProgressIndicator(
-                      value: 0.6,
+                      value: totalBalance > 0
+                          ? (account.balance / totalBalance).clamp(0.0, 1.0)
+                          : 0.0,
                       backgroundColor: color.withValues(alpha: 0.10),
                       valueColor: AlwaysStoppedAnimation(color),
                       minHeight: 3,

@@ -805,14 +805,18 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
     final breakdown = ref.watch(categoryBreakdownProvider);
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
+    final savedToAccount = ref.watch(monthlySavingsProvider);
     final topCat = ref.watch(topCategoryProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     final insights = _buildInsights(
       prediction: prediction,
       breakdown: breakdown,
       income: income,
       expenses: expenses,
+      savedToAccount: savedToAccount,
       topCategory: topCat,
+      currency: currency,
     );
 
     return Column(
@@ -854,89 +858,172 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
     required Map<TransactionCategory, double> breakdown,
     required double income,
     required double expenses,
+    required double savedToAccount,
     required TransactionCategory? topCategory,
+    required String currency,
   }) {
     final insights = <_Insight>[];
-    final savingsRate = income > 0 ? (income - expenses) / income : 0.0;
     final now = DateTime.now();
     final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysElapsed = now.day;
+    final daysLeft = daysInMonth - daysElapsed;
 
-    // Insight 1: balance prediction
-    if (prediction.predictedBalance > 0) {
+    // ── 1. Proyección concreta con días restantes ─────────────────────────────
+    if (income > 0 || expenses > 0) {
+      final dailyExpense = daysElapsed > 0 ? expenses / daysElapsed : 0.0;
+      final projectedTotal = expenses + dailyExpense * daysLeft;
+      final balance = income - projectedTotal;
+      if (income > 0 && balance > 0) {
+        insights.add(_Insight(
+          icon: Icons.calendar_today_rounded,
+          color: AppColors.positive,
+          title: 'Proyección al día $daysInMonth',
+          body: 'Con tus ingresos de $currency${income.toStringAsFixed(0)} y '
+              '$currency${dailyExpense.toStringAsFixed(0)}/día de gasto, '
+              'terminarás el mes con aprox. $currency${balance.toStringAsFixed(0)} disponibles.',
+          type: _InsightType.positive,
+        ));
+      } else if (income > 0) {
+        final overrun = (projectedTotal - income).toStringAsFixed(0);
+        insights.add(_Insight(
+          icon: Icons.running_with_errors_rounded,
+          color: AppColors.negative,
+          title: 'Alerta: gastos proyectados altos',
+          body: 'A $currency${dailyExpense.toStringAsFixed(0)}/día de gasto '
+              'gastarás $currency$overrun más de lo que ganas este mes. '
+              'Recorta $currency${(dailyExpense * 0.15).toStringAsFixed(0)}/día para salir en cero.',
+          type: _InsightType.warning,
+        ));
+      }
+    }
+
+    // ── 2. Regla 50/30/20 adaptada al ingreso real ────────────────────────────
+    if (income > 0) {
+      final target50 = income * 0.50;
+      final target30 = income * 0.30;
+      final target20 = income * 0.20;
+
+      // Classify spending: needs = food+transport+health, wants = rest
+      final needsCats = {
+        TransactionCategory.food,
+        TransactionCategory.transport,
+        TransactionCategory.health,
+      };
+      final actualNeeds = breakdown.entries
+          .where((e) => needsCats.contains(e.key))
+          .fold(0.0, (s, e) => s + e.value);
+      final actualWants = breakdown.entries
+          .where((e) => !needsCats.contains(e.key))
+          .fold(0.0, (s, e) => s + e.value);
+
+      final needsPct = (actualNeeds / income * 100).toStringAsFixed(0);
+      final wantsPct = (actualWants / income * 100).toStringAsFixed(0);
+      final savedPct = income > 0
+          ? (savedToAccount / income * 100).toStringAsFixed(0)
+          : '0';
+
+      String body;
+      _InsightType type;
+      if (actualNeeds <= target50 && actualWants <= target30) {
+        body = 'Regla 50/30/20 para $currency${income.toStringAsFixed(0)}: '
+            'necesidades $currency${target50.toStringAsFixed(0)} (llevas $currency${actualNeeds.toStringAsFixed(0)}, $needsPct%), '
+            'gustos $currency${target30.toStringAsFixed(0)} (llevas $currency${actualWants.toStringAsFixed(0)}, $wantsPct%), '
+            'ahorro $currency${target20.toStringAsFixed(0)} (llevas $currency${savedToAccount.toStringAsFixed(0)}, $savedPct%). ¡Vas bien!';
+        type = _InsightType.positive;
+      } else if (actualNeeds > target50) {
+        final excess = (actualNeeds - target50).toStringAsFixed(0);
+        body = 'Regla 50/30/20: llevas $currency${actualNeeds.toStringAsFixed(0)} '
+            'en necesidades — $currency$excess por encima del límite de $currency${target50.toStringAsFixed(0)} (50%). '
+            'Revisa transporte y comida para recuperar ese margen.';
+        type = _InsightType.warning;
+      } else {
+        final excess = (actualWants - target30).toStringAsFixed(0);
+        body = 'Llevas $currency${actualWants.toStringAsFixed(0)} en gustos — '
+            '$currency$excess por encima del límite de $currency${target30.toStringAsFixed(0)} (30%). '
+            'Recorta entretenimiento o compras para quedar dentro del objetivo.';
+        type = _InsightType.warning;
+      }
       insights.add(_Insight(
-        icon: Icons.trending_up_rounded,
-        color: AppColors.positive,
-        title: 'Proyección de saldo',
-        body:
-            'Si mantienes este ritmo, tendrás \$${prediction.predictedBalance.toStringAsFixed(0)} disponibles al final del mes.',
-        type: _InsightType.positive,
-      ));
-    } else {
-      insights.add(_Insight(
-        icon: Icons.warning_amber_rounded,
-        color: AppColors.warning,
-        title: 'Riesgo de presupuesto',
-        body:
-            'A este ritmo de gasto podrías superar tus ingresos. Considera reducir gastos en los próximos ${prediction.daysLeft} días.',
-        type: _InsightType.warning,
+        icon: Icons.pie_chart_outline_rounded,
+        color: type == _InsightType.positive ? AppColors.emerald : AppColors.warning,
+        title: 'Regla 50/30/20',
+        body: body,
+        type: type,
       ));
     }
 
-    // Insight 2: savings rate
-    if (savingsRate > 0) {
-      final savingsFmt =
-          (income * savingsRate).toStringAsFixed(0);
-      insights.add(_Insight(
-        icon: Icons.savings_rounded,
-        color: AppColors.emerald,
-        title: 'Potencial de ahorro',
-        body:
-            'Podrías ahorrar aproximadamente \$$savingsFmt este mes (${(savingsRate * 100).toStringAsFixed(0)}% de ingresos).',
-        type: _InsightType.positive,
-      ));
+    // ── 3. Acción de ahorro concreta ──────────────────────────────────────────
+    if (income > 0) {
+      final target20 = income * 0.20;
+      if (savedToAccount == 0) {
+        insights.add(_Insight(
+          icon: Icons.savings_rounded,
+          color: AppColors.warning,
+          title: 'Acción: transfiere a Ahorro hoy',
+          body: 'No has ahorrado nada este mes. '
+              'Transfiere $currency${target20.toStringAsFixed(0)} (20% de tus ingresos) '
+              'a tu cuenta Ahorro ahora mismo — el mejor momento es siempre el día de cobro.',
+          type: _InsightType.warning,
+        ));
+      } else if (savedToAccount < target20) {
+        final missing = (target20 - savedToAccount).toStringAsFixed(0);
+        insights.add(_Insight(
+          icon: Icons.savings_rounded,
+          color: AppColors.petroleum,
+          title: 'Ahorro: te faltan $currency$missing',
+          body: 'Llevas $currency${savedToAccount.toStringAsFixed(0)} ahorrados. '
+              'Para llegar al 20% ($currency${target20.toStringAsFixed(0)}) '
+              'transfieres $currency$missing más a tu cuenta Ahorro antes del día $daysInMonth.',
+          type: _InsightType.neutral,
+        ));
+      } else {
+        insights.add(_Insight(
+          icon: Icons.check_circle_outline_rounded,
+          color: AppColors.positive,
+          title: 'Objetivo de ahorro cumplido',
+          body: 'Ahorraste $currency${savedToAccount.toStringAsFixed(0)} '
+              '(${(savedToAccount / income * 100).toStringAsFixed(0)}% de tus ingresos). '
+              'Superaste el objetivo del 20%. Considera invertir el excedente.',
+          type: _InsightType.positive,
+        ));
+      }
     }
 
-    // Insight 3: daily average
-    if (prediction.dailyAvgExpense > 0) {
-      insights.add(_Insight(
-        icon: Icons.today_rounded,
-        color: AppColors.petroleum,
-        title: 'Gasto diario promedio',
-        body:
-            'Gastas en promedio \$${prediction.dailyAvgExpense.toStringAsFixed(2)} por día este mes.',
-        type: _InsightType.neutral,
-      ));
-    }
-
-    // Insight 4: top category
-    if (topCategory != null && breakdown.isNotEmpty) {
+    // ── 4. Acción sobre la categoría más cara ─────────────────────────────────
+    if (topCategory != null && breakdown.isNotEmpty && income > 0) {
       final topAmount = breakdown[topCategory] ?? 0;
+      final reduction10 = topAmount * 0.10;
+      final pctOfIncome = (topAmount / income * 100).toStringAsFixed(0);
       insights.add(_Insight(
         icon: topCategory.icon,
         color: topCategory.color,
-        title: 'Mayor categoría',
-        body:
-            'Tu mayor gasto es ${topCategory.label} con \$${topAmount.toStringAsFixed(2)} este mes.',
+        title: '${topCategory.label}: $pctOfIncome% de tus ingresos',
+        body: 'Gastaste $currency${topAmount.toStringAsFixed(0)} en ${topCategory.label.toLowerCase()} este mes. '
+            'Reducir solo un 10% ($currency${reduction10.toStringAsFixed(0)}) '
+            'te daría $currency${(reduction10 * 12).toStringAsFixed(0)} extra al año.',
         type: _InsightType.neutral,
       ));
     }
 
-    // Insight 5: month progress vs spending
-    final monthProgress = now.day / daysInMonth;
-    final spendingProgress =
-        income > 0 ? expenses / income : 0.0;
-    if (spendingProgress > monthProgress + 0.15) {
-      insights.add(_Insight(
-        icon: Icons.speed_rounded,
-        color: AppColors.negative,
-        title: 'Gasto acelerado',
-        body:
-            'Llevas ${(spendingProgress * 100).toStringAsFixed(0)}% del ingreso gastado con solo el ${(monthProgress * 100).toStringAsFixed(0)}% del mes transcurrido.',
-        type: _InsightType.warning,
-      ));
+    // ── 5. Velocidad de gasto vs avance del mes ───────────────────────────────
+    if (income > 0 && expenses > 0) {
+      final monthProgress = daysElapsed / daysInMonth;
+      final spendingProgress = expenses / income;
+      if (spendingProgress > monthProgress + 0.15) {
+        final daysAhead = ((spendingProgress - monthProgress) * daysInMonth).round();
+        insights.add(_Insight(
+          icon: Icons.speed_rounded,
+          color: AppColors.negative,
+          title: 'Gastas más rápido de lo que ingresa',
+          body: 'Llevas el ${(spendingProgress * 100).toStringAsFixed(0)}% '
+              'del ingreso gastado con solo el ${(monthProgress * 100).toStringAsFixed(0)}% del mes. '
+              'Vas $daysAhead días adelantado en gasto — congela compras no esenciales hasta el día ${daysElapsed + daysAhead}.',
+          type: _InsightType.warning,
+        ));
+      }
     }
 
-    return insights.take(4).toList();
+    return insights.take(5).toList();
   }
 }
 
