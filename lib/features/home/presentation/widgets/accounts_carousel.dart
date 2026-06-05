@@ -45,27 +45,35 @@ class AccountsCarousel extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        SizedBox(
-          height: 130,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const AlwaysScrollableScrollPhysics(),
-            clipBehavior: Clip.none,
-            itemCount: accounts.length,
-            separatorBuilder: (context, _) =>
-                const SizedBox(width: AppSpacing.md),
-            itemBuilder: (context, index) =>
-                _AccountCard(account: accounts[index]),
-          ),
-        ),
+        Builder(builder: (context) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final cardWidth = (screenWidth -
+                  2 * AppSpacing.screenPadding -
+                  AppSpacing.md) /
+              2.25;
+          return SizedBox(
+            height: 130,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
+              clipBehavior: Clip.none,
+              itemCount: accounts.length,
+              separatorBuilder: (context, _) =>
+                  const SizedBox(width: AppSpacing.md),
+              itemBuilder: (context, index) =>
+                  _AccountCard(account: accounts[index], width: cardWidth),
+            ),
+          );
+        }),
       ],
     );
   }
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account});
+  const _AccountCard({required this.account, required this.width});
   final Account account;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +88,7 @@ class _AccountCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 148,
+        width: width,
         padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),

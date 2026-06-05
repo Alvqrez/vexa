@@ -8,7 +8,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/providers/settings_provider.dart';
-import '../../../shell/presentation/pages/main_shell.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -74,9 +74,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   Future<void> _complete() async {
     HapticFeedback.mediumImpact();
     final name = _nameCtrl.text.trim();
-    if (name.isNotEmpty) {
-      await ref.read(userProfileProvider.notifier).update(name: name);
-    }
+    await ref.read(userProfileProvider.notifier).update(
+          name: name.isNotEmpty ? name : 'Usuario',
+        );
     final currency = _currencies[_selectedCurrencyIndex];
     await LocalPrefsService.setString('currency_symbol', currency.symbol);
     await LocalPrefsService.setString('currency_code', currency.code);
@@ -86,7 +86,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (ctx, anim, secondary) => const MainShell(),
+        pageBuilder: (ctx, anim, secondary) => const LoginPage(),
         transitionDuration: const Duration(milliseconds: 500),
         transitionsBuilder: (ctx, animation, secondary, child) {
           return FadeTransition(

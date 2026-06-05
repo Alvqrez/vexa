@@ -161,8 +161,6 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
     final prediction = ref.watch(predictionProvider);
     final txns = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
-    final tip = _dailyTip();
-
     final now = DateTime.now();
     final hasTransactionsThisMonth = txns.any(
         (t) => t.date.month == now.month && t.date.year == now.year);
@@ -180,15 +178,6 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
           time: 'hoy',
           unread: true,
         ),
-      _Notif(
-        id: 'n2',
-        icon: tip.$2,
-        color: tip.$3,
-        title: 'Consejo del día',
-        body: tip.$1,
-        time: 'hoy',
-        unread: false,
-      ),
     ];
 
     final notifications =
@@ -246,19 +235,6 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   }
 
   // Returns (tipText, icon, color) for today's tip
-  (String, IconData, Color) _dailyTip() {
-    final tips = [
-      ('Destina el 20% de tus ingresos al ahorro cada mes.', Icons.savings_rounded, AppColors.emerald),
-      ('Un café de \$5 diario son \$1,825 al año. ¿Vale la pena?', Icons.coffee_rounded, AppColors.catFood),
-      ('Antes de comprar algo, espera 24 horas. Funciona.', Icons.hourglass_top_rounded, AppColors.catEntertainment),
-      ('Automatiza tu ahorro el día de cobro. Lo que no ves, no lo gastas.', Icons.autorenew_rounded, AppColors.petroleum),
-      ('Elimina suscripciones que no uses. Revísalas hoy.', Icons.subscriptions_rounded, AppColors.catShopping),
-      ('Pagar deuda de alto interés = inversión garantizada.', Icons.credit_card_off_rounded, AppColors.negative),
-      ('Tu mayor activo eres tú. Invierte en aprender.', Icons.psychology_rounded, AppColors.catTransport),
-    ];
-    final idx = DateTime.now().difference(DateTime(DateTime.now().year)).inDays % tips.length;
-    return tips[idx];
-  }
 }
 
 class _Notif {

@@ -12,6 +12,8 @@ import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/utils/export_utils.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../../../splash/presentation/pages/splash_page.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -25,7 +27,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
 
-  // State
   bool _haptics = true;
   bool _analytics = false;
   String _language = 'Español';
@@ -39,6 +40,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..forward();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final haptics = await LocalPrefsService.getBool('settings_haptics', defaultValue: true);
+    final analytics = await LocalPrefsService.getBool('settings_analytics', defaultValue: false);
+    final lang = await LocalPrefsService.getString('settings_language') ?? 'Español';
+    if (!mounted) return;
+    setState(() {
+      _haptics = haptics;
+      _analytics = analytics;
+      _language = lang;
+    });
   }
 
   @override
@@ -76,6 +90,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
         onSelect: (lang) {
           HapticFeedback.selectionClick();
           setState(() => _language = lang);
+          LocalPrefsService.setString('settings_language', lang);
           Navigator.pop(context);
         },
       ),
@@ -186,6 +201,16 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
       // Wipe all local prefs (clears onboarding_done, transactions_seeded, currency, etc.)
       await LocalPrefsService.clear();
+
+      // Delete profile photo file so it doesn't get auto-restored
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final photo = File('${dir.path}/profile_photo.jpg');
+        if (photo.existsSync()) await photo.delete();
+      } catch (_) {}
+
+      // Clear profile notifier state (keeps photo from reappearing in-session)
+      ref.read(userProfileProvider.notifier).clearProfile();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -273,6 +298,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
                                 setState(() => _haptics = v);
+                                LocalPrefsService.setBool('settings_haptics', v);
                               },
                             ),
                             _ToggleItem(
@@ -322,6 +348,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
                                 setState(() => _analytics = v);
+                                LocalPrefsService.setBool('settings_analytics', v);
                               },
                             ),
                             _ActionItem(

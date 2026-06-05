@@ -523,7 +523,7 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -605,7 +605,7 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

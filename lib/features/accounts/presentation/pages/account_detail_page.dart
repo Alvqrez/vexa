@@ -61,7 +61,7 @@ class AccountDetailPage extends ConsumerWidget {
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
 
-                      // Back + title
+                      // Back + title + edit + delete
                       Row(
                         children: [
                           GestureDetector(
@@ -85,10 +85,104 @@ class AccountDetailPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
-                          Text(
-                            stats.account.name,
-                            style: AppTypography.headingM
-                                .copyWith(color: AppColors.textPrimary),
+                          Expanded(
+                            child: Text(
+                              stats.account.name,
+                              style: AppTypography.headingM
+                                  .copyWith(color: AppColors.textPrimary),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                useSafeArea: true,
+                                builder: (_) => _EditAccountSheet(
+                                    account: stats.account),
+                              );
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.glassLight,
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                    color: AppColors.glassBorder,
+                                    width: 0.5),
+                              ),
+                              child: const Icon(Icons.edit_rounded,
+                                  size: 16,
+                                  color: AppColors.textSecondary),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  backgroundColor: AppColors.card,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          AppSpacing.cardRadius)),
+                                  title: Text('Eliminar cuenta',
+                                      style: AppTypography.headingS.copyWith(
+                                          color: AppColors.textPrimary)),
+                                  content: Text(
+                                      '¿Eliminar "${stats.account.name}"? Esta acción no se puede deshacer.',
+                                      style: AppTypography.bodyM.copyWith(
+                                          color: AppColors.textSecondary)),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context),
+                                      child: Text('Cancelar',
+                                          style: AppTypography.labelM
+                                              .copyWith(
+                                                  color: AppColors
+                                                      .textTertiary)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        ref
+                                            .read(accountsProvider.notifier)
+                                            .deleteAccount(accountId);
+                                        Navigator.of(context)
+                                          ..pop()
+                                          ..pop();
+                                      },
+                                      child: Text('Eliminar',
+                                          style: AppTypography.labelM
+                                              .copyWith(
+                                                  color:
+                                                      AppColors.negative)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.negativeSurface,
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                    color: AppColors.negative
+                                        .withValues(alpha: 0.25),
+                                    width: 0.5),
+                              ),
+                              child: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 16,
+                                  color: AppColors.negative),
+                            ),
                           ),
                         ],
                       ),
@@ -485,6 +579,384 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Edit account sheet ────────────────────────────────────────────────────────
+
+const _kAccountColors = [
+  Color(0xFF1565C0),
+  Color(0xFF820AD1),
+  Color(0xFF00D68F),
+  Color(0xFFFF6B35),
+  Color(0xFFE91E63),
+  Color(0xFF00BCD4),
+  Color(0xFFFF9800),
+  Color(0xFF4CAF50),
+  Color(0xFF9C27B0),
+  Color(0xFFF44336),
+];
+
+class _EditAccountSheet extends ConsumerStatefulWidget {
+  const _EditAccountSheet({required this.account});
+  final Account account;
+
+  @override
+  ConsumerState<_EditAccountSheet> createState() => _EditAccountSheetState();
+}
+
+class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
+  late final TextEditingController _nameCtrl;
+  late AccountIcon _icon;
+  late int _colorIndex;
+  late bool _isSavings;
+
+  static const _icons = AccountIcon.values;
+  static const _iconLabels = [
+    'Banco', 'Tarjeta', 'Cartera', 'Ahorros', 'Inversión', 'Efectivo'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.account.name);
+    _icon = widget.account.icon;
+    _isSavings = widget.account.isSavings;
+    _colorIndex = _kAccountColors.indexWhere(
+        (c) => c.toARGB32() == widget.account.color.toARGB32());
+    if (_colorIndex < 0) _colorIndex = 0;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) return;
+    final updated = widget.account.copyWith(
+      name: name,
+      icon: _icon,
+      color: _kAccountColors[_colorIndex],
+      isSavings: _isSavings,
+    );
+    ref.read(accountsProvider.notifier).updateAccount(updated);
+    HapticFeedback.mediumImpact();
+    Navigator.of(context).pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final color = _kAccountColors[_colorIndex];
+
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+          AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 24 + bottom),
+      decoration: BoxDecoration(
+        color: AppColors.cardElevated,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.glassMedium,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
+            child: Text('Editar cuenta',
+                style: AppTypography.headingS
+                    .copyWith(color: AppColors.textPrimary)),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _SheetLabel('Nombre'),
+                    const SizedBox(height: AppSpacing.sm),
+                    TextField(
+                      controller: _nameCtrl,
+                      autofocus: true,
+                      style: AppTypography.labelL
+                          .copyWith(color: AppColors.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Ej. BBVA, Efectivo…',
+                        hintStyle: AppTypography.labelL
+                            .copyWith(color: AppColors.textTertiary),
+                        filled: true,
+                        fillColor: AppColors.glassLight,
+                        border: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderSide: BorderSide(
+                              color: AppColors.glassBorder, width: 0.5),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderSide: BorderSide(
+                              color: AppColors.glassBorder, width: 0.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderSide:
+                              BorderSide(color: AppColors.emerald, width: 1.5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _SheetLabel('Tipo'),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      height: 68,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _icons.length,
+                        separatorBuilder: (_, i) =>
+                            const SizedBox(width: AppSpacing.sm),
+                        itemBuilder: (_, i) {
+                          final selected = _icon == _icons[i];
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _icon = _icons[i]);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              width: 60,
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? color.withValues(alpha: 0.15)
+                                    : AppColors.glassLight,
+                                borderRadius: BorderRadius.circular(
+                                    AppSpacing.cardRadius),
+                                border: Border.all(
+                                  color: selected
+                                      ? color.withValues(alpha: 0.40)
+                                      : AppColors.glassBorder,
+                                  width: selected ? 1.5 : 0.5,
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(_icons[i].iconData,
+                                      size: 20,
+                                      color: selected
+                                          ? color
+                                          : AppColors.textTertiary),
+                                  const SizedBox(height: 4),
+                                  Text(_iconLabels[i],
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: selected
+                                            ? color
+                                            : AppColors.textTertiary,
+                                        fontWeight: selected
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      )),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    _SheetLabel('Color'),
+                    const SizedBox(height: AppSpacing.sm),
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _kAccountColors.length,
+                        separatorBuilder: (_, i) =>
+                            const SizedBox(width: AppSpacing.sm),
+                        itemBuilder: (_, i) {
+                          final selected = i == _colorIndex;
+                          return GestureDetector(
+                            onTap: () {
+                              HapticFeedback.selectionClick();
+                              setState(() => _colorIndex = i);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 180),
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: _kAccountColors[i],
+                                shape: BoxShape.circle,
+                                border: selected
+                                    ? Border.all(
+                                        color: AppColors.textPrimary,
+                                        width: 2.5)
+                                    : null,
+                                boxShadow: selected
+                                    ? [
+                                        BoxShadow(
+                                          color: _kAccountColors[i]
+                                              .withValues(alpha: 0.4),
+                                          blurRadius: 8,
+                                          spreadRadius: -2,
+                                        )
+                                      ]
+                                    : null,
+                              ),
+                              child: selected
+                                  ? const Icon(Icons.check_rounded,
+                                      size: 16, color: Colors.white)
+                                  : null,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _isSavings = !_isSavings);
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.lg,
+                            vertical: AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: _isSavings
+                              ? AppColors.emerald.withValues(alpha: 0.10)
+                              : AppColors.glassLight,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          border: Border.all(
+                            color: _isSavings
+                                ? AppColors.emerald.withValues(alpha: 0.40)
+                                : AppColors.glassBorder,
+                            width: _isSavings ? 1.5 : 0.5,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 34, height: 34,
+                              decoration: BoxDecoration(
+                                color: _isSavings
+                                    ? AppColors.emerald.withValues(alpha: 0.15)
+                                    : AppColors.glassMedium,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.savings_outlined,
+                                  size: 16,
+                                  color: _isSavings
+                                      ? AppColors.emerald
+                                      : AppColors.textTertiary),
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Cuenta de ahorro',
+                                      style: AppTypography.labelL.copyWith(
+                                        color: _isSavings
+                                            ? AppColors.textPrimary
+                                            : AppColors.textSecondary,
+                                      )),
+                                  Text(
+                                      'Las transferencias a esta cuenta cuentan como ahorro',
+                                      style: AppTypography.labelS.copyWith(
+                                          color: AppColors.textTertiary)),
+                                ],
+                              ),
+                            ),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 22, height: 22,
+                              decoration: BoxDecoration(
+                                color: _isSavings
+                                    ? AppColors.emerald
+                                    : AppColors.glassMedium,
+                                shape: BoxShape.circle,
+                              ),
+                              child: _isSavings
+                                  ? const Icon(Icons.check_rounded,
+                                      size: 13, color: Colors.white)
+                                  : null,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    GestureDetector(
+                      onTap: _save,
+                      child: Container(
+                        width: double.infinity,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: AppColors.emerald,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.emerald.withValues(alpha: 0.30),
+                              blurRadius: 20,
+                              spreadRadius: -4,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text('Guardar cambios',
+                              style: AppTypography.labelL.copyWith(
+                                color: AppColors.textInverse,
+                                fontWeight: FontWeight.w700,
+                              )),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetLabel extends StatelessWidget {
+  const _SheetLabel(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Text(text,
+      style: AppTypography.labelM.copyWith(
+          color: AppColors.textSecondary, fontWeight: FontWeight.w600));
 }
 
 // ── Correction sheet ──────────────────────────────────────────────────────────

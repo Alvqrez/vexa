@@ -388,7 +388,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         ),
       ),
       padding: EdgeInsets.only(bottom: bottom),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Drag handle ──────────────────────────────────────────────────
@@ -734,7 +734,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

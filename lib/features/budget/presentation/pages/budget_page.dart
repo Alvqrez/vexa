@@ -855,7 +855,7 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
             : Theme.of(context).scaffoldBackgroundColor,
       ),
       padding: EdgeInsets.only(bottom: bottom),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag handle
@@ -1092,7 +1092,7 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -1221,7 +1221,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
             : Theme.of(context).scaffoldBackgroundColor,
       ),
       padding: EdgeInsets.only(bottom: bottom),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Drag handle ────────────────────────────────────────────────
@@ -1615,7 +1615,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

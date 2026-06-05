@@ -375,7 +375,7 @@ class _AddAccountSheet extends StatefulWidget {
 
 class _AddAccountSheetState extends State<_AddAccountSheet> {
   final _nameCtrl = TextEditingController();
-  final _balanceCtrl = TextEditingController(text: '0');
+  final _balanceCtrl = TextEditingController();
   AccountIcon _icon = AccountIcon.bank;
   int _colorIndex = 0;
   bool _isSavings = false;
@@ -446,12 +446,14 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                 style: AppTypography.headingS
                     .copyWith(color: AppColors.textPrimary)),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+          Flexible(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 // Name field
                 _Label('Nombre'),
                 const SizedBox(height: AppSpacing.sm),
@@ -761,7 +763,9 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                     ),
                   ),
                 ),
-              ],
+                  ],
+                ),
+              ),
             ),
           ),
         ],

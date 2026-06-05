@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import '../data/local_prefs_service.dart';
 
 /// Global toggle: when false, all UI animations are disabled (reduced motion).
@@ -70,9 +72,31 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
     final email = await LocalPrefsService.getString('profile_email') ?? '';
     final phone = await LocalPrefsService.getString('profile_phone') ?? '';
     final birthdate = await LocalPrefsService.getString('profile_birthdate') ?? '';
-    final photoPath = await LocalPrefsService.getString('profile_photo_path');
+    String? photoPath = await LocalPrefsService.getString('profile_photo_path');
+
+    // Validate stored path; fall back to the standard filename if the path is
+    // stale (e.g. after a reinstall or documents-dir change).
+    if (photoPath == null || !File(photoPath).existsSync()) {
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final standard = File('${dir.path}/profile_photo.jpg');
+        if (standard.existsSync()) {
+          photoPath = standard.path;
+          await LocalPrefsService.setString('profile_photo_path', photoPath);
+        } else {
+          photoPath = null;
+        }
+      } catch (_) {
+        photoPath = null;
+      }
+    }
+
     state = UserProfile(
         name: name, email: email, phone: phone, birthdate: birthdate, photoPath: photoPath);
+  }
+
+  void clearProfile() {
+    state = const UserProfile();
   }
 
   Future<void> update({
@@ -95,4 +119,36 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
 final userProfileProvider =
     StateNotifierProvider<UserProfileNotifier, UserProfile>(
   (ref) => UserProfileNotifier(),
+);
+
+// ── Notification preferences ──────────────────────────────────────────────────
+
+class NotifPrefs {
+  const NotifPrefs({
+    this.dailyTip = true,
+    this.prediction = true,
+  });
+  final bool dailyTip;
+  final bool prediction;
+}
+
+class NotifPrefsNotifier extends StateNotifier<NotifPrefs> {
+  NotifPrefsNotifier() : super(const NotifPrefs()) {
+    _load();
+  }
+
+  Future<void> _load() async {
+    final dailyTip =
+        await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
+    final prediction = await LocalPrefsService.getBool('notif_prediction',
+        defaultValue: true);
+    state = NotifPrefs(dailyTip: dailyTip, prediction: prediction);
+  }
+
+  void reload() => _load();
+}
+
+final notifPrefsProvider =
+    StateNotifierProvider<NotifPrefsNotifier, NotifPrefs>(
+  (ref) => NotifPrefsNotifier(),
 );

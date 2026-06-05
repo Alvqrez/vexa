@@ -6,7 +6,6 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/presentation/providers/home_provider.dart';
-import '../../../education/domain/models/financial_tip.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
 
@@ -27,7 +26,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
   bool _marketing = false;
   bool _security = true;
   bool _prediction = true;
-  bool _dailyTip = true;
 
   @override
   void initState() {
@@ -46,7 +44,6 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
     final marketing = await LocalPrefsService.getBool('notif_marketing', defaultValue: false);
     final security = await LocalPrefsService.getBool('notif_security', defaultValue: true);
     final prediction = await LocalPrefsService.getBool('notif_prediction', defaultValue: true);
-    final dailyTip = await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
     if (!mounted) return;
     setState(() {
       _transactions = transactions;
@@ -55,12 +52,15 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
       _marketing = marketing;
       _security = security;
       _prediction = prediction;
-      _dailyTip = dailyTip;
     });
   }
 
-  Future<void> _save(String key, bool value) =>
-      LocalPrefsService.setBool(key, value);
+  Future<void> _save(String key, bool value) async {
+    await LocalPrefsService.setBool(key, value);
+    if (key == 'notif_prediction') {
+      ref.read(notifPrefsProvider.notifier).reload();
+    }
+  }
 
   @override
   void dispose() {
@@ -113,18 +113,11 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                           5,
                           _IntelligenceSection(
                             prediction: ref.watch(predictionProvider),
-                            tip: FinancialTips.daily,
                             predictionEnabled: _prediction,
-                            tipEnabled: _dailyTip,
                             onPredictionChanged: (v) {
                               HapticFeedback.selectionClick();
                               setState(() => _prediction = v);
                               _save('notif_prediction', v);
-                            },
-                            onTipChanged: (v) {
-                              HapticFeedback.selectionClick();
-                              setState(() => _dailyTip = v);
-                              _save('notif_daily_tip', v);
                             },
                           )),
                       const SizedBox(height: AppSpacing.lg),
@@ -354,19 +347,13 @@ class _NotifRow extends StatelessWidget {
 class _IntelligenceSection extends StatefulWidget {
   const _IntelligenceSection({
     required this.prediction,
-    required this.tip,
     required this.predictionEnabled,
-    required this.tipEnabled,
     required this.onPredictionChanged,
-    required this.onTipChanged,
   });
 
   final MonthlyPrediction prediction;
-  final FinancialTip tip;
   final bool predictionEnabled;
-  final bool tipEnabled;
   final ValueChanged<bool> onPredictionChanged;
-  final ValueChanged<bool> onTipChanged;
 
   @override
   State<_IntelligenceSection> createState() => _IntelligenceSectionState();
@@ -374,7 +361,6 @@ class _IntelligenceSection extends StatefulWidget {
 
 class _IntelligenceSectionState extends State<_IntelligenceSection> {
   bool _showPredDetail = false;
-  bool _showTipDetail = false;
 
   @override
   Widget build(BuildContext context) {
@@ -414,25 +400,6 @@ class _IntelligenceSectionState extends State<_IntelligenceSection> {
                     setState(() => _showPredDetail = !_showPredDetail),
                 expandedContent: _PredictionDetail(
                     prediction: widget.prediction),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: Divider(
-                    height: 1, thickness: 0.5, color: AppColors.glassBorder),
-              ),
-              // Tip toggle + expandable detail
-              _IntelRow(
-                icon: Icons.lightbulb_outline_rounded,
-                color: widget.tip.category.color,
-                title: 'Consejo del día',
-                subtitle: 'Un consejo financiero nuevo cada día.',
-                value: widget.tipEnabled,
-                onChanged: widget.onTipChanged,
-                expanded: _showTipDetail,
-                onExpand: () =>
-                    setState(() => _showTipDetail = !_showTipDetail),
-                expandedContent: _TipDetail(tip: widget.tip),
               ),
             ],
           ),
@@ -601,45 +568,6 @@ class _PredictionDetail extends ConsumerWidget {
   }
 }
 
-class _TipDetail extends StatelessWidget {
-  const _TipDetail({required this.tip});
-  final FinancialTip tip;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = tip.category.color;
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(AppSpacing.md),
-        border:
-            Border.all(color: color.withValues(alpha: 0.18), width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(tip.category.icon, size: 12, color: color),
-              const SizedBox(width: 4),
-              Text(tip.category.label,
-                  style: AppTypography.labelS.copyWith(color: color)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(tip.title,
-              style: AppTypography.labelL.copyWith(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 4),
-          Text(tip.content,
-              style: AppTypography.labelS
-                  .copyWith(color: AppColors.textSecondary, height: 1.5)),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Shared ────────────────────────────────────────────────────────────────────
 

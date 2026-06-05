@@ -223,6 +223,20 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     await _persistAll();
   }
 
+  Future<void> updateAccount(Account account) async {
+    _isLoaded = true;
+    state = [for (final a in state) if (a.id == account.id) account else a];
+    await LocalPrefsService.setBool(
+        'account_savings_${account.id}', account.isSavings);
+    await _persistAll();
+  }
+
+  Future<void> deleteAccount(String accountId) async {
+    _isLoaded = true;
+    state = state.where((a) => a.id != accountId).toList();
+    await _persistAll();
+  }
+
   Future<void> markAsSavings(String accountId, bool isSavings) async {
     _isLoaded = true;
     state = [
@@ -242,11 +256,20 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
         color: Color(0xFF00D68F),
         icon: AccountIcon.wallet,
       ),
+      Account(
+        id: 'savings_default',
+        name: 'Ahorro',
+        balance: 0,
+        color: Color(0xFFF59E0B),
+        icon: AccountIcon.savings,
+        isSavings: true,
+      ),
     ];
     await _isar.writeTxn(() async {
       await _isar.isarAccounts.clear();
       await _isar.isarAccounts.putAll(state.map(_accountToIsar).toList());
     });
+    await LocalPrefsService.setBool('account_savings_savings_default', true);
   }
 }
 

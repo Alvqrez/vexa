@@ -121,16 +121,6 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
   }
 
   void _confirmDelete(WalletCategory cat) {
-    if (cat.isDefault) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Las categorías por defecto no se pueden eliminar',
-              style: AppTypography.labelM.copyWith(color: AppColors.textInverse)),
-          backgroundColor: AppColors.card,
-        ),
-      );
-      return;
-    }
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -429,54 +419,31 @@ class _CategoryTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (category.isDefault)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => _CategoryActionSheet(
+                    category: category,
+                    onEdit: onEdit,
+                    onDelete: onDelete,
+                  ),
+                );
+              },
+              child: Container(
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: AppColors.glassLight,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.pillRadius),
+                  borderRadius: BorderRadius.circular(9),
                 ),
-                child: Text('Default',
-                    style: AppTypography.eyebrow
-                        .copyWith(color: AppColors.textTertiary)),
-              )
-            else ...[
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onEdit();
-                },
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.glassLight,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(Icons.edit_rounded,
-                      size: 14, color: AppColors.textSecondary),
-                ),
+                child: const Icon(Icons.more_vert_rounded,
+                    size: 14, color: AppColors.textSecondary),
               ),
-              const SizedBox(width: AppSpacing.xs),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onDelete();
-                },
-                child: Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.negativeSurface,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(Icons.delete_outline_rounded,
-                      size: 14, color: AppColors.negative),
-                ),
-              ),
-            ],
+            ),
             const SizedBox(width: AppSpacing.sm),
             Icon(Icons.drag_handle_rounded,
                 size: 18, color: AppColors.textTertiary),
@@ -932,6 +899,132 @@ class _IconPickerGrid extends StatelessWidget {
           ),
         );
       }).toList(),
+    );
+  }
+}
+
+// ── Category action sheet ─────────────────────────────────────────────────────
+
+class _CategoryActionSheet extends StatelessWidget {
+  const _CategoryActionSheet({
+    required this.category,
+    required this.onEdit,
+    required this.onDelete,
+  });
+  final WalletCategory category;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: category.surface,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(category.icon, size: 22, color: category.color),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Text(category.name,
+                  style: AppTypography.headingS
+                      .copyWith(color: AppColors.textPrimary)),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          _CategoryActionTile(
+            icon: Icons.edit_rounded,
+            label: 'Editar categoría',
+            color: AppColors.petroleum,
+            onTap: () {
+              Navigator.of(context).pop();
+              onEdit();
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _CategoryActionTile(
+            icon: Icons.delete_outline_rounded,
+            label: 'Eliminar categoría',
+            color: AppColors.negative,
+            onTap: () {
+              Navigator.of(context).pop();
+              onDelete();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryActionTile extends StatelessWidget {
+  const _CategoryActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: color.withValues(alpha: 0.15), width: 0.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 16, color: color),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text(label, style: AppTypography.labelL.copyWith(color: color)),
+          ],
+        ),
+      ),
     );
   }
 }

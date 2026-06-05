@@ -487,7 +487,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
         borderRadius: BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -642,7 +642,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

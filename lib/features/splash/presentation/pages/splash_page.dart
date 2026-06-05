@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../onboarding/presentation/pages/onboarding_page.dart';
+import '../../../auth/presentation/pages/lock_screen_page.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/services/local_auth_service.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -83,10 +85,19 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
     if (savedCode != null) {
       ref.read(currencyCodeProvider.notifier).state = savedCode;
     }
+    Widget destination;
+    if (!onboardingDone) {
+      destination = const OnboardingPage();
+    } else if (await LocalAuthService.isAnyLockEnabled()) {
+      destination = const LockScreenPage();
+    } else {
+      destination = const MainShell();
+    }
+
+    if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (ctx, a1, a2) =>
-            onboardingDone ? const MainShell() : const OnboardingPage(),
+        pageBuilder: (ctx, a1, a2) => destination,
         transitionsBuilder: (ctx, anim, a2, child) =>
             FadeTransition(opacity: anim, child: child),
         transitionDuration: const Duration(milliseconds: 420),

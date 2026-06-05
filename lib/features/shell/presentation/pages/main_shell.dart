@@ -534,7 +534,7 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -639,7 +639,7 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }
@@ -1100,7 +1100,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
       ),
       padding: EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md,
           AppSpacing.xxl, AppSpacing.xxl + bottom),
-      child: Column(
+      child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Center(
@@ -1215,7 +1215,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

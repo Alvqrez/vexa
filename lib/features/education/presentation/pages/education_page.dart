@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_tip.dart';
+import 'tip_detail_page.dart';
 
 class EducationPage extends StatefulWidget {
   const EducationPage({super.key});
@@ -376,61 +377,8 @@ class _TipCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
-    final color = tip.category.color;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(tip.category.icon, size: 22, color: color),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Text(tip.category.label,
-                    style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(tip.title,
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.md),
-            Text(tip.content,
-                style: AppTypography.bodyM.copyWith(
-                    color: AppColors.textSecondary, height: 1.6)),
-            const SizedBox(height: AppSpacing.xxl),
-          ],
-        ),
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => TipDetailPage(tip: tip)),
     );
   }
 }

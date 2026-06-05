@@ -38,6 +38,11 @@ class _RecurringListNotifier
     await RecurringTransaction.saveAll(state);
   }
 
+  Future<void> update(RecurringTransaction r) async {
+    state = state.map((x) => x.id == r.id ? r : x).toList();
+    await RecurringTransaction.saveAll(state);
+  }
+
   Future<void> refresh() async => state = await RecurringTransaction.loadAll();
 }
 
@@ -58,7 +63,6 @@ class RecurringTransactionsPage extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Padding(
               padding: const EdgeInsets.fromLTRB(
                   AppSpacing.screenPadding, AppSpacing.lg,
@@ -86,7 +90,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
                             .copyWith(color: AppColors.textPrimary)),
                   ),
                   GestureDetector(
-                    onTap: () => _showAddSheet(context, ref, accounts),
+                    onTap: () => _showFormSheet(context, ref, accounts),
                     child: Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
@@ -113,7 +117,6 @@ class RecurringTransactionsPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
-
             Expanded(
               child: items.isEmpty
                   ? Center(
@@ -148,6 +151,8 @@ class RecurringTransactionsPage extends ConsumerWidget {
                           item: r,
                           account: account,
                           currency: currency,
+                          onEdit: () => _showFormSheet(context, ref, accounts,
+                              existing: r),
                           onDelete: () => ref
                               .read(recurringListProvider.notifier)
                               .remove(r.id),
@@ -161,17 +166,21 @@ class RecurringTransactionsPage extends ConsumerWidget {
     );
   }
 
-  void _showAddSheet(
-      BuildContext context, WidgetRef ref, List<Account> accounts) {
+  void _showFormSheet(
+    BuildContext context,
+    WidgetRef ref,
+    List<Account> accounts, {
+    RecurringTransaction? existing,
+  }) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       useSafeArea: true,
-      builder: (_) => _AddRecurringSheet(accounts: accounts),
-    ).then((_) =>
-        ref.read(recurringListProvider.notifier).refresh());
+      builder: (_) =>
+          _RecurringFormSheet(accounts: accounts, existing: existing),
+    ).then((_) => ref.read(recurringListProvider.notifier).refresh());
   }
 }
 
@@ -182,12 +191,14 @@ class _RecurringItemRow extends StatelessWidget {
     required this.item,
     required this.account,
     required this.currency,
+    required this.onEdit,
     required this.onDelete,
   });
 
   final RecurringTransaction item;
   final Account? account;
   final String currency;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   String _freqLabel() {
@@ -211,72 +222,224 @@ class _RecurringItemRow extends StatelessWidget {
     );
     final isIncome = item.type == TransactionType.income.name;
 
-    return Dismissible(
-      key: ValueKey(item.id),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => onDelete(),
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: AppSpacing.xl),
-        decoration: BoxDecoration(
-          color: AppColors.negative.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        ),
-        child: const Icon(Icons.delete_outline_rounded,
-            color: AppColors.negative, size: 22),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: AppColors.glassBorder, width: 0.5),
       ),
+      child: Row(
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: cat.surface,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(cat.icon, size: 18, color: cat.color),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.merchant,
+                    style: AppTypography.labelL
+                        .copyWith(color: AppColors.textPrimary)),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(_freqLabel(),
+                        style: AppTypography.labelS
+                            .copyWith(color: AppColors.textTertiary)),
+                    if (account != null) ...[
+                      const Text(' · ',
+                          style: TextStyle(color: AppColors.textTertiary)),
+                      Text(account!.name,
+                          style: AppTypography.labelS
+                              .copyWith(color: AppColors.textTertiary)),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${isIncome ? '+' : '-'}$currency${item.amount.toStringAsFixed(2)}',
+            style: AppTypography.labelL.copyWith(
+              color: isIncome ? AppColors.positive : AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          GestureDetector(
+            onTap: () {
+              HapticFeedback.selectionClick();
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => _RecurringActionSheet(
+                  item: item,
+                  currency: currency,
+                  onEdit: onEdit,
+                  onDelete: onDelete,
+                ),
+              );
+            },
+            child: Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                color: AppColors.glassLight,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: const Icon(Icons.more_vert_rounded,
+                  size: 14, color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Recurring action sheet ────────────────────────────────────────────────────
+
+class _RecurringActionSheet extends StatelessWidget {
+  const _RecurringActionSheet({
+    required this.item,
+    required this.currency,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final RecurringTransaction item;
+  final String currency;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final cat = TransactionCategory.values.firstWhere(
+      (c) => c.name == item.category,
+      orElse: () => TransactionCategory.other,
+    );
+    final isIncome = item.type == TransactionType.income.name;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+      decoration: const BoxDecoration(
+        color: AppColors.card,
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+              decoration: BoxDecoration(
+                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: cat.surface,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(cat.icon, size: 22, color: cat.color),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(item.merchant,
+                      style: AppTypography.headingS
+                          .copyWith(color: AppColors.textPrimary)),
+                  Text(
+                    '${isIncome ? '+' : '-'}$currency${item.amount.toStringAsFixed(2)}',
+                    style: AppTypography.labelM
+                        .copyWith(color: AppColors.textTertiary),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xxl),
+          _RecurringActionTile(
+            icon: Icons.edit_rounded,
+            label: 'Editar recurrente',
+            color: AppColors.petroleum,
+            onTap: () {
+              Navigator.of(context).pop();
+              onEdit();
+            },
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _RecurringActionTile(
+            icon: Icons.delete_outline_rounded,
+            label: 'Eliminar recurrente',
+            color: AppColors.negative,
+            onTap: () {
+              onDelete();
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecurringActionTile extends StatelessWidget {
+  const _RecurringActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg, vertical: AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: color.withValues(alpha: 0.15), width: 0.5),
         ),
         child: Row(
           children: [
             Container(
-              width: 40, height: 40,
+              width: 34, height: 34,
               decoration: BoxDecoration(
-                color: cat.surface,
-                borderRadius: BorderRadius.circular(12),
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(cat.icon, size: 18, color: cat.color),
+              child: Icon(icon, size: 16, color: color),
             ),
             const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.merchant,
-                      style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Text(_freqLabel(),
-                          style: AppTypography.labelS
-                              .copyWith(color: AppColors.textTertiary)),
-                      if (account != null) ...[
-                        const Text(' · ',
-                            style:
-                                TextStyle(color: AppColors.textTertiary)),
-                        Text(account!.name,
-                            style: AppTypography.labelS.copyWith(
-                                color: AppColors.textTertiary)),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '${isIncome ? '+' : '-'}$currency${item.amount.toStringAsFixed(2)}',
-              style: AppTypography.labelL.copyWith(
-                color: isIncome ? AppColors.positive : AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(label, style: AppTypography.labelL.copyWith(color: color)),
           ],
         ),
       ),
@@ -284,25 +447,26 @@ class _RecurringItemRow extends StatelessWidget {
   }
 }
 
-// ── Add sheet ─────────────────────────────────────────────────────────────────
+// ── Form sheet (create / edit) ────────────────────────────────────────────────
 
-class _AddRecurringSheet extends ConsumerStatefulWidget {
-  const _AddRecurringSheet({required this.accounts});
+class _RecurringFormSheet extends ConsumerStatefulWidget {
+  const _RecurringFormSheet({required this.accounts, this.existing});
   final List<Account> accounts;
+  final RecurringTransaction? existing;
 
   @override
-  ConsumerState<_AddRecurringSheet> createState() =>
-      _AddRecurringSheetState();
+  ConsumerState<_RecurringFormSheet> createState() =>
+      _RecurringFormSheetState();
 }
 
-class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
-  final _nameCtrl = TextEditingController();
-  final _amountCtrl = TextEditingController();
-  TransactionType _type = TransactionType.expense;
-  TransactionCategory _cat = TransactionCategory.transport;
-  RecurrenceFrequency _freq = RecurrenceFrequency.daily;
-  int _times = 1;
-  final Set<int> _weekDays = {1, 2, 3, 4, 5}; // Mon–Fri default
+class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _amountCtrl;
+  late TransactionType _type;
+  late TransactionCategory _cat;
+  late RecurrenceFrequency _freq;
+  late int _times;
+  late final Set<int> _weekDays;
   String? _accountId;
 
   static const _dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -310,9 +474,25 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
   @override
   void initState() {
     super.initState();
-    if (widget.accounts.isNotEmpty) {
-      _accountId = widget.accounts.first.id;
-    }
+    final e = widget.existing;
+    _nameCtrl = TextEditingController(text: e?.merchant ?? '');
+    _amountCtrl = TextEditingController(
+        text: e != null ? e.amount.toStringAsFixed(2) : '');
+    _type = e != null
+        ? TransactionType.values.firstWhere((t) => t.name == e.type,
+            orElse: () => TransactionType.expense)
+        : TransactionType.expense;
+    _cat = e != null
+        ? TransactionCategory.values.firstWhere((c) => c.name == e.category,
+            orElse: () => TransactionCategory.transport)
+        : TransactionCategory.transport;
+    _freq = e?.frequency ?? RecurrenceFrequency.daily;
+    _times = e?.timesPerOccurrence ?? 1;
+    _weekDays = e?.weekDays != null
+        ? Set<int>.from(e!.weekDays!)
+        : {1, 2, 3, 4, 5};
+    _accountId = e?.accountId ??
+        (widget.accounts.isNotEmpty ? widget.accounts.first.id : null);
   }
 
   @override
@@ -336,30 +516,29 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
     if (_freq == RecurrenceFrequency.weekly ||
         _freq == RecurrenceFrequency.daily) {
       if (_weekDays.isNotEmpty) {
-        final sorted = _weekDays.toList();
-        sorted.sort();
+        final sorted = _weekDays.toList()..sort();
         weekDaysValue = sorted;
       }
     }
 
     final r = RecurringTransaction(
-      id: generateId(),
+      id: widget.existing?.id ?? generateId(),
       merchant: name,
       amount: amount,
       type: _type.name,
       category: _cat.name,
       accountId: _accountId,
       frequency: _freq,
-      nextDate: today,
+      nextDate: widget.existing?.nextDate ?? today,
       timesPerOccurrence: _times,
       weekDays: weekDaysValue,
     );
 
-    RecurringTransaction.loadAll().then((all) {
-      all.add(r);
-      RecurringTransaction.saveAll(all);
-    });
-
+    if (widget.existing != null) {
+      ref.read(recurringListProvider.notifier).update(r);
+    } else {
+      ref.read(recurringListProvider.notifier).add(r);
+    }
     HapticFeedback.mediumImpact();
     Navigator.of(context).pop();
   }
@@ -369,6 +548,7 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final showDays = _freq == RecurrenceFrequency.daily ||
         _freq == RecurrenceFrequency.weekly;
+    final isEdit = widget.existing != null;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
@@ -383,7 +563,6 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 36, height: 4,
@@ -394,29 +573,30 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                 ),
               ),
             ),
-            Text('Nueva recurrente',
+            Text(isEdit ? 'Editar recurrente' : 'Nueva recurrente',
                 style: AppTypography.headingS
                     .copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: AppSpacing.xxl),
 
-            // Concept
             _Label('Concepto'),
             const SizedBox(height: AppSpacing.sm),
-            _Field(controller: _nameCtrl, hint: 'ej. Transporte, Gimnasio…',
-                icon: Icons.label_outline_rounded, autofocus: true),
+            _Field(
+                controller: _nameCtrl,
+                hint: 'ej. Transporte, Gimnasio…',
+                icon: Icons.label_outline_rounded,
+                autofocus: !isEdit),
             const SizedBox(height: AppSpacing.xl),
 
-            // Amount
             _Label('Monto por vez'),
             const SizedBox(height: AppSpacing.sm),
             _Field(
                 controller: _amountCtrl,
                 hint: '0.00',
                 icon: Icons.attach_money_rounded,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true)),
             const SizedBox(height: AppSpacing.xl),
 
-            // Type
             _Label('Tipo'),
             const SizedBox(height: AppSpacing.sm),
             Row(
@@ -462,7 +642,6 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // Category
             _Label('Categoría'),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -494,7 +673,9 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(c.icon, size: 12, color: sel ? c.color : AppColors.textTertiary),
+                        Icon(c.icon,
+                            size: 12,
+                            color: sel ? c.color : AppColors.textTertiary),
                         const SizedBox(width: 5),
                         Text(c.label,
                             style: AppTypography.labelS.copyWith(
@@ -510,7 +691,6 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // Frequency
             _Label('Frecuencia'),
             const SizedBox(height: AppSpacing.sm),
             Wrap(
@@ -540,9 +720,8 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                     ),
                     child: Text(f.label,
                         style: AppTypography.labelM.copyWith(
-                          color: sel
-                              ? AppColors.emerald
-                              : AppColors.textTertiary,
+                          color:
+                              sel ? AppColors.emerald : AppColors.textTertiary,
                           fontWeight:
                               sel ? FontWeight.w600 : FontWeight.w400,
                         )),
@@ -552,7 +731,6 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
             ),
             const SizedBox(height: AppSpacing.xl),
 
-            // Times per occurrence
             _Label('¿Cuántas veces?'),
             const SizedBox(height: AppSpacing.sm),
             Row(
@@ -593,20 +771,20 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
-                Text('por ${_freq == RecurrenceFrequency.daily ? 'día' : 'semana'}',
+                Text(
+                    'por ${_freq == RecurrenceFrequency.daily ? 'día' : 'semana'}',
                     style: AppTypography.labelM
                         .copyWith(color: AppColors.textTertiary)),
               ],
             ),
 
-            // Days of week (shown for daily and weekly)
             if (showDays) ...[
               const SizedBox(height: AppSpacing.xl),
               _Label('Días de la semana'),
               const SizedBox(height: AppSpacing.sm),
               Row(
                 children: List.generate(7, (i) {
-                  final day = i + 1; // 1=Mon…7=Sun
+                  final day = i + 1;
                   final sel = _weekDays.contains(day);
                   return Expanded(
                     child: GestureDetector(
@@ -622,8 +800,7 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 160),
-                        margin:
-                            const EdgeInsets.symmetric(horizontal: 2),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
                         height: 38,
                         decoration: BoxDecoration(
                           color: sel
@@ -643,9 +820,8 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                               color: sel
                                   ? AppColors.emerald
                                   : AppColors.textTertiary,
-                              fontWeight: sel
-                                  ? FontWeight.w700
-                                  : FontWeight.w400,
+                              fontWeight:
+                                  sel ? FontWeight.w700 : FontWeight.w400,
                             ),
                           ),
                         ),
@@ -656,7 +832,6 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
               ),
             ],
 
-            // Account
             if (widget.accounts.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xl),
               _Label('Cuenta'),
@@ -696,7 +871,8 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                           const SizedBox(width: 5),
                           Text(a.name,
                               style: AppTypography.labelM.copyWith(
-                                color: sel ? a.color : AppColors.textTertiary,
+                                color:
+                                    sel ? a.color : AppColors.textTertiary,
                                 fontWeight:
                                     sel ? FontWeight.w600 : FontWeight.w400,
                               )),
@@ -710,16 +886,17 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
 
             const SizedBox(height: AppSpacing.xxl),
 
-            // Submit
             GestureDetector(
               onTap: _submit,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                padding:
+                    const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                       colors: [AppColors.emerald, AppColors.emeraldDim]),
-                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.cardRadius),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.emerald.withValues(alpha: 0.30),
@@ -728,7 +905,7 @@ class _AddRecurringSheetState extends ConsumerState<_AddRecurringSheet> {
                     ),
                   ],
                 ),
-                child: Text('Agregar',
+                child: Text(isEdit ? 'Guardar cambios' : 'Agregar',
                     textAlign: TextAlign.center,
                     style: AppTypography.labelL.copyWith(
                       color: AppColors.textInverse,

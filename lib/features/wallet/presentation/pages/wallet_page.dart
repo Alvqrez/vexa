@@ -13,6 +13,9 @@ import '../providers/wallet_provider.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/recurring_transaction.dart';
 import '../../../home/presentation/pages/recurring_transactions_page.dart';
+import '../../../loans/domain/models/loan.dart';
+import '../../../loans/presentation/pages/loans_page.dart';
+import '../../../loans/presentation/providers/loans_provider.dart';
 import 'wallet_categories_page.dart';
 
 class WalletPage extends ConsumerStatefulWidget {
@@ -25,7 +28,7 @@ class WalletPage extends ConsumerStatefulWidget {
 class _WalletPageState extends ConsumerState<WalletPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
-  static const _sectionCount = 5;
+  static const _sectionCount = 6;
 
   @override
   void initState() {
@@ -82,9 +85,11 @@ class _WalletPageState extends ConsumerState<WalletPage>
                     const SizedBox(height: AppSpacing.xl),
                     _reveal(2, const _SubscriptionsPreviewSection()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, const _RecurringTransactionsCard()),
+                    _reveal(3, const _LoansPreviewSection()),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(4, const _CategoriesPreviewSection()),
+                    _reveal(4, const _RecurringTransactionsCard()),
+                    const SizedBox(height: AppSpacing.xl),
+                    _reveal(5, const _CategoriesPreviewSection()),
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
@@ -447,6 +452,83 @@ class _SubsPreviewTile extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Loans preview ─────────────────────────────────────────────────────────────
+
+class _LoansPreviewSection extends ConsumerWidget {
+  const _LoansPreviewSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final active = ref.watch(activeLoansProvider).take(3).toList();
+    final totalLent = ref.watch(totalLentProvider);
+    final totalBorrowed = ref.watch(totalBorrowedProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    final subtitle = active.isEmpty
+        ? 'Sin préstamos activos'
+        : '$currency${totalLent.toStringAsFixed(0)} prestado · $currency${totalBorrowed.toStringAsFixed(0)} debido';
+
+    return _WalletSection(
+      title: 'Préstamos',
+      subtitle: subtitle,
+      icon: Icons.handshake_rounded,
+      onTap: () => Navigator.push(
+          context, MaterialPageRoute(builder: (_) => const LoansPage())),
+      child: active.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+              child: Center(
+                child: Text('Sin préstamos activos',
+                    style: AppTypography.labelM
+                        .copyWith(color: AppColors.textTertiary)),
+              ),
+            )
+          : Column(
+              children: active.map((l) {
+                final isLent = l.type == LoanType.lentByMe;
+                final accentColor =
+                    isLent ? AppColors.positive : AppColors.negative;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: l.color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(l.icon, size: 17, color: l.color),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l.name,
+                                style: AppTypography.labelL
+                                    .copyWith(color: AppColors.textPrimary)),
+                            Text(l.type.label,
+                                style: AppTypography.labelS
+                                    .copyWith(color: AppColors.textTertiary)),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${isLent ? '+' : '-'}$currency${l.remainingAmount.toStringAsFixed(2)}',
+                        style: AppTypography.labelM.copyWith(
+                            color: accentColor, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
     );
   }
 }

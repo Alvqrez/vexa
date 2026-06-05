@@ -11,6 +11,7 @@ import '../widgets/smart_insights_widget.dart';
 import '../widgets/summary_cards.dart';
 import '../widgets/transactions_section.dart';
 import '../../../health/presentation/widgets/health_score_widget.dart';
+import '../../../education/presentation/widgets/daily_tip_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -99,15 +100,17 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(height: AppSpacing.xl),
                         _section(2, const SmartInsightsWidget()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(3, const HealthScoreWidget()),
+                        _section(3, const DailyTipCard()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(4, const AccountsCarousel()),
+                        _section(4, const HealthScoreWidget()),
+                        const SizedBox(height: AppSpacing.xl),
+                        _section(5, const AccountsCarousel()),
                         const SizedBox(height: AppSpacing.xxl),
-                        _section(5, _SectionLabel(label: 'Categorías')),
+                        _section(6, _SectionLabel(label: 'Categorías')),
                         const SizedBox(height: AppSpacing.md),
-                        _section(6, const CategoriesRow()),
+                        _section(7, const CategoriesRow()),
                         const SizedBox(height: AppSpacing.xxl),
-                        _section(7, const TransactionsSection()),
+                        _section(8, const TransactionsSection()),
                         const SizedBox(
                           height: AppSpacing.bottomNavHeight +
                               AppSpacing.bottomNavBottomPadding +

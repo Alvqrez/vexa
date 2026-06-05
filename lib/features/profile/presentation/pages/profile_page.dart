@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,6 +19,7 @@ import 'help_center_page.dart';
 import 'rate_app_page.dart';
 import 'about_page.dart';
 import 'settings_page.dart';
+import '../../../auth/presentation/pages/login_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -266,28 +268,43 @@ class _ProfileHeroCard extends ConsumerWidget {
           children: [
             Stack(
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppColors.petroleum, AppColors.emeraldDim],
+                Builder(builder: (context) {
+                  final path = profile.photoPath;
+                  final file = path != null ? File(path) : null;
+                  final hasPhoto = file != null && file.existsSync();
+                  return Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: hasPhoto
+                          ? null
+                          : const LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [AppColors.petroleum, AppColors.emeraldDim],
+                            ),
+                      image: hasPhoto
+                          ? DecorationImage(
+                              image: FileImage(file),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                     ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      profile.initial,
-                      style: AppTypography.headingM.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 26,
-                      ),
-                    ),
-                  ),
-                ),
+                    child: hasPhoto
+                        ? null
+                        : Center(
+                            child: Text(
+                              profile.initial,
+                              style: AppTypography.headingM.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 26,
+                              ),
+                            ),
+                          ),
+                  );
+                }),
                 Positioned(
                   bottom: 0,
                   right: 0,
@@ -764,8 +781,8 @@ class _UseSeedButton extends ConsumerWidget {
 class _SignOutButton extends StatelessWidget {
   const _SignOutButton();
 
-  void _confirm(BuildContext context) {
-    showDialog(
+  Future<void> _confirm(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardElevated,
@@ -782,23 +799,30 @@ class _SignOutButton extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancelar',
-              style: AppTypography.labelL
-                  .copyWith(color: AppColors.textSecondary),
-            ),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelL
+                    .copyWith(color: AppColors.textSecondary)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cerrar sesión',
-              style:
-                  AppTypography.labelL.copyWith(color: AppColors.negative),
-            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Cerrar sesión',
+                style: AppTypography.labelL.copyWith(color: AppColors.negative)),
           ),
         ],
       ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        pageBuilder: (_, a1, a2) => const LoginPage(),
+        transitionsBuilder: (_, anim, a2, child) =>
+            FadeTransition(opacity: anim, child: child),
+        transitionDuration: const Duration(milliseconds: 350),
+      ),
+      (route) => false,
     );
   }
 
