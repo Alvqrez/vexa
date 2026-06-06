@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../providers/home_provider.dart';
 import '../../domain/models/transaction.dart';
@@ -144,6 +145,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final all = ref.watch(transactionsProvider);
     final filtered = _applyFilters(all);
     final grouped = _groupByDate(filtered);
@@ -156,7 +158,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
         .fold(0.0, (s, t) => s + t.amount);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           // Background glow
@@ -283,7 +285,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                       Divider(
                           height: 1,
                           thickness: 0.5,
-                          color: AppColors.glassBorder),
+                          color: c.glassBorder),
                     ],
                   ),
                 ),
@@ -318,6 +320,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     int index,
     Map<String, List<Transaction>> groups,
   ) {
+    final c = context.colors;
     final entry = groups.entries.elementAt(index);
     final txns = entry.value;
     return Column(
@@ -331,9 +334,9 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
           ),
           child: Column(
             children: [
@@ -350,7 +353,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
-                      color: AppColors.glassBorder,
+                      color: c.glassBorder,
                     ),
                   ),
               ],
@@ -384,6 +387,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -392,13 +396,12 @@ class _Header extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
+              color: c.glass,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(
-                  color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_rounded,
-                size: 18, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_rounded,
+                size: 18, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -408,10 +411,10 @@ class _Header extends StatelessWidget {
             children: [
               Text(title,
                   style: AppTypography.headingM
-                      .copyWith(color: AppColors.textPrimary)),
+                      .copyWith(color: c.textPrimary)),
               Text('$count movimientos',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary)),
+                      .copyWith(color: c.textTertiary)),
             ],
           ),
         ),
@@ -422,20 +425,19 @@ class _Header extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
+              color: c.glass,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.sort_rounded,
-                    size: 14, color: AppColors.textTertiary),
+                Icon(Icons.sort_rounded,
+                    size: 14, color: c.textTertiary),
                 const SizedBox(width: 4),
                 Text(sortLabel.split(' ').first,
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textSecondary)),
+                        .copyWith(color: c.textSecondary)),
               ],
             ),
           ),
@@ -451,19 +453,19 @@ class _Header extends StatelessWidget {
             decoration: BoxDecoration(
               color: showSearch
                   ? AppColors.emeraldSurface
-                  : Colors.white.withValues(alpha: 0.06),
+                  : c.glass,
               borderRadius: BorderRadius.circular(11),
               border: Border.all(
                 color: showSearch
                     ? AppColors.emerald.withValues(alpha: 0.3)
-                    : AppColors.glassBorder,
+                    : c.glassBorder,
                 width: 0.5,
               ),
             ),
             child: Icon(
               showSearch ? Icons.search_off_rounded : Icons.search_rounded,
               size: 18,
-              color: showSearch ? AppColors.emerald : AppColors.textSecondary,
+              color: showSearch ? AppColors.emerald : c.textSecondary,
             ),
           ),
         ),
@@ -485,28 +487,27 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border:
-            Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: c.glassBorderStrong, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: c.textPrimary),
         decoration: InputDecoration(
           hintText: 'Buscar por comercio, categoría, etiqueta…',
-          hintStyle:
-              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: const Icon(Icons.search_rounded,
-              size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
+          prefixIcon: Icon(Icons.search_rounded,
+              size: 18, color: c.textTertiary),
           suffixIcon: controller.text.isNotEmpty
               ? GestureDetector(
                   onTap: onClear,
-                  child: const Icon(Icons.close_rounded,
-                      size: 16, color: AppColors.textTertiary),
+                  child: Icon(Icons.close_rounded,
+                      size: 16, color: c.textTertiary),
                 )
               : null,
           border: InputBorder.none,
@@ -527,12 +528,13 @@ class _SortSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: Column(
@@ -544,14 +546,13 @@ class _SortSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Text('Ordenar por',
-              style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary)),
+              style: AppTypography.headingS.copyWith(color: c.textPrimary)),
           const SizedBox(height: AppSpacing.xl),
           ..._SortBy.values.map((s) {
             final active = s == current;
@@ -567,13 +568,13 @@ class _SortSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: active
                       ? AppColors.emeraldSurface
-                      : Colors.white.withValues(alpha: 0.04),
+                      : c.glass,
                   borderRadius:
                       BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
                     color: active
                         ? AppColors.emerald.withValues(alpha: 0.3)
-                        : AppColors.glassBorder,
+                        : c.glassBorder,
                     width: 0.5,
                   ),
                 ),
@@ -583,14 +584,14 @@ class _SortSheet extends StatelessWidget {
                         size: 18,
                         color: active
                             ? AppColors.emerald
-                            : AppColors.textSecondary),
+                            : c.textSecondary),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(s.label,
                           style: AppTypography.labelL.copyWith(
                             color: active
                                 ? AppColors.emerald
-                                : AppColors.textPrimary,
+                                : c.textPrimary,
                             fontWeight: active
                                 ? FontWeight.w600
                                 : FontWeight.w400,
@@ -618,11 +619,12 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Text(label,
             style: AppTypography.labelM.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2)),
         const SizedBox(width: AppSpacing.sm),
@@ -630,7 +632,7 @@ class _DateHeader extends StatelessWidget {
           child: Divider(
             height: 1,
             thickness: 0.5,
-            color: AppColors.glassBorder,
+            color: c.glassBorder,
           ),
         ),
       ],
@@ -663,7 +665,7 @@ class _SummaryChip extends StatelessWidget {
         children: [
           Text(label,
               style: AppTypography.labelS
-                  .copyWith(color: AppColors.textTertiary)),
+                  .copyWith(color: context.colors.textTertiary)),
           Text(value,
               style: AppTypography.headingS
                   .copyWith(color: color, fontSize: 14)),
@@ -700,19 +702,19 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? color.withValues(alpha: 0.18)
-              : Colors.white.withValues(alpha: 0.04),
+              : context.colors.glass,
           borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           border: Border.all(
             color: selected
                 ? color.withValues(alpha: 0.35)
-                : Colors.white.withValues(alpha: 0.08),
+                : context.colors.glassBorder,
             width: 0.5,
           ),
         ),
         child: Text(
           label,
           style: AppTypography.labelM.copyWith(
-            color: selected ? color : AppColors.textSecondary,
+            color: selected ? color : context.colors.textSecondary,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
           ),
         ),
@@ -729,6 +731,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.huge),
@@ -739,21 +742,17 @@ class _EmptyState extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.glassLight,
+                color: c.glass,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                    color: AppColors.glassBorder, width: 0.5),
+                border: Border.all(color: c.glassBorder, width: 0.5),
               ),
-              child: const Icon(Icons.receipt_long_rounded,
-                  size: 32, color: AppColors.textTertiary),
+              child: Icon(Icons.receipt_long_rounded,
+                  size: 32, color: c.textTertiary),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              hasQuery
-                  ? 'Sin resultados'
-                  : 'Sin movimientos',
-              style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary),
+              hasQuery ? 'Sin resultados' : 'Sin movimientos',
+              style: AppTypography.headingS.copyWith(color: c.textPrimary),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
@@ -761,7 +760,7 @@ class _EmptyState extends StatelessWidget {
                   ? 'Prueba con otro término o limpia los filtros.'
                   : 'Registra tu primer gasto o ingreso\ncon el botón +.',
               style: AppTypography.bodyM
-                  .copyWith(color: AppColors.textTertiary, height: 1.5),
+                  .copyWith(color: c.textTertiary, height: 1.5),
               textAlign: TextAlign.center,
             ),
           ],

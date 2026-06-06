@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -101,7 +102,9 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BudgetFormSheet(
-        onSave: (item) => ref.read(budgetProvider.notifier).add(item),
+        onSave: (item) {
+          ref.read(budgetProvider.notifier).add(item);
+        },
       ),
     );
   }
@@ -113,8 +116,12 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _EditLimitSheet(
         item: item,
-        onSave: (limit) => ref.read(budgetProvider.notifier).updateLimit(item.id, limit),
-        onDelete: () => ref.read(budgetProvider.notifier).delete(item.id),
+        onSave: (limit) {
+          ref.read(budgetProvider.notifier).updateLimit(item.id, limit);
+        },
+        onDelete: () {
+          ref.read(budgetProvider.notifier).delete(item.id);
+        },
       ),
     );
   }
@@ -173,10 +180,11 @@ class _BudgetBg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -80,
             right: -60,
@@ -224,6 +232,7 @@ class _BudgetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final now = DateTime.now();
     final monthLabel = () {
       final l = DateFormat('MMMM yyyy', 'es').format(now);
@@ -236,14 +245,14 @@ class _BudgetHeader extends StatelessWidget {
         Text(
           'Presupuesto',
           style: AppTypography.headingM.copyWith(
-            color: AppColors.textPrimary,
+            color: c.textPrimary,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           monthLabel,
           style: AppTypography.labelM.copyWith(
-            color: AppColors.textTertiary,
+            color: c.textTertiary,
           ),
         ),
       ],
@@ -288,6 +297,7 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final spent = ref.watch(totalBudgetSpentProvider);
     final limit = ref.watch(totalBudgetLimitProvider);
     final ratio = limit > 0 ? (spent / limit).clamp(0.0, 1.0) : 0.0;
@@ -301,33 +311,20 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
-          ),
+          color: c.cardElevated,
           boxShadow: [
             BoxShadow(
               color: AppColors.emerald.withValues(alpha: 0.06),
               blurRadius: 60,
               spreadRadius: -8,
               offset: const Offset(0, 24),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -340,7 +337,7 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
                 height: 116,
                 child: CustomPaint(
                   painter: _BudgetArcPainter(
-                      progress: ratio * _arcAnim.value, ratio: ratio),
+                      progress: ratio * _arcAnim.value, ratio: ratio, trackColor: c.card),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -348,14 +345,14 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
                         Text(
                           '${(ratio * 100).toStringAsFixed(0)}%',
                           style: AppTypography.headingS.copyWith(
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             fontSize: 20,
                           ),
                         ),
                         Text(
                           'usado',
                           style: AppTypography.eyebrow.copyWith(
-                            color: AppColors.textTertiary,
+                            color: c.textTertiary,
                             letterSpacing: 1.2,
                           ),
                         ),
@@ -392,13 +389,13 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
                           text:
                               '${widget.currency}${spent.toStringAsFixed(0)}',
                           style: AppTypography.headingL
-                              .copyWith(color: AppColors.textPrimary),
+                              .copyWith(color: c.textPrimary),
                         ),
                         TextSpan(
                           text:
                               ' / ${widget.currency}${limit.toStringAsFixed(0)}',
                           style: AppTypography.bodyM
-                              .copyWith(color: AppColors.textTertiary),
+                              .copyWith(color: c.textTertiary),
                         ),
                       ],
                     ),
@@ -444,6 +441,7 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Container(
@@ -459,7 +457,7 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: AppTypography.labelM.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.labelM.copyWith(color: c.textSecondary),
           ),
         ),
         Text(value,
@@ -470,9 +468,10 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _BudgetArcPainter extends CustomPainter {
-  const _BudgetArcPainter({required this.progress, required this.ratio});
+  const _BudgetArcPainter({required this.progress, required this.ratio, required this.trackColor});
   final double progress;
   final double ratio;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -488,7 +487,7 @@ class _BudgetArcPainter extends CustomPainter {
       sweepAngle,
       false,
       Paint()
-        ..color = AppColors.card
+        ..color = trackColor
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
@@ -537,7 +536,7 @@ class _BudgetArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BudgetArcPainter old) =>
-      old.progress != progress || old.ratio != ratio;
+      old.progress != progress || old.ratio != ratio || old.trackColor != trackColor;
 }
 
 // ── Category list ─────────────────────────────────────────────────────────────
@@ -555,18 +554,19 @@ class _BudgetCategoryList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (items.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: c.glass,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: c.glassBorder, width: 0.5),
         ),
         child: Center(
           child: Text(
             'Sin categorías de presupuesto.\nToca + para agregar.',
-            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelM.copyWith(color: c.textTertiary),
             textAlign: TextAlign.center,
           ),
         ),
@@ -582,7 +582,7 @@ class _BudgetCategoryList extends StatelessWidget {
             Text(
               'Por categoría',
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.4,
               ),
@@ -590,7 +590,7 @@ class _BudgetCategoryList extends StatelessWidget {
             Text(
               '${items.length} activos',
               style: AppTypography.labelS.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ),
           ],
@@ -651,6 +651,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final item = widget.item;
     final color = item.isOver
         ? AppColors.negative
@@ -664,18 +665,18 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
         padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-          color: Colors.white.withValues(alpha: 0.03),
+          color: c.glass,
           border: Border.all(
             color: item.isWarning
                 ? AppColors.warning.withValues(alpha: 0.15)
-                : Colors.white.withValues(alpha: 0.05),
+                : c.glassBorder,
             width: 0.5,
           ),
         ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
           child: Column(
@@ -699,7 +700,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                         Text(
                           item.item.name,
                           style: AppTypography.labelL.copyWith(
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                           ),
                         ),
                         if (item.item.limit > 0) ...[
@@ -709,7 +710,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                             style: AppTypography.labelS.copyWith(
                               color: item.isOver
                                   ? AppColors.negative
-                                  : AppColors.textTertiary,
+                                  : c.textTertiary,
                             ),
                           ),
                         ],
@@ -727,7 +728,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                         Text(
                           'de ${widget.currency}${item.item.limit.toStringAsFixed(0)}',
                           style: AppTypography.labelS.copyWith(
-                            color: AppColors.textTertiary,
+                            color: c.textTertiary,
                           ),
                         ),
                     ],
@@ -842,17 +843,15 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final item = widget.item;
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
-        color: isDark
-            ? AppColors.surface
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: c.surface,
       ),
       padding: EdgeInsets.only(bottom: bottom),
       child: SingleChildScrollView(child: Column(
@@ -866,7 +865,7 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -913,22 +912,22 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: AppColors.glassMedium,
+                          color: c.glassMedium,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 16, color: AppColors.textSecondary),
+                        child: Icon(Icons.close_rounded,
+                            size: 16, color: c.textSecondary),
                       ),
                     ),
                   ],
                 ),
                 // Centered title
-                const Text(
+                Text(
                   'Presupuesto',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
+                    color: c.textSecondary,
                   ),
                 ),
               ],
@@ -949,18 +948,18 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                   child: _expanded
                       ? Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder, width: 0.5),
                           ),
                           child: Row(
                             children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 12),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12),
                                 child: Icon(Icons.attach_money_rounded,
-                                    size: 15, color: AppColors.textTertiary),
+                                    size: 15, color: c.textTertiary),
                               ),
                               Expanded(
                                 child: TextField(
@@ -970,16 +969,16 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 14,
-                                      color: AppColors.textPrimary),
-                                  decoration: const InputDecoration(
+                                      color: c.textPrimary),
+                                  decoration: InputDecoration(
                                     hintText: 'ej. 200',
                                     hintStyle: TextStyle(
                                         fontSize: 14,
-                                        color: AppColors.textTertiary),
+                                        color: c.textTertiary),
                                     border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 12),
                                   ),
                                 ),
@@ -987,11 +986,11 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                               GestureDetector(
                                 onTap: () =>
                                     setState(() => _expanded = false),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(right: 10),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 10),
                                   child: Icon(Icons.close_rounded,
                                       size: 15,
-                                      color: AppColors.textTertiary),
+                                      color: c.textTertiary),
                                 ),
                               ),
                             ],
@@ -1002,20 +1001,20 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                             setState(() => _expanded = true);
                             Future.microtask(() => _focusNode.requestFocus());
                           },
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.add_rounded,
-                                    size: 13, color: AppColors.textTertiary),
-                                SizedBox(width: 3),
+                                    size: 13, color: c.textTertiary),
+                                const SizedBox(width: 3),
                                 Text(
                                   '+ Presupuesto mensual',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: AppColors.textTertiary,
+                                    color: c.textTertiary,
                                   ),
                                 ),
                               ],
@@ -1080,9 +1079,9 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                     child: Text(
                       'Eliminar del presupuesto',
                       style: AppTypography.labelS.copyWith(
-                        color: AppColors.textTertiary,
+                        color: c.textTertiary,
                         decoration: TextDecoration.underline,
-                        decorationColor: AppColors.textTertiary,
+                        decorationColor: c.textTertiary,
                       ),
                     ),
                   ),
@@ -1105,15 +1104,16 @@ class _AddBudgetButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: c.glass,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+          border: Border.all(color: c.glassBorderStrong, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1208,17 +1208,15 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final previewName = _nameCtrl.text.trim();
 
     return Container(
       decoration: BoxDecoration(
         borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
-        color: isDark
-            ? AppColors.surface
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: c.surface,
       ),
       padding: EdgeInsets.only(bottom: bottom),
       child: SingleChildScrollView(child: Column(
@@ -1232,7 +1230,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1255,21 +1253,21 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: AppColors.glassMedium,
+                          color: c.glassMedium,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 16, color: AppColors.textSecondary),
+                        child: Icon(Icons.close_rounded,
+                            size: 16, color: c.textSecondary),
                       ),
                     ),
                   ],
                 ),
                 Text(
                   'Nueva categoría',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
+                    color: c.textSecondary,
                   ),
                 ),
               ],
@@ -1316,7 +1314,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: previewName.isEmpty
-                                ? AppColors.textTertiary
+                                ? c.textTertiary
                                 : _color,
                           ),
                           maxLines: 1,
@@ -1330,11 +1328,11 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                 // b) Name + Icon field
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.card,
+                    color: c.card,
                     borderRadius:
                         BorderRadius.circular(AppSpacing.cardRadius),
                     border: Border.all(
-                        color: AppColors.glassBorder, width: 0.5),
+                        color: c.glassBorder, width: 0.5),
                   ),
                   child: Row(
                     children: [
@@ -1342,14 +1340,14 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                         child: TextField(
                           controller: _nameCtrl,
                           autofocus: true,
-                          style: const TextStyle(
-                              fontSize: 14, color: AppColors.textPrimary),
-                          decoration: const InputDecoration(
+                          style: TextStyle(
+                              fontSize: 14, color: c.textPrimary),
+                          decoration: InputDecoration(
                             hintText: 'ej. Gimnasio, Transporte…',
                             hintStyle: TextStyle(
-                                fontSize: 14, color: AppColors.textTertiary),
+                                fontSize: 14, color: c.textTertiary),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
+                            contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 12),
                           ),
                         ),
@@ -1417,12 +1415,12 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                                   decoration: BoxDecoration(
                                     color: isSel
                                         ? _color.withValues(alpha: 0.18)
-                                        : AppColors.card,
+                                        : c.card,
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: isSel
                                           ? _color.withValues(alpha: 0.5)
-                                          : AppColors.glassBorder,
+                                          : c.glassBorder,
                                       width: isSel ? 1.5 : 0.5,
                                     ),
                                   ),
@@ -1430,7 +1428,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                                       size: 18,
                                       color: isSel
                                           ? _color
-                                          : AppColors.textTertiary),
+                                          : c.textTertiary),
                                 ),
                               );
                             }).toList(),
@@ -1447,19 +1445,19 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                     itemCount: _kColorOptions.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 8),
                     itemBuilder: (_, i) {
-                      final c = _kColorOptions[i];
-                      final isSel = c.toARGB32() == _color.toARGB32();
+                      final col = _kColorOptions[i];
+                      final isSel = col.toARGB32() == _color.toARGB32();
                       return GestureDetector(
                         onTap: () {
                           HapticFeedback.selectionClick();
-                          setState(() => _color = c);
+                          setState(() => _color = col);
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 150),
                           width: 28,
                           height: 28,
                           decoration: BoxDecoration(
-                            color: c,
+                            color: col,
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: isSel ? Colors.white : Colors.transparent,
@@ -1468,7 +1466,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                             boxShadow: isSel
                                 ? [
                                     BoxShadow(
-                                        color: c.withValues(alpha: 0.5),
+                                        color: col.withValues(alpha: 0.5),
                                         blurRadius: 8,
                                         spreadRadius: -2)
                                   ]
@@ -1491,20 +1489,20 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                   child: _budgetExpanded
                       ? Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder, width: 0.5),
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              const Padding(
-                                padding: EdgeInsets.only(left: 12),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12),
                                 child: Icon(Icons.attach_money_rounded,
                                     size: 15,
-                                    color: AppColors.textTertiary),
+                                    color: c.textTertiary),
                               ),
                               Expanded(
                                 child: TextField(
@@ -1513,16 +1511,16 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                                   keyboardType:
                                       const TextInputType.numberWithOptions(
                                           decimal: true),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                       fontSize: 14,
-                                      color: AppColors.textPrimary),
-                                  decoration: const InputDecoration(
+                                      color: c.textPrimary),
+                                  decoration: InputDecoration(
                                     hintText: 'ej. 200',
                                     hintStyle: TextStyle(
                                         fontSize: 14,
-                                        color: AppColors.textTertiary),
+                                        color: c.textTertiary),
                                     border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
+                                    contentPadding: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 12),
                                   ),
                                 ),
@@ -1530,11 +1528,11 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                               GestureDetector(
                                 onTap: () =>
                                     setState(() => _budgetExpanded = false),
-                                child: const Padding(
-                                  padding: EdgeInsets.only(right: 10),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 10),
                                   child: Icon(Icons.close_rounded,
                                       size: 15,
-                                      color: AppColors.textTertiary),
+                                      color: c.textTertiary),
                                 ),
                               ),
                             ],
@@ -1543,20 +1541,20 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
                       : GestureDetector(
                           onTap: () =>
                               setState(() => _budgetExpanded = true),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.add_rounded,
-                                    size: 13, color: AppColors.textTertiary),
-                                SizedBox(width: 3),
+                                    size: 13, color: c.textTertiary),
+                                const SizedBox(width: 3),
                                 Text(
                                   '+ Presupuesto mensual',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: AppColors.textTertiary,
+                                    color: c.textTertiary,
                                   ),
                                 ),
                               ],

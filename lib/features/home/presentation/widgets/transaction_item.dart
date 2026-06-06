@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/transaction.dart';
@@ -73,15 +74,16 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     final t = widget.transaction;
     ref.read(transactionsProvider.notifier).delete(t);
 
+    final c = context.colors;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
           content: Text(
             'Transacción eliminada',
-            style: AppTypography.labelM.copyWith(color: AppColors.textPrimary),
+            style: AppTypography.labelM.copyWith(color: c.textPrimary),
           ),
-          backgroundColor: AppColors.card,
+          backgroundColor: c.card,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
           margin: const EdgeInsets.fromLTRB(
@@ -118,6 +120,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final t = widget.transaction;
     final cat = t.category;
     final isIncome = t.isIncome;
@@ -168,7 +171,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                       Text(
                         t.merchant,
                         style: AppTypography.bodyM.copyWith(
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
@@ -187,8 +190,8 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                             const SizedBox(width: 6),
                             Container(
                               width: 3, height: 3,
-                              decoration: const BoxDecoration(
-                                color: AppColors.textTertiary,
+                              decoration: BoxDecoration(
+                                color: c.textTertiary,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -196,7 +199,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                           ],
                           Text(_relativeDate(t.date),
                               style: AppTypography.labelS
-                                  .copyWith(color: AppColors.textTertiary)),
+                                  .copyWith(color: c.textTertiary)),
                         ],
                       ),
                       if (t.tags.isNotEmpty) ...[
@@ -207,12 +210,12 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6, vertical: 1),
                             decoration: BoxDecoration(
-                              color: AppColors.glassMedium,
+                              color: c.glassMedium,
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(tag,
                                 style: AppTypography.labelS.copyWith(
-                                    color: AppColors.textTertiary,
+                                    color: c.textTertiary,
                                     fontSize: 9)),
                           )).toList(),
                         ),
@@ -233,12 +236,12 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                               HapticFeedback.selectionClick();
                               _openNote();
                             },
-                            child: const Padding(
-                              padding: EdgeInsets.only(right: 5),
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 5),
                               child: Icon(
                                 Icons.notes_rounded,
                                 size: 13,
-                                color: AppColors.textTertiary,
+                                color: c.textTertiary,
                               ),
                             ),
                           ),
@@ -247,7 +250,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                           style: AppTypography.labelL.copyWith(
                             color: isIncome
                                 ? AppColors.positive
-                                : AppColors.textPrimary,
+                                : c.textPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -261,7 +264,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                       decoration: BoxDecoration(
                         color: isIncome
                             ? AppColors.positiveSurface
-                            : AppColors.card,
+                            : c.card,
                         borderRadius:
                             BorderRadius.circular(AppSpacing.pillRadius),
                       ),
@@ -270,7 +273,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                         style: AppTypography.labelS.copyWith(
                           color: isIncome
                               ? AppColors.positive
-                              : AppColors.textTertiary,
+                              : c.textTertiary,
                           fontSize: 10,
                         ),
                       ),
@@ -336,12 +339,13 @@ class _NoteSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 32),
       decoration: BoxDecoration(
-        color: AppColors.cardElevated,
+        color: c.cardElevated,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: c.glassBorderStrong, width: 0.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -355,7 +359,7 @@ class _NoteSheet extends StatelessWidget {
               margin: const EdgeInsets.only(
                   top: AppSpacing.md, bottom: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -372,16 +376,16 @@ class _NoteSheet extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.notes_rounded,
                       size: 15,
-                      color: AppColors.textTertiary,
+                      color: c.textTertiary,
                     ),
                     const SizedBox(width: AppSpacing.sm),
                     Text(
                       'Nota',
                       style: AppTypography.labelM.copyWith(
-                        color: AppColors.textTertiary,
+                        color: c.textTertiary,
                       ),
                     ),
                   ],
@@ -390,7 +394,7 @@ class _NoteSheet extends StatelessWidget {
                 Text(
                   note,
                   style: AppTypography.bodyM.copyWith(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                   ),
                 ),
               ],

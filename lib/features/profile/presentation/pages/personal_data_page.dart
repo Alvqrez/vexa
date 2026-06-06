@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -77,43 +78,7 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
     return showModalBottomSheet<ImageSource>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 36, height: 4,
-              margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Text('Foto de perfil',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.xl),
-            _SourceOption(
-              icon: Icons.photo_library_outlined,
-              label: 'Elegir de la galería',
-              onTap: () => Navigator.pop(context, ImageSource.gallery),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            _SourceOption(
-              icon: Icons.camera_alt_outlined,
-              label: 'Tomar una foto',
-              onTap: () => Navigator.pop(context, ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => const _SourceSheet(),
     );
   }
 
@@ -155,19 +120,22 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
         birthdate: _birthdateController.text.trim(),
       );
       HapticFeedback.lightImpact();
+    } else {
+      HapticFeedback.selectionClick();
     }
     setState(() => _editing = !_editing);
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     // Re-populate controllers if the provider finishes loading after this page opens.
     ref.listen<UserProfile>(userProfileProvider, (_, profile) {
       if (!_editing) _populateControllers(profile);
     });
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -191,13 +159,13 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
                             decoration: BoxDecoration(
                               color: _editing
                                   ? AppColors.emeraldSurface
-                                  : AppColors.glassLight,
+                                  : c.glass,
                               borderRadius:
                                   BorderRadius.circular(AppSpacing.pillRadius),
                               border: Border.all(
                                 color: _editing
                                     ? AppColors.emeraldGlow
-                                    : AppColors.glassBorder,
+                                    : c.glassBorder,
                                 width: 0.5,
                               ),
                             ),
@@ -206,7 +174,7 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
                               style: AppTypography.labelM.copyWith(
                                 color: _editing
                                     ? AppColors.emerald
-                                    : AppColors.textSecondary,
+                                    : c.textSecondary,
                               ),
                             ),
                           ),
@@ -235,14 +203,14 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
                                     color: AppColors.petroleum,
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                      color: AppColors.background,
+                                      color: c.background,
                                       width: 2,
                                     ),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.camera_alt_rounded,
                                     size: 13,
-                                    color: AppColors.textPrimary,
+                                    color: c.textPrimary,
                                   ),
                                 ),
                               ),
@@ -317,11 +285,19 @@ class _FieldsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final c = context.colors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(
+          color: editing
+              ? AppColors.emeraldGlow.withValues(alpha: 0.45)
+              : c.glassBorder,
+          width: editing ? 1.0 : 0.5,
+        ),
       ),
       child: Column(
         children: [
@@ -334,7 +310,7 @@ class _FieldsCard extends StatelessWidget {
                 child: Divider(
                     height: 1,
                     thickness: 0.5,
-                    color: AppColors.glassBorder),
+                    color: c.glassBorder),
               ),
           ],
         ],
@@ -350,20 +326,24 @@ class _FormField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
       child: Row(
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOut,
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: editing ? AppColors.emeraldSurface : c.glass,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(data.icon,
-                size: 16, color: AppColors.textSecondary),
+                size: 16,
+                color: editing ? AppColors.emerald : c.textSecondary),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -373,7 +353,7 @@ class _FormField extends StatelessWidget {
                 Text(
                   data.label,
                   style: AppTypography.labelS.copyWith(
-                      color: AppColors.textTertiary),
+                      color: c.textTertiary),
                 ),
                 const SizedBox(height: 4),
                 editing
@@ -381,7 +361,7 @@ class _FormField extends StatelessWidget {
                         controller: data.controller,
                         keyboardType: data.keyboardType,
                         style: AppTypography.bodyM
-                            .copyWith(color: AppColors.textPrimary),
+                            .copyWith(color: c.textPrimary),
                         decoration: const InputDecoration(
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
@@ -391,7 +371,7 @@ class _FormField extends StatelessWidget {
                     : Text(
                         data.controller.text,
                         style: AppTypography.bodyM
-                            .copyWith(color: AppColors.textPrimary),
+                            .copyWith(color: c.textPrimary),
                       ),
               ],
             ),
@@ -411,6 +391,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -419,12 +400,12 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -432,7 +413,7 @@ class _SubPageHeader extends StatelessWidget {
           child: Text(
             title,
             style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary),
+                color: c.textPrimary),
           ),
         ),
         if (trailing != null) trailing!,
@@ -444,10 +425,11 @@ class _SubPageHeader extends StatelessWidget {
 class _ProfileSubBg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             right: -80,
@@ -486,6 +468,7 @@ class _ProfileAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final path = profile.photoPath;
     final file = path != null ? File(path) : null;
     final hasPhoto = file != null && file.existsSync();
@@ -509,13 +492,61 @@ class _ProfileAvatar extends StatelessWidget {
                   child: Text(
                     profile.initial,
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       fontWeight: FontWeight.w800,
                       fontSize: size * 0.4,
                     ),
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+// ── Source sheet (modal) ──────────────────────────────────────────────────────
+
+class _SourceSheet extends StatelessWidget {
+  const _SourceSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxxl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 36,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: AppSpacing.xl),
+            decoration: BoxDecoration(
+              color: c.textTertiary.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text('Foto de perfil',
+              style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+          const SizedBox(height: AppSpacing.xl),
+          _SourceOption(
+            icon: Icons.photo_library_outlined,
+            label: 'Elegir de la galería',
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _SourceOption(
+            icon: Icons.camera_alt_outlined,
+            label: 'Tomar una foto',
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ],
       ),
     );
   }
@@ -536,15 +567,16 @@ class _SourceOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg, vertical: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: c.glass,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: c.glassBorder, width: 0.5),
         ),
         child: Row(
           children: [
@@ -560,7 +592,7 @@ class _SourceOption extends StatelessWidget {
             const SizedBox(width: AppSpacing.lg),
             Text(label,
                 style: AppTypography.labelL
-                    .copyWith(color: AppColors.textPrimary)),
+                    .copyWith(color: c.textPrimary)),
           ],
         ),
       ),

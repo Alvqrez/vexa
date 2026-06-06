@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/domain/models/transaction.dart';
@@ -33,7 +34,10 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
       duration: const Duration(milliseconds: 900),
     )..forward();
     _selectedDay = DateTime(
-        DateTime.now().year, DateTime.now().month, DateTime.now().day);
+      DateTime.now().year,
+      DateTime.now().month,
+      DateTime.now().day,
+    );
   }
 
   @override
@@ -45,8 +49,7 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
   void _prevMonth() {
     HapticFeedback.selectionClick();
     setState(() {
-      _currentMonth =
-          DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
       _stagger.reset();
       _stagger.forward();
     });
@@ -55,8 +58,7 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
   void _nextMonth() {
     HapticFeedback.selectionClick();
     setState(() {
-      _currentMonth =
-          DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
+      _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
       _stagger.reset();
       _stagger.forward();
     });
@@ -81,17 +83,20 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
     for (final s in subscriptions) {
       if (s.nextBillingDate.month == _currentMonth.month &&
           s.nextBillingDate.year == _currentMonth.year) {
-        subMap[s.nextBillingDate.day] = (subMap[s.nextBillingDate.day] ?? 0) + 1;
+        subMap[s.nextBillingDate.day] =
+            (subMap[s.nextBillingDate.day] ?? 0) + 1;
       }
     }
 
-    final selectedTxns = _selectedDay == null
-        ? <Transaction>[]
-        : (dayMap[_selectedDay!.day] ?? [])
+    final selectedTxns =
+        _selectedDay == null
+              ? <Transaction>[]
+              : (dayMap[_selectedDay!.day] ?? [])
           ..sort((a, b) => b.date.compareTo(a.date));
 
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _CalendarBg(),
@@ -102,8 +107,11 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
                 // ── Header ──────────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenPadding, AppSpacing.lg,
-                      AppSpacing.screenPadding, 0),
+                    AppSpacing.screenPadding,
+                    AppSpacing.lg,
+                    AppSpacing.screenPadding,
+                    0,
+                  ),
                   child: _CalHeader(
                     month: _currentMonth,
                     onBack: () => Navigator.of(context).pop(),
@@ -115,21 +123,24 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
                 // ── Month summary pills ──────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   child: _MonthSummary(dayMap: dayMap),
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 // ── Weekday headers ──────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   child: _WeekdayRow(),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 // ── Calendar grid ────────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   child: _CalendarGrid(
                     month: _currentMonth,
                     dayMap: dayMap,
@@ -141,11 +152,12 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
                 ),
                 const SizedBox(height: AppSpacing.lg),
                 Divider(
-                    height: 1,
-                    thickness: 0.5,
-                    color: AppColors.glassBorder,
-                    indent: AppSpacing.screenPadding,
-                    endIndent: AppSpacing.screenPadding),
+                  height: 1,
+                  thickness: 0.5,
+                  color: c.glassBorder,
+                  indent: AppSpacing.screenPadding,
+                  endIndent: AppSpacing.screenPadding,
+                ),
                 const SizedBox(height: AppSpacing.md),
                 // ── Selected day transactions ────────────────────────────
                 Expanded(
@@ -171,7 +183,7 @@ class _CalendarBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -80,
             right: -80,
@@ -180,10 +192,12 @@ class _CalendarBg extends StatelessWidget {
               height: 280,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.emerald.withValues(alpha: 0.08),
-                  Colors.transparent,
-                ]),
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.emerald.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
@@ -220,12 +234,15 @@ class _CalHeader extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: context.colors.glass,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: context.colors.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_rounded,
-                size: 18, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.arrow_back_rounded,
+              size: 18,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -233,12 +250,18 @@ class _CalHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Calendario',
-                  style: AppTypography.headingM
-                      .copyWith(color: AppColors.textPrimary)),
-              Text('Financiero',
-                  style: AppTypography.labelM
-                      .copyWith(color: AppColors.textTertiary)),
+              Text(
+                'Calendario',
+                style: AppTypography.headingM.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              Text(
+                'Financiero',
+                style: AppTypography.labelM.copyWith(
+                  color: context.colors.textTertiary,
+                ),
+              ),
             ],
           ),
         ),
@@ -246,16 +269,19 @@ class _CalHeader extends StatelessWidget {
         _NavBtn(icon: Icons.chevron_left_rounded, onTap: onPrev),
         const SizedBox(width: AppSpacing.sm),
         Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: AppColors.glassLight,
+            color: context.colors.glass,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: context.colors.glassBorder, width: 0.5),
           ),
-          child: Text(label,
-              style: AppTypography.labelM.copyWith(
-                  color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: AppTypography.labelM.copyWith(
+              color: context.colors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         _NavBtn(icon: Icons.chevron_right_rounded, onTap: onNext),
@@ -277,11 +303,11 @@ class _NavBtn extends StatelessWidget {
         width: 34,
         height: 34,
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: context.colors.glass,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: context.colors.glassBorder, width: 0.5),
         ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+        child: Icon(icon, size: 18, color: context.colors.textSecondary),
       ),
     );
   }
@@ -297,8 +323,9 @@ class _MonthSummary extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(currencySymbolProvider);
     final allTxns = dayMap.values.expand((l) => l).toList();
-    final income =
-        allTxns.where((t) => t.isIncome).fold(0.0, (s, t) => s + t.amount);
+    final income = allTxns
+        .where((t) => t.isIncome)
+        .fold(0.0, (s, t) => s + t.amount);
     final expenses = allTxns
         .where((t) => !t.isIncome)
         .fold(0.0, (s, t) => s + t.amount);
@@ -306,32 +333,39 @@ class _MonthSummary extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-            child: _SummaryPill(
-                label: 'Ingresos',
-                value: '$currency${income.toStringAsFixed(0)}',
-                color: AppColors.positive)),
+          child: _SummaryPill(
+            label: 'Ingresos',
+            value: '$currency${income.toStringAsFixed(0)}',
+            color: AppColors.positive,
+          ),
+        ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-            child: _SummaryPill(
-                label: 'Gastos',
-                value: '$currency${expenses.toStringAsFixed(0)}',
-                color: AppColors.negative)),
+          child: _SummaryPill(
+            label: 'Gastos',
+            value: '$currency${expenses.toStringAsFixed(0)}',
+            color: AppColors.negative,
+          ),
+        ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
-            child: _SummaryPill(
-                label: 'Balance',
-                value: '$currency${(income - expenses).toStringAsFixed(0)}',
-                color: income >= expenses
-                    ? AppColors.positive
-                    : AppColors.negative)),
+          child: _SummaryPill(
+            label: 'Balance',
+            value: '$currency${(income - expenses).toStringAsFixed(0)}',
+            color: income >= expenses ? AppColors.positive : AppColors.negative,
+          ),
+        ),
       ],
     );
   }
 }
 
 class _SummaryPill extends StatelessWidget {
-  const _SummaryPill(
-      {required this.label, required this.value, required this.color});
+  const _SummaryPill({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -339,8 +373,10 @@ class _SummaryPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 10, vertical: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
@@ -349,13 +385,20 @@ class _SummaryPill extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: AppTypography.eyebrow
-                  .copyWith(color: AppColors.textTertiary)),
+          Text(
+            label,
+            style: AppTypography.eyebrow.copyWith(
+              color: context.colors.textTertiary,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(value,
-              style: AppTypography.labelL
-                  .copyWith(color: color, fontWeight: FontWeight.w700)),
+          Text(
+            value,
+            style: AppTypography.labelL.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -373,9 +416,13 @@ class _WeekdayRow extends StatelessWidget {
       children: _days.map((d) {
         return Expanded(
           child: Center(
-            child: Text(d,
-                style: AppTypography.eyebrow.copyWith(
-                    color: AppColors.textTertiary, letterSpacing: 1)),
+            child: Text(
+              d,
+              style: AppTypography.eyebrow.copyWith(
+                color: context.colors.textTertiary,
+                letterSpacing: 1,
+              ),
+            ),
           ),
         );
       }).toList(),
@@ -424,10 +471,12 @@ class _CalendarGrid extends StatelessWidget {
               final date = DateTime(month.year, month.month, day);
               final txns = dayMap[day] ?? [];
               final subs = subMap[day] ?? 0;
-              final isSelected = selectedDay?.day == day &&
+              final isSelected =
+                  selectedDay?.day == day &&
                   selectedDay?.month == month.month &&
                   selectedDay?.year == month.year;
-              final isToday = DateTime.now().day == day &&
+              final isToday =
+                  DateTime.now().day == day &&
                   DateTime.now().month == month.month &&
                   DateTime.now().year == month.year;
 
@@ -492,16 +541,20 @@ class _DayCell extends StatelessWidget {
         color: isSelected
             ? AppColors.emerald.withValues(alpha: 0.18)
             : isToday
-                ? AppColors.glassMedium
-                : Colors.transparent,
+            ? context.colors.glassMedium
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
         border: isSelected
             ? Border.all(
-                color: AppColors.emerald.withValues(alpha: 0.5), width: 1)
+                color: AppColors.emerald.withValues(alpha: 0.5),
+                width: 1,
+              )
             : isToday
-                ? Border.all(
-                    color: AppColors.emerald.withValues(alpha: 0.3), width: 0.5)
-                : null,
+            ? Border.all(
+                color: AppColors.emerald.withValues(alpha: 0.3),
+                width: 0.5,
+              )
+            : null,
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -512,8 +565,8 @@ class _DayCell extends StatelessWidget {
               color: isSelected
                   ? AppColors.emerald
                   : isToday
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
+                  ? context.colors.textPrimary
+                  : context.colors.textSecondary,
               fontWeight: isSelected || isToday
                   ? FontWeight.w700
                   : FontWeight.w400,
@@ -526,12 +579,9 @@ class _DayCell extends StatelessWidget {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (hasIncome)
-                  _Dot(color: AppColors.positive),
-                if (hasExpense)
-                  _Dot(color: AppColors.negative),
-                if (hasSub)
-                  _Dot(color: AppColors.warning),
+                if (hasIncome) _Dot(color: AppColors.positive),
+                if (hasExpense) _Dot(color: AppColors.negative),
+                if (hasSub) _Dot(color: AppColors.warning),
               ],
             )
           else
@@ -571,9 +621,12 @@ class _DayDetailPanel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(currencySymbolProvider);
     if (selectedDay == null) {
-      return const Center(
-          child: Text('Selecciona un día',
-              style: TextStyle(color: AppColors.textTertiary)));
+      return Center(
+        child: Text(
+          'Selecciona un día',
+          style: TextStyle(color: context.colors.textTertiary),
+        ),
+      );
     }
 
     final raw = DateFormat('EEEE d \'de\' MMMM', 'es').format(selectedDay!);
@@ -591,23 +644,29 @@ class _DayDetailPanel extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenPadding),
+            horizontal: AppSpacing.screenPadding,
+          ),
           child: Row(
             children: [
               Expanded(
-                child: Text(dayLabel,
-                    style: AppTypography.labelL.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600)),
+                child: Text(
+                  dayLabel,
+                  style: AppTypography.labelL.copyWith(
+                    color: context.colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               if (transactions.isNotEmpty) ...[
                 _DayBadge(
-                    value: '+$currency${income.toStringAsFixed(0)}',
-                    color: AppColors.positive),
+                  value: '+$currency${income.toStringAsFixed(0)}',
+                  color: AppColors.positive,
+                ),
                 const SizedBox(width: AppSpacing.xs),
                 _DayBadge(
-                    value: '-$currency${expenses.toStringAsFixed(0)}',
-                    color: AppColors.negative),
+                  value: '-$currency${expenses.toStringAsFixed(0)}',
+                  color: AppColors.negative,
+                ),
               ],
             ],
           ),
@@ -619,30 +678,41 @@ class _DayDetailPanel extends ConsumerWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.event_available_rounded,
-                          size: 32, color: AppColors.textTertiary),
+                      Icon(
+                        Icons.event_available_rounded,
+                        size: 32,
+                        color: context.colors.textTertiary,
+                      ),
                       const SizedBox(height: AppSpacing.sm),
-                      Text('Sin movimientos este día',
-                          style: AppTypography.labelM
-                              .copyWith(color: AppColors.textTertiary)),
+                      Text(
+                        'Sin movimientos este día',
+                        style: AppTypography.labelM.copyWith(
+                          color: context.colors.textTertiary,
+                        ),
+                      ),
                     ],
                   ),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenPadding, 0,
-                      AppSpacing.screenPadding, 120),
+                    AppSpacing.screenPadding,
+                    0,
+                    AppSpacing.screenPadding,
+                    120,
+                  ),
                   itemCount: transactions.length,
                   separatorBuilder: (_, index) => Divider(
                     height: 1,
                     thickness: 0.5,
-                    color: AppColors.glassBorder,
+                    color: context.colors.glassBorder,
                     indent: AppSpacing.screenPadding,
                     endIndent: AppSpacing.screenPadding,
                   ),
                   itemBuilder: (context, i) => Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.md,
+                    ),
                     child: _CalTxnRow(transaction: transactions[i]),
                   ),
                 ),
@@ -665,9 +735,13 @@ class _DayBadge extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
       ),
-      child: Text(value,
-          style: AppTypography.labelS.copyWith(
-              color: color, fontWeight: FontWeight.w600)),
+      child: Text(
+        value,
+        style: AppTypography.labelS.copyWith(
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -696,12 +770,18 @@ class _CalTxnRow extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(t.merchant,
-                  style: AppTypography.labelL
-                      .copyWith(color: AppColors.textPrimary)),
-              Text(t.category.label,
-                  style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary)),
+              Text(
+                t.merchant,
+                style: AppTypography.labelL.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              Text(
+                t.category.label,
+                style: AppTypography.labelS.copyWith(
+                  color: context.colors.textTertiary,
+                ),
+              ),
             ],
           ),
         ),

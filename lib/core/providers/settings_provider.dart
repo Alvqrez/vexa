@@ -17,7 +17,22 @@ final currencySymbolProvider = StateProvider<String>((ref) => '\$');
 final currencyCodeProvider = StateProvider<String>((ref) => 'USD');
 
 /// App theme mode: dark, light, or follow system.
+/// Persisted to LocalPrefsService under key 'theme_mode'.
+/// 0 = system, 1 = light, 2 = dark (default).
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.dark);
+
+/// Persist the theme choice.
+Future<void> saveThemeMode(ThemeMode mode) async {
+  final index = ThemeMode.values.indexOf(mode);
+  await LocalPrefsService.setInt('theme_mode', index);
+}
+
+/// Load the persisted theme choice (returns dark if unset).
+Future<ThemeMode> loadThemeMode() async {
+  final index = await LocalPrefsService.getInt('theme_mode', defaultValue: 2);
+  if (index < 0 || index >= ThemeMode.values.length) return ThemeMode.dark;
+  return ThemeMode.values[index];
+}
 
 // ── User profile ──────────────────────────────────────────────────────────────
 

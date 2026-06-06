@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../home/domain/models/transaction.dart';
@@ -25,11 +26,14 @@ class AccountDetailPage extends ConsumerWidget {
     final currency = ref.watch(currencySymbolProvider);
     final allTransfers = ref.watch(transferHistoryProvider);
     final transfers = allTransfers
-        .where((r) => r.fromAccountId == accountId || r.toAccountId == accountId)
+        .where(
+          (r) => r.fromAccountId == accountId || r.toAccountId == accountId,
+        )
         .toList();
 
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           // Colored glow behind header
@@ -42,10 +46,7 @@ class AccountDetailPage extends ConsumerWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    color.withValues(alpha: 0.18),
-                    Colors.transparent,
-                  ],
+                  colors: [color.withValues(alpha: 0.18), Colors.transparent],
                 ),
               ),
             ),
@@ -56,7 +57,8 @@ class AccountDetailPage extends ConsumerWidget {
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
@@ -73,14 +75,13 @@ class AccountDetailPage extends ConsumerWidget {
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color:
-                                    Colors.white.withValues(alpha: 0.06),
+                                color: Colors.white.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(11),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.arrow_back_rounded,
                                 size: 18,
-                                color: AppColors.textSecondary,
+                                color: c.textSecondary,
                               ),
                             ),
                           ),
@@ -88,8 +89,9 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               stats.account.name,
-                              style: AppTypography.headingM
-                                  .copyWith(color: AppColors.textPrimary),
+                              style: AppTypography.headingM.copyWith(
+                                color: c.textPrimary,
+                              ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -101,23 +103,26 @@ class AccountDetailPage extends ConsumerWidget {
                                 isScrollControlled: true,
                                 backgroundColor: Colors.transparent,
                                 useSafeArea: true,
-                                builder: (_) => _EditAccountSheet(
-                                    account: stats.account),
+                                builder: (_) =>
+                                    _EditAccountSheet(account: stats.account),
                               );
                             },
                             child: Container(
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color: AppColors.glassLight,
+                                color: c.glass,
                                 borderRadius: BorderRadius.circular(11),
                                 border: Border.all(
-                                    color: AppColors.glassBorder,
-                                    width: 0.5),
+                                  color: c.glassBorder,
+                                  width: 0.5,
+                                ),
                               ),
-                              child: const Icon(Icons.edit_rounded,
-                                  size: 16,
-                                  color: AppColors.textSecondary),
+                              child: Icon(
+                                Icons.edit_rounded,
+                                size: 16,
+                                color: c.textSecondary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.xs),
@@ -127,26 +132,33 @@ class AccountDetailPage extends ConsumerWidget {
                               showDialog(
                                 context: context,
                                 builder: (_) => AlertDialog(
-                                  backgroundColor: AppColors.card,
+                                  backgroundColor: c.card,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          AppSpacing.cardRadius)),
-                                  title: Text('Eliminar cuenta',
-                                      style: AppTypography.headingS.copyWith(
-                                          color: AppColors.textPrimary)),
+                                    borderRadius: BorderRadius.circular(
+                                      AppSpacing.cardRadius,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    'Eliminar cuenta',
+                                    style: AppTypography.headingS.copyWith(
+                                      color: c.textPrimary,
+                                    ),
+                                  ),
                                   content: Text(
-                                      '¿Eliminar "${stats.account.name}"? Esta acción no se puede deshacer.',
-                                      style: AppTypography.bodyM.copyWith(
-                                          color: AppColors.textSecondary)),
+                                    '¿Eliminar "${stats.account.name}"? Esta acción no se puede deshacer.',
+                                    style: AppTypography.bodyM.copyWith(
+                                      color: c.textSecondary,
+                                    ),
+                                  ),
                                   actions: [
                                     TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context),
-                                      child: Text('Cancelar',
-                                          style: AppTypography.labelM
-                                              .copyWith(
-                                                  color: AppColors
-                                                      .textTertiary)),
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text(
+                                        'Cancelar',
+                                        style: AppTypography.labelM.copyWith(
+                                          color: c.textTertiary,
+                                        ),
+                                      ),
                                     ),
                                     TextButton(
                                       onPressed: () {
@@ -157,11 +169,12 @@ class AccountDetailPage extends ConsumerWidget {
                                           ..pop()
                                           ..pop();
                                       },
-                                      child: Text('Eliminar',
-                                          style: AppTypography.labelM
-                                              .copyWith(
-                                                  color:
-                                                      AppColors.negative)),
+                                      child: Text(
+                                        'Eliminar',
+                                        style: AppTypography.labelM.copyWith(
+                                          color: AppColors.negative,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -174,14 +187,17 @@ class AccountDetailPage extends ConsumerWidget {
                                 color: AppColors.negativeSurface,
                                 borderRadius: BorderRadius.circular(11),
                                 border: Border.all(
-                                    color: AppColors.negative
-                                        .withValues(alpha: 0.25),
-                                    width: 0.5),
+                                  color: AppColors.negative.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                  width: 0.5,
+                                ),
                               ),
                               child: const Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 16,
-                                  color: AppColors.negative),
+                                Icons.delete_outline_rounded,
+                                size: 16,
+                                color: AppColors.negative,
+                              ),
                             ),
                           ),
                         ],
@@ -205,16 +221,18 @@ class AccountDetailPage extends ConsumerWidget {
                               const SizedBox(width: 7),
                               Text(
                                 'SALDO ACTUAL',
-                                style: AppTypography.eyebrow
-                                    .copyWith(color: AppColors.textTertiary),
+                                style: AppTypography.eyebrow.copyWith(
+                                  color: c.textTertiary,
+                                ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '$currency${stats.balance.toStringAsFixed(2)}',
-                            style: AppTypography.displayM
-                                .copyWith(color: AppColors.textPrimary),
+                            style: AppTypography.displayM.copyWith(
+                              color: c.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -226,7 +244,8 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Ingresos',
-                              value: '+$currency${stats.income.toStringAsFixed(0)}',
+                              value:
+                                  '+$currency${stats.income.toStringAsFixed(0)}',
                               color: AppColors.positive,
                               icon: Icons.arrow_downward_rounded,
                             ),
@@ -235,7 +254,8 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Egresos',
-                              value: '-$currency${stats.expenses.toStringAsFixed(0)}',
+                              value:
+                                  '-$currency${stats.expenses.toStringAsFixed(0)}',
                               color: AppColors.negative,
                               icon: Icons.arrow_upward_rounded,
                             ),
@@ -262,52 +282,61 @@ class AccountDetailPage extends ConsumerWidget {
                         Text(
                           'Categorías',
                           style: AppTypography.headingS.copyWith(
-                              color: AppColors.textPrimary),
+                            color: c.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
                         _CategoryBreakdown(
-                            transactions: stats.transactions,
-                            currency: currency),
+                          transactions: stats.transactions,
+                          currency: currency,
+                        ),
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
                       // Transactions list
                       Text(
                         'Movimientos',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
 
                       if (stats.transactions.isEmpty)
                         _EmptyState(accountName: stats.account.name)
                       else
-                        ...stats.transactions
-                            .map((t) => Padding(
-                                  padding: const EdgeInsets.only(
-                                      bottom: AppSpacing.sm),
-                                  child: TransactionItem(transaction: t),
-                                )),
+                        ...stats.transactions.map(
+                          (t) => Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
+                            child: TransactionItem(transaction: t),
+                          ),
+                        ),
 
                       // Transfers section
                       if (transfers.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xl),
                         Text(
                           'Transferencias',
-                          style: AppTypography.headingS
-                              .copyWith(color: AppColors.textPrimary),
+                          style: AppTypography.headingS.copyWith(
+                            color: c.textPrimary,
+                          ),
                         ),
                         const SizedBox(height: AppSpacing.md),
-                        ...transfers.map((r) => Padding(
-                              padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm),
-                              child: _TransferRow(
-                                record: r,
-                                accountId: accountId,
-                                accounts: ref.read(accountsProvider),
-                                currency: currency,
-                              ),
-                            )),
+                        ...transfers.map(
+                          (r) => Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: AppSpacing.sm,
+                            ),
+                            child: _TransferRow(
+                              record: r,
+                              accountId: accountId,
+                              accounts: ref.read(accountsProvider),
+                              currency: currency,
+                            ),
+                          ),
+                        ),
                       ],
 
                       const SizedBox(height: 120),
@@ -331,9 +360,9 @@ class AccountDetailPage extends ConsumerWidget {
                 AppSpacing.lg,
               ),
               decoration: BoxDecoration(
-                color: AppColors.background,
+                color: c.background,
                 border: Border(
-                  top: BorderSide(color: AppColors.glassBorder, width: 0.5),
+                  top: BorderSide(color: c.glassBorder, width: 0.5),
                 ),
               ),
               child: Row(
@@ -348,9 +377,8 @@ class AccountDetailPage extends ConsumerWidget {
                         isScrollControlled: true,
                         backgroundColor: Colors.transparent,
                         useSafeArea: true,
-                        builder: (_) => AddTransactionSheet(
-                          defaultAccountId: accountId,
-                        ),
+                        builder: (_) =>
+                            AddTransactionSheet(defaultAccountId: accountId),
                       ),
                     ),
                   ),
@@ -397,7 +425,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.05),
@@ -421,8 +449,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: AppTypography.labelS
-                .copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelS.copyWith(color: context.colors.textTertiary),
           ),
         ],
       ),
@@ -431,7 +458,10 @@ class _StatCard extends StatelessWidget {
 }
 
 class _CategoryBreakdown extends StatelessWidget {
-  const _CategoryBreakdown({required this.transactions, required this.currency});
+  const _CategoryBreakdown({
+    required this.transactions,
+    required this.currency,
+  });
   final List<Transaction> transactions;
   final String currency;
 
@@ -472,12 +502,18 @@ class _CategoryBreakdown extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(e.key.label,
-                            style: AppTypography.labelM
-                                .copyWith(color: AppColors.textSecondary)),
-                        Text('$currency${e.value.toStringAsFixed(0)}',
-                            style: AppTypography.labelM
-                                .copyWith(color: AppColors.textPrimary)),
+                        Text(
+                          e.key.label,
+                          style: AppTypography.labelM.copyWith(
+                            color: context.colors.textSecondary,
+                          ),
+                        ),
+                        Text(
+                          '$currency${e.value.toStringAsFixed(0)}',
+                          style: AppTypography.labelM.copyWith(
+                            color: context.colors.textPrimary,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 3),
@@ -485,8 +521,7 @@ class _CategoryBreakdown extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
                         value: ratio,
-                        backgroundColor:
-                            color.withValues(alpha: 0.12),
+                        backgroundColor: color.withValues(alpha: 0.12),
                         valueColor: AlwaysStoppedAnimation(color),
                         minHeight: 3,
                       ),
@@ -511,7 +546,7 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xxl),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
           color: Colors.white.withValues(alpha: 0.05),
@@ -520,13 +555,15 @@ class _EmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.receipt_long_rounded,
-              size: 32, color: AppColors.textTertiary),
+          Icon(
+            Icons.receipt_long_rounded,
+            size: 32,
+            color: context.colors.textTertiary,
+          ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'Sin movimientos en $accountName',
-            style: AppTypography.bodyM
-                .copyWith(color: AppColors.textTertiary),
+            style: AppTypography.bodyM.copyWith(color: context.colors.textTertiary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -571,8 +608,10 @@ class _ActionButton extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: AppTypography.labelM
-                  .copyWith(color: color, fontWeight: FontWeight.w600),
+              style: AppTypography.labelM.copyWith(
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -612,7 +651,12 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
 
   static const _icons = AccountIcon.values;
   static const _iconLabels = [
-    'Banco', 'Tarjeta', 'Cartera', 'Ahorros', 'Inversión', 'Efectivo'
+    'Banco',
+    'Tarjeta',
+    'Cartera',
+    'Ahorros',
+    'Inversión',
+    'Efectivo',
   ];
 
   @override
@@ -622,7 +666,8 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
     _icon = widget.account.icon;
     _isSavings = widget.account.isSavings;
     _colorIndex = _kAccountColors.indexWhere(
-        (c) => c.toARGB32() == widget.account.color.toARGB32());
+      (c) => c.toARGB32() == widget.account.color.toARGB32(),
+    );
     if (_colorIndex < 0) _colorIndex = 0;
   }
 
@@ -653,11 +698,15 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
 
     return Container(
       margin: EdgeInsets.fromLTRB(
-          AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 24 + bottom),
+        AppSpacing.screenPadding,
+        0,
+        AppSpacing.screenPadding,
+        24 + bottom,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.cardElevated,
+        color: context.colors.cardElevated,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: context.colors.glassBorderStrong, width: 0.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -667,9 +716,10 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
             child: Padding(
               padding: const EdgeInsets.only(top: AppSpacing.md),
               child: Container(
-                width: 36, height: 4,
+                width: 36,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.glassMedium,
+                  color: context.colors.glassMedium,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -677,16 +727,25 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.xl, AppSpacing.lg, AppSpacing.xl, 0),
-            child: Text('Editar cuenta',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+              AppSpacing.xl,
+              AppSpacing.lg,
+              AppSpacing.xl,
+              0,
+            ),
+            child: Text(
+              'Editar cuenta',
+              style: AppTypography.headingS.copyWith(
+                color: context.colors.textPrimary,
+              ),
+            ),
           ),
           Flexible(
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.lg,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -695,35 +754,47 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                     TextField(
                       controller: _nameCtrl,
                       autofocus: true,
-                      style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.labelL.copyWith(
+                        color: context.colors.textPrimary,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Ej. BBVA, Efectivo…',
-                        hintStyle: AppTypography.labelL
-                            .copyWith(color: AppColors.textTertiary),
+                        hintStyle: AppTypography.labelL.copyWith(
+                          color: context.colors.textTertiary,
+                        ),
                         filled: true,
-                        fillColor: AppColors.glassLight,
+                        fillColor: context.colors.glass,
                         border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.cardRadius,
+                          ),
                           borderSide: BorderSide(
-                              color: AppColors.glassBorder, width: 0.5),
+                            color: context.colors.glassBorder,
+                            width: 0.5,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.cardRadius,
+                          ),
                           borderSide: BorderSide(
-                              color: AppColors.glassBorder, width: 0.5),
+                            color: context.colors.glassBorder,
+                            width: 0.5,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
-                          borderSide:
-                              BorderSide(color: AppColors.emerald, width: 1.5),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.cardRadius,
+                          ),
+                          borderSide: const BorderSide(
+                            color: AppColors.emerald,
+                            width: 1.5,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md),
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
@@ -749,35 +820,40 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                               decoration: BoxDecoration(
                                 color: selected
                                     ? color.withValues(alpha: 0.15)
-                                    : AppColors.glassLight,
+                                    : context.colors.glass,
                                 borderRadius: BorderRadius.circular(
-                                    AppSpacing.cardRadius),
+                                  AppSpacing.cardRadius,
+                                ),
                                 border: Border.all(
                                   color: selected
                                       ? color.withValues(alpha: 0.40)
-                                      : AppColors.glassBorder,
+                                      : context.colors.glassBorder,
                                   width: selected ? 1.5 : 0.5,
                                 ),
                               ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(_icons[i].iconData,
-                                      size: 20,
+                                  Icon(
+                                    _icons[i].iconData,
+                                    size: 20,
+                                    color: selected
+                                        ? color
+                                        : context.colors.textTertiary,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _iconLabels[i],
+                                    style: TextStyle(
+                                      fontSize: 9,
                                       color: selected
                                           ? color
-                                          : AppColors.textTertiary),
-                                  const SizedBox(height: 4),
-                                  Text(_iconLabels[i],
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: selected
-                                            ? color
-                                            : AppColors.textTertiary,
-                                        fontWeight: selected
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
-                                      )),
+                                          : context.colors.textTertiary,
+                                      fontWeight: selected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -811,23 +887,28 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                                 shape: BoxShape.circle,
                                 border: selected
                                     ? Border.all(
-                                        color: AppColors.textPrimary,
-                                        width: 2.5)
+                                        color: context.colors.textPrimary,
+                                        width: 2.5,
+                                      )
                                     : null,
                                 boxShadow: selected
                                     ? [
                                         BoxShadow(
-                                          color: _kAccountColors[i]
-                                              .withValues(alpha: 0.4),
+                                          color: _kAccountColors[i].withValues(
+                                            alpha: 0.4,
+                                          ),
                                           blurRadius: 8,
                                           spreadRadius: -2,
-                                        )
+                                        ),
                                       ]
                                     : null,
                               ),
                               child: selected
-                                  ? const Icon(Icons.check_rounded,
-                                      size: 16, color: Colors.white)
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 16,
+                                      color: Colors.white,
+                                    )
                                   : null,
                             ),
                           );
@@ -844,67 +925,80 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.lg,
-                            vertical: AppSpacing.md),
+                          horizontal: AppSpacing.lg,
+                          vertical: AppSpacing.md,
+                        ),
                         decoration: BoxDecoration(
                           color: _isSavings
                               ? AppColors.emerald.withValues(alpha: 0.10)
-                              : AppColors.glassLight,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
+                              : context.colors.glass,
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.cardRadius,
+                          ),
                           border: Border.all(
                             color: _isSavings
                                 ? AppColors.emerald.withValues(alpha: 0.40)
-                                : AppColors.glassBorder,
+                                : context.colors.glassBorder,
                             width: _isSavings ? 1.5 : 0.5,
                           ),
                         ),
                         child: Row(
                           children: [
                             Container(
-                              width: 34, height: 34,
+                              width: 34,
+                              height: 34,
                               decoration: BoxDecoration(
                                 color: _isSavings
                                     ? AppColors.emerald.withValues(alpha: 0.15)
-                                    : AppColors.glassMedium,
+                                    : context.colors.glassMedium,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(Icons.savings_outlined,
-                                  size: 16,
-                                  color: _isSavings
-                                      ? AppColors.emerald
-                                      : AppColors.textTertiary),
+                              child: Icon(
+                                Icons.savings_outlined,
+                                size: 16,
+                                color: _isSavings
+                                    ? AppColors.emerald
+                                    : context.colors.textTertiary,
+                              ),
                             ),
                             const SizedBox(width: AppSpacing.md),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Cuenta de ahorro',
-                                      style: AppTypography.labelL.copyWith(
-                                        color: _isSavings
-                                            ? AppColors.textPrimary
-                                            : AppColors.textSecondary,
-                                      )),
                                   Text(
-                                      'Las transferencias a esta cuenta cuentan como ahorro',
-                                      style: AppTypography.labelS.copyWith(
-                                          color: AppColors.textTertiary)),
+                                    'Cuenta de ahorro',
+                                    style: AppTypography.labelL.copyWith(
+                                      color: _isSavings
+                                          ? context.colors.textPrimary
+                                          : context.colors.textSecondary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Las transferencias a esta cuenta cuentan como ahorro',
+                                    style: AppTypography.labelS.copyWith(
+                                      color: context.colors.textTertiary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
-                              width: 22, height: 22,
+                              width: 22,
+                              height: 22,
                               decoration: BoxDecoration(
                                 color: _isSavings
                                     ? AppColors.emerald
-                                    : AppColors.glassMedium,
+                                    : context.colors.glassMedium,
                                 shape: BoxShape.circle,
                               ),
                               child: _isSavings
-                                  ? const Icon(Icons.check_rounded,
-                                      size: 13, color: Colors.white)
+                                  ? const Icon(
+                                      Icons.check_rounded,
+                                      size: 13,
+                                      color: Colors.white,
+                                    )
                                   : null,
                             ),
                           ],
@@ -919,8 +1013,9 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                         height: 52,
                         decoration: BoxDecoration(
                           color: AppColors.emerald,
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.cardRadius),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.cardRadius,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: AppColors.emerald.withValues(alpha: 0.30),
@@ -931,11 +1026,13 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                           ],
                         ),
                         child: Center(
-                          child: Text('Guardar cambios',
-                              style: AppTypography.labelL.copyWith(
-                                color: AppColors.textInverse,
-                                fontWeight: FontWeight.w700,
-                              )),
+                          child: Text(
+                            'Guardar cambios',
+                            style: AppTypography.labelL.copyWith(
+                              color: AppColors.textInverse,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -954,9 +1051,13 @@ class _SheetLabel extends StatelessWidget {
   const _SheetLabel(this.text);
   final String text;
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: AppTypography.labelM.copyWith(
-          color: AppColors.textSecondary, fontWeight: FontWeight.w600));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: AppTypography.labelM.copyWith(
+      color: context.colors.textSecondary,
+      fontWeight: FontWeight.w600,
+    ),
+  );
 }
 
 // ── Correction sheet ──────────────────────────────────────────────────────────
@@ -1001,10 +1102,9 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
     );
 
     ref.read(transactionsProvider.notifier).add(tx);
-    ref.read(accountsProvider.notifier).correctBalance(
-          widget.account.id,
-          newBalance,
-        );
+    ref
+        .read(accountsProvider.notifier)
+        .correctBalance(widget.account.id, newBalance);
 
     HapticFeedback.mediumImpact();
     Navigator.of(context).pop();
@@ -1016,11 +1116,16 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
 
     return Container(
       padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cardRadiusL)),
+        AppSpacing.xxl,
+        AppSpacing.xxl,
+        AppSpacing.xxl,
+        AppSpacing.xxl + bottom,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1031,7 +1136,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: context.colors.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1039,12 +1144,14 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
           const SizedBox(height: AppSpacing.xl),
           Text(
             'Corrección de saldo',
-            style: AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+            style: AppTypography.headingS.copyWith(
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             'Úsalo cuando el saldo físico no coincide con el sistema.',
-            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelM.copyWith(color: context.colors.textTertiary),
           ),
           const SizedBox(height: AppSpacing.xl),
           Container(
@@ -1053,18 +1160,25 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
               color: AppColors.warning.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
               border: Border.all(
-                  color: AppColors.warning.withValues(alpha: 0.20), width: 0.5),
+                color: AppColors.warning.withValues(alpha: 0.20),
+                width: 0.5,
+              ),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Saldo actual',
-                    style: AppTypography.labelM
-                        .copyWith(color: AppColors.textSecondary)),
+                Text(
+                  'Saldo actual',
+                  style: AppTypography.labelM.copyWith(
+                    color: context.colors.textSecondary,
+                  ),
+                ),
                 Text(
                   '\$${widget.account.balance.toStringAsFixed(2)}',
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.warning, fontWeight: FontWeight.w700),
+                  style: AppTypography.headingS.copyWith(
+                    color: AppColors.warning,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
@@ -1075,23 +1189,32 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
               color: Colors.white.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
               border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                color: Colors.white.withValues(alpha: 0.08),
+                width: 0.5,
+              ),
             ),
             child: TextField(
               controller: _ctrl,
               autofocus: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Saldo real',
-                hintStyle: AppTypography.bodyM
-                    .copyWith(color: AppColors.textTertiary),
-                prefixIcon: const Icon(Icons.attach_money_rounded,
-                    size: 18, color: AppColors.textTertiary),
+                hintStyle: AppTypography.bodyM.copyWith(
+                  color: context.colors.textTertiary,
+                ),
+                prefixIcon: Icon(
+                  Icons.attach_money_rounded,
+                  size: 18,
+                  color: context.colors.textTertiary,
+                ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
               ),
             ),
           ),
@@ -1101,14 +1224,14 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
             child: GestureDetector(
               onTap: _submit,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                 decoration: BoxDecoration(
                   color: AppColors.warning.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                      color: AppColors.warning.withValues(alpha: 0.35),
-                      width: 0.5),
+                    color: AppColors.warning.withValues(alpha: 0.35),
+                    width: 0.5,
+                  ),
                 ),
                 child: Text(
                   'Aplicar corrección',
@@ -1145,34 +1268,35 @@ class _TransferRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOutgoing = record.fromAccountId == accountId;
-    final otherAccountId =
-        isOutgoing ? record.toAccountId : record.fromAccountId;
-    final otherAccount =
-        accounts.where((a) => a.id == otherAccountId).firstOrNull;
-    final color =
-        isOutgoing ? AppColors.negative : AppColors.positive;
+    final otherAccountId = isOutgoing
+        ? record.toAccountId
+        : record.fromAccountId;
+    final otherAccount = accounts
+        .where((a) => a.id == otherAccountId)
+        .firstOrNull;
+    final color = isOutgoing ? AppColors.negative : AppColors.positive;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final day = DateTime(
-        record.date.year, record.date.month, record.date.day);
+    final day = DateTime(record.date.year, record.date.month, record.date.day);
     final String dateLabel;
     if (day == today) {
       dateLabel = 'Hoy';
     } else if (day == today.subtract(const Duration(days: 1))) {
       dateLabel = 'Ayer';
     } else {
-      dateLabel =
-          '${record.date.day}/${record.date.month}/${record.date.year}';
+      dateLabel = '${record.date.day}/${record.date.month}/${record.date.year}';
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: Row(
         children: [
@@ -1200,16 +1324,18 @@ class _TransferRow extends StatelessWidget {
                   isOutgoing
                       ? 'Transferencia enviada'
                       : 'Transferencia recibida',
-                  style: AppTypography.labelL
-                      .copyWith(color: AppColors.textPrimary),
+                  style: AppTypography.labelL.copyWith(
+                    color: context.colors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isOutgoing
                       ? 'A: ${otherAccount?.name ?? 'Cuenta desconocida'}'
                       : 'De: ${otherAccount?.name ?? 'Cuenta desconocida'}',
-                  style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary),
+                  style: AppTypography.labelS.copyWith(
+                    color: context.colors.textTertiary,
+                  ),
                 ),
               ],
             ),
@@ -1220,13 +1346,16 @@ class _TransferRow extends StatelessWidget {
               Text(
                 '${isOutgoing ? '-' : '+'}$currency${record.amount.toStringAsFixed(2)}',
                 style: AppTypography.labelL.copyWith(
-                    color: color, fontWeight: FontWeight.w600),
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 dateLabel,
-                style:
-                    AppTypography.labelS.copyWith(color: AppColors.textTertiary),
+                style: AppTypography.labelS.copyWith(
+                  color: context.colors.textTertiary,
+                ),
               ),
             ],
           ),

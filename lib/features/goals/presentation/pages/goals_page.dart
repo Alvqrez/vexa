@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/financial_goal.dart';
@@ -19,6 +20,7 @@ class GoalsPage extends ConsumerWidget {
         ref.watch(goalsProgressSummaryProvider);
     final goals = ref.watch(goalsProvider);
 
+    final c = context.colors;
     return Stack(
       children: [
         _GoalsBg(),
@@ -41,7 +43,7 @@ class GoalsPage extends ConsumerWidget {
                         Text(
                           'Mis metas',
                           style: AppTypography.headingM
-                              .copyWith(color: AppColors.textPrimary),
+                              .copyWith(color: c.textPrimary),
                         ),
                         GestureDetector(
                           onTap: () {
@@ -136,7 +138,7 @@ class GoalsPage extends ConsumerWidget {
                               .textTheme
                               .titleMedium
                               ?.copyWith(
-                                color: AppColors.textPrimary,
+                                color: c.textPrimary,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.4,
                               ),
@@ -158,7 +160,7 @@ class GoalsPage extends ConsumerWidget {
                               .textTheme
                               .titleMedium
                               ?.copyWith(
-                                color: AppColors.textPrimary,
+                                color: c.textPrimary,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.4,
                               ),
@@ -203,7 +205,9 @@ class GoalsPage extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddGoalSheet(
-        onAdd: (goal) => ref.read(goalsProvider.notifier).add(goal),
+        onAdd: (goal) {
+          ref.read(goalsProvider.notifier).add(goal);
+        },
       ),
     );
   }
@@ -249,6 +253,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
     final g = widget.goal;
     final isComplete = g.isCompleted;
     final color = isComplete ? AppColors.emerald : g.color;
+    final c = context.colors;
 
     return GestureDetector(
       onTap: () {
@@ -278,7 +283,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -307,7 +312,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                       Text(
                         g.title,
                         style: AppTypography.labelL.copyWith(
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             fontWeight: FontWeight.w600),
                       ),
                       Text(
@@ -317,7 +322,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                         style: AppTypography.labelS.copyWith(
                             color: isComplete
                                 ? AppColors.emerald
-                                : AppColors.textTertiary),
+                                : c.textTertiary),
                       ),
                     ],
                   ),
@@ -339,8 +344,9 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                       backgroundColor: Colors.transparent,
                       builder: (_) => _EditGoalSheet(
                         goal: g,
-                        onSave: (updated) =>
-                            ref.read(goalsProvider.notifier).update(updated),
+                        onSave: (updated) {
+                          ref.read(goalsProvider.notifier).update(updated);
+                        },
                       ),
                     );
                   },
@@ -348,11 +354,11 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                     width: 30,
                     height: 30,
                     decoration: BoxDecoration(
-                      color: AppColors.glassLight,
+                      color: c.glass,
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Icon(Icons.edit_rounded,
-                        size: 13, color: AppColors.textTertiary),
+                        size: 13, color: c.textTertiary),
                   ),
                 ),
               ],
@@ -388,12 +394,12 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                 Text(
                   '${_fmt(g.current)} ahorrados',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: c.textSecondary),
                 ),
                 Text(
                   'Meta: ${_fmt(g.target)}',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary),
+                      .copyWith(color: c.textTertiary),
                 ),
               ],
             ),
@@ -479,12 +485,13 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final c = context.colors;
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(child: Column(
@@ -496,7 +503,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -504,7 +511,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
           const SizedBox(height: AppSpacing.xl),
           Text('Nueva meta',
               style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary)),
+                  .copyWith(color: c.textPrimary)),
           const SizedBox(height: AppSpacing.xl),
 
           // Title field
@@ -527,7 +534,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
           // Icon selector
           Text('Icono',
               style:
-                  AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
+                  AppTypography.labelM.copyWith(color: c.textTertiary)),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
             height: 44,
@@ -559,7 +566,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
                     child: Icon(
                       _icons[i],
                       size: 20,
-                      color: selected ? color : AppColors.textTertiary,
+                      color: selected ? color : c.textTertiary,
                     ),
                   ),
                 );
@@ -571,7 +578,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
           // Color selector
           Text('Color',
               style:
-                  AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
+                  AppTypography.labelM.copyWith(color: c.textTertiary)),
           const SizedBox(height: AppSpacing.sm),
           SizedBox(
             height: 36,
@@ -672,12 +679,12 @@ class _Field extends StatelessWidget {
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
           hintStyle:
-              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
+              AppTypography.bodyM.copyWith(color: context.colors.textTertiary),
+          prefixIcon: Icon(icon, size: 18, color: context.colors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -712,13 +719,13 @@ class _EmptyGoals extends StatelessWidget {
         Text(
           'Sin metas aún',
           style: AppTypography.headingS
-              .copyWith(color: AppColors.textPrimary),
+              .copyWith(color: context.colors.textPrimary),
         ),
         const SizedBox(height: AppSpacing.sm),
         Text(
           'Crea tu primera meta de ahorro\ny empieza a trabajar hacia ella.',
           style: AppTypography.bodyS
-              .copyWith(color: AppColors.textTertiary),
+              .copyWith(color: context.colors.textTertiary),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -774,7 +781,7 @@ class _StatTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -794,13 +801,13 @@ class _StatTile extends StatelessWidget {
             Text(
               value,
               style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary, fontSize: 15),
+                  .copyWith(color: context.colors.textPrimary, fontSize: 15),
             ),
             const SizedBox(height: 2),
             Text(
               label,
               style: AppTypography.labelS
-                  .copyWith(color: AppColors.textTertiary),
+                  .copyWith(color: context.colors.textTertiary),
             ),
           ],
         ),
@@ -931,8 +938,8 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
           colorScheme: ColorScheme.dark(
             primary: AppColors.emerald,
             onPrimary: Colors.white,
-            surface: AppColors.card,
-            onSurface: AppColors.textPrimary,
+            surface: ctx.colors.card,
+            onSurface: ctx.colors.textPrimary,
           ),
         ),
         child: child!,
@@ -972,11 +979,12 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final c = context.colors;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
@@ -990,13 +998,13 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
                 width: 36, height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.lg),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text('Editar meta',
-                style: AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
+                style: AppTypography.headingS.copyWith(color: c.textPrimary)),
             const SizedBox(height: AppSpacing.lg),
             // Title
             _GoalTextField(_titleCtrl, 'Nombre de la meta', Icons.label_outline_rounded),
@@ -1024,15 +1032,15 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(Icons.calendar_today_rounded,
+                        size: 16, color: c.textTertiary),
                     const SizedBox(width: AppSpacing.sm),
                     Text('Fecha límite: $_deadlineLabel',
                         style: AppTypography.bodyM
-                            .copyWith(color: AppColors.textSecondary)),
+                            .copyWith(color: c.textSecondary)),
                     const Spacer(),
-                    const Icon(Icons.chevron_right_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(Icons.chevron_right_rounded,
+                        size: 16, color: c.textTertiary),
                   ],
                 ),
               ),
@@ -1054,15 +1062,15 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
                       duration: const Duration(milliseconds: 150),
                       width: 44, height: 44,
                       decoration: BoxDecoration(
-                        color: sel ? col.withValues(alpha: 0.18) : AppColors.glassLight,
+                        color: sel ? col.withValues(alpha: 0.18) : c.glass,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: sel ? col.withValues(alpha: 0.5) : AppColors.glassBorder,
+                          color: sel ? col.withValues(alpha: 0.5) : c.glassBorder,
                           width: sel ? 1.5 : 0.5,
                         ),
                       ),
                       child: Icon(_icons[i], size: 20,
-                          color: sel ? col : AppColors.textTertiary),
+                          color: sel ? col : c.textTertiary),
                     ),
                   );
                 },
@@ -1140,11 +1148,11 @@ class _GoalTextField extends StatelessWidget {
         keyboardType: numeric
             ? const TextInputType.numberWithOptions(decimal: true)
             : null,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: Icon(icon, size: 16, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: context.colors.textTertiary),
+          prefixIcon: Icon(icon, size: 16, color: context.colors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -1162,7 +1170,7 @@ class _GoalsBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -120,
             left: -60,

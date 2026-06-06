@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/transaction.dart';
@@ -18,6 +19,7 @@ class TransactionDetailPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final currency = ref.watch(currencySymbolProvider);
     final accounts = ref.watch(accountsProvider);
     final account = transaction.accountId != null
@@ -28,7 +30,7 @@ class TransactionDetailPage extends ConsumerWidget {
     final amountColor = isIncome ? AppColors.positive : AppColors.negative;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -36,20 +38,20 @@ class TransactionDetailPage extends ConsumerWidget {
           onTap: () => Navigator.of(context).pop(),
           child: Container(
             margin: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: AppColors.glassMedium,
+            decoration: BoxDecoration(
+              color: c.glassMedium,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
               size: 20,
             ),
           ),
         ),
         title: Text(
           'Detalle',
-          style: AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+          style: AppTypography.headingS.copyWith(color: c.textPrimary),
         ),
         centerTitle: true,
         actions: [
@@ -107,7 +109,7 @@ class TransactionDetailPage extends ConsumerWidget {
                   Text(
                     transaction.merchant,
                     style: AppTypography.headingM.copyWith(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -139,9 +141,9 @@ class TransactionDetailPage extends ConsumerWidget {
             // Details list
             Container(
               decoration: BoxDecoration(
-                color: AppColors.card,
+                color: c.card,
                 borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                border: Border.all(color: AppColors.glassBorder, width: 0.5),
+                border: Border.all(color: c.glassBorder, width: 0.5),
               ),
               child: Column(
                 children: [
@@ -230,25 +232,24 @@ class TransactionDetailPage extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.card,
+        backgroundColor: ctx.colors.card,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
         ),
         title: Text(
           'Eliminar transacción',
-          style: AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+          style: AppTypography.headingS.copyWith(color: ctx.colors.textPrimary),
         ),
         content: Text(
           '¿Estás seguro de que quieres eliminar "${transaction.merchant}"? Esta acción no se puede deshacer.',
-          style:
-              AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
+          style: AppTypography.bodyM.copyWith(color: ctx.colors.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
               'Cancelar',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: ctx.colors.textSecondary),
             ),
           ),
           TextButton(
@@ -291,21 +292,22 @@ class _MoreMenuButton extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     return PopupMenuButton<String>(
-      color: AppColors.cardElevated,
+      color: c.cardElevated,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
       icon: Container(
         width: 36,
         height: 36,
-        decoration: const BoxDecoration(
-          color: AppColors.glassMedium,
+        decoration: BoxDecoration(
+          color: c.glassMedium,
           shape: BoxShape.circle,
         ),
-        child: const Icon(
+        child: Icon(
           Icons.more_horiz_rounded,
-          color: AppColors.textSecondary,
+          color: c.textSecondary,
           size: 20,
         ),
       ),
@@ -321,25 +323,25 @@ class _MoreMenuButton extends ConsumerWidget {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              backgroundColor: AppColors.card,
+              backgroundColor: ctx.colors.card,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
               ),
               title: Text(
                 'Eliminar transacción',
                 style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary),
+                    .copyWith(color: ctx.colors.textPrimary),
               ),
               content: Text(
                 '¿Eliminar "${transaction.merchant}"?',
                 style: AppTypography.bodyM
-                    .copyWith(color: AppColors.textSecondary),
+                    .copyWith(color: ctx.colors.textSecondary),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: Text('Cancelar',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                      style: TextStyle(color: ctx.colors.textSecondary)),
                 ),
                 TextButton(
                   onPressed: () {
@@ -361,13 +363,13 @@ class _MoreMenuButton extends ConsumerWidget {
         }
       },
       itemBuilder: (_) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'edit',
           child: Row(children: [
-            Icon(Icons.edit_rounded, color: AppColors.textSecondary, size: 18),
-            SizedBox(width: 10),
+            Icon(Icons.edit_rounded, color: c.textSecondary, size: 18),
+            const SizedBox(width: 10),
             Text('Editar',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                style: TextStyle(color: c.textPrimary, fontSize: 14)),
           ]),
         ),
         const PopupMenuItem(
@@ -412,24 +414,24 @@ class _DetailRow extends StatelessWidget {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
-              color: AppColors.glassMedium,
+            decoration: BoxDecoration(
+              color: context.colors.glassMedium,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: AppColors.textSecondary, size: 17),
+            child: Icon(icon, color: context.colors.textSecondary, size: 17),
           ),
           const SizedBox(width: AppSpacing.md),
           Text(
             label,
             style: AppTypography.bodyM.copyWith(
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
             ),
           ),
           const Spacer(),
           Text(
             value,
             style: AppTypography.labelL.copyWith(
-              color: valueColor ?? AppColors.textPrimary,
+              color: valueColor ?? context.colors.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -442,12 +444,12 @@ class _DetailRow extends StatelessWidget {
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Divider(
+    return Divider(
       height: 1,
       thickness: 0.5,
       indent: AppSpacing.lg,
       endIndent: AppSpacing.lg,
-      color: AppColors.glassBorder,
+      color: context.colors.glassBorder,
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/animated_number.dart';
 import '../providers/home_provider.dart';
@@ -15,6 +16,7 @@ class SummaryBalanceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final balance = ref.watch(totalBalanceProvider);
 
     return Column(
@@ -35,7 +37,7 @@ class SummaryBalanceCard extends ConsumerWidget {
             Text(
               'SALDO TOTAL',
               style: AppTypography.eyebrow.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ),
           ],
@@ -44,7 +46,7 @@ class SummaryBalanceCard extends ConsumerWidget {
         AnimatedNumber(
           value: balance,
           style: AppTypography.displayL.copyWith(
-            color: AppColors.textPrimary,
+            color: c.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
@@ -145,6 +147,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         MaterialPageRoute(
@@ -155,16 +158,16 @@ class _SummaryCard extends StatelessWidget {
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.025),
+        color: c.glass,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: c.glassBorder,
           width: 0.5,
         ),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -186,7 +189,7 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   label,
                   style: AppTypography.eyebrow.copyWith(
-                    color: AppColors.textTertiary,
+                    color: c.textTertiary,
                   ),
                 ),
               ],
@@ -195,7 +198,7 @@ class _SummaryCard extends StatelessWidget {
             AnimatedNumber(
               value: value,
               style: AppTypography.headingM.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 letterSpacing: -0.5,
               ),
               duration: const Duration(milliseconds: 1000),
@@ -204,7 +207,7 @@ class _SummaryCard extends StatelessWidget {
             Text(
               'Este mes',
               style: AppTypography.labelS.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ),
           ],

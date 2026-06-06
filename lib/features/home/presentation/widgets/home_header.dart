@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -24,6 +25,7 @@ class HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final streak = ref.watch(streakProvider);
     final profile = ref.watch(userProfileProvider);
     final displayName = profile.firstName.isEmpty ? 'Usuario' : profile.firstName;
@@ -38,7 +40,7 @@ class HomeHeader extends ConsumerWidget {
               Text(
                 _greeting(),
                 style: AppTypography.labelM.copyWith(
-                  color: AppColors.textTertiary,
+                  color: c.textTertiary,
                   letterSpacing: 0.6,
                 ),
               ),
@@ -46,7 +48,7 @@ class HomeHeader extends ConsumerWidget {
               Text(
                 displayName,
                 style: AppTypography.headingM.copyWith(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                 ),
               ),
             ],
@@ -158,6 +160,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final prediction = ref.watch(predictionProvider);
     final txns = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
@@ -201,16 +204,16 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                const Icon(
+                Icon(
                   Icons.notifications_outlined,
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                   size: 20,
                 ),
                 if (notifications.any((n) => n.unread))
@@ -312,14 +315,15 @@ class _DropdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final unreadCount = notifications.where((n) => n.unread).length;
 
     return Container(
       width: 300,
       decoration: BoxDecoration(
-        color: AppColors.cardElevated,
+        color: c.cardElevated,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: c.glassBorderStrong, width: 0.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.40),
@@ -343,7 +347,7 @@ class _DropdownCard extends StatelessWidget {
                 Text(
                   'Notificaciones',
                   style: AppTypography.headingS.copyWith(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                   ),
                 ),
                 Row(
@@ -372,7 +376,7 @@ class _DropdownCard extends StatelessWidget {
                         child: Text(
                           'Limpiar',
                           style: AppTypography.labelS.copyWith(
-                            color: AppColors.textTertiary,
+                            color: c.textTertiary,
                           ),
                         ),
                       ),
@@ -386,7 +390,7 @@ class _DropdownCard extends StatelessWidget {
             padding:
                 const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Divider(
-                height: 1, thickness: 0.5, color: AppColors.glassBorder),
+                height: 1, thickness: 0.5, color: c.glassBorder),
           ),
           if (notifications.isEmpty)
             Padding(
@@ -394,12 +398,12 @@ class _DropdownCard extends StatelessWidget {
               child: Column(
                 children: [
                   Icon(Icons.notifications_off_outlined,
-                      size: 28, color: AppColors.textTertiary),
+                      size: 28, color: c.textTertiary),
                   const SizedBox(height: 8),
                   Text(
                     'Sin notificaciones',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary),
+                        .copyWith(color: c.textTertiary),
                   ),
                 ],
               ),
@@ -414,7 +418,7 @@ class _DropdownCard extends StatelessWidget {
                   child: Divider(
                       height: 1,
                       thickness: 0.5,
-                      color: AppColors.glassBorder),
+                      color: c.glassBorder),
                 ),
             ],
           const SizedBox(height: AppSpacing.sm),
@@ -431,6 +435,7 @@ class _NotifRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -457,7 +462,7 @@ class _NotifRow extends StatelessWidget {
                       child: Text(
                         notif.title,
                         style: AppTypography.labelL.copyWith(
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                           fontWeight: notif.unread
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -480,11 +485,11 @@ class _NotifRow extends StatelessWidget {
                         width: 18,
                         height: 18,
                         decoration: BoxDecoration(
-                          color: AppColors.glassLight,
+                          color: c.glass,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            size: 11, color: AppColors.textTertiary),
+                        child: Icon(Icons.close_rounded,
+                            size: 11, color: c.textTertiary),
                       ),
                     ),
                   ],
@@ -493,13 +498,13 @@ class _NotifRow extends StatelessWidget {
                 Text(
                   notif.body,
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: c.textSecondary),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   notif.time,
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary),
+                      .copyWith(color: c.textTertiary),
                 ),
               ],
             ),
@@ -548,7 +553,7 @@ class _AvatarButton extends ConsumerWidget {
                     child: Text(
                       profile.initial,
                       style: AppTypography.labelL.copyWith(
-                        color: AppColors.textPrimary,
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                       ),

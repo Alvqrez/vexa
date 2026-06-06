@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 
@@ -40,15 +41,17 @@ class _RateAppPageState extends State<RateAppPage>
     final end = (start + 0.6).clamp(0.0, 1.0);
     return FadeTransition(
       opacity: CurvedAnimation(
-          parent: _stagger,
-          curve: Interval(start, end, curve: AppCurves.gentle)),
+        parent: _stagger,
+        curve: Interval(start, end, curve: AppCurves.gentle),
+      ),
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-            parent: _stagger,
-            curve: Interval(start, end, curve: AppCurves.spring))),
+        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+            .animate(
+              CurvedAnimation(
+                parent: _stagger,
+                curve: Interval(start, end, curve: AppCurves.spring),
+              ),
+            ),
         child: child,
       ),
     );
@@ -79,8 +82,9 @@ class _RateAppPageState extends State<RateAppPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -90,12 +94,16 @@ class _RateAppPageState extends State<RateAppPage>
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
                       _reveal(
-                          0, 4, const _SubPageHeader(title: 'Valorar Vexa')),
+                        0,
+                        4,
+                        const _SubPageHeader(title: 'Valorar Vexa'),
+                      ),
                       const SizedBox(height: AppSpacing.xxl),
 
                       if (_submitted) ...[
@@ -109,11 +117,14 @@ class _RateAppPageState extends State<RateAppPage>
                             width: double.infinity,
                             padding: const EdgeInsets.all(AppSpacing.xxl),
                             decoration: BoxDecoration(
-                              color: AppColors.card,
+                              color: c.card,
                               borderRadius: BorderRadius.circular(
-                                  AppSpacing.cardRadius),
+                                AppSpacing.cardRadius,
+                              ),
                               border: Border.all(
-                                  color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder,
+                                width: 0.5,
+                              ),
                             ),
                             child: Column(
                               children: [
@@ -122,23 +133,21 @@ class _RateAppPageState extends State<RateAppPage>
                                   width: 64,
                                   height: 64,
                                   decoration: BoxDecoration(
-                                    borderRadius:
-                                        BorderRadius.circular(18),
+                                    borderRadius: BorderRadius.circular(18),
                                     gradient: const LinearGradient(
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
                                         AppColors.petroleum,
-                                        AppColors.emeraldDim
+                                        AppColors.emeraldDim,
                                       ],
                                     ),
                                   ),
                                   child: Center(
                                     child: Text(
                                       'V',
-                                      style:
-                                          AppTypography.headingM.copyWith(
-                                        color: AppColors.textPrimary,
+                                      style: AppTypography.headingM.copyWith(
+                                        color: c.textPrimary,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 28,
                                       ),
@@ -150,13 +159,13 @@ class _RateAppPageState extends State<RateAppPage>
                                   '¿Cómo va tu experiencia con Vexa?',
                                   textAlign: TextAlign.center,
                                   style: AppTypography.headingS.copyWith(
-                                      color: AppColors.textPrimary),
+                                    color: c.textPrimary,
+                                  ),
                                 ),
                                 const SizedBox(height: AppSpacing.xl),
                                 // Stars row
                                 Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: List.generate(5, (i) {
                                     final filled = i < _stars;
                                     return GestureDetector(
@@ -166,10 +175,12 @@ class _RateAppPageState extends State<RateAppPage>
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 6),
+                                          horizontal: 6,
+                                        ),
                                         child: AnimatedSwitcher(
                                           duration: const Duration(
-                                              milliseconds: 180),
+                                            milliseconds: 180,
+                                          ),
                                           child: Icon(
                                             filled
                                                 ? Icons.star_rounded
@@ -178,7 +189,7 @@ class _RateAppPageState extends State<RateAppPage>
                                             size: 40,
                                             color: filled
                                                 ? AppColors.catEntertainment
-                                                : AppColors.textTertiary,
+                                                : c.textTertiary,
                                           ),
                                         ),
                                       ),
@@ -191,7 +202,7 @@ class _RateAppPageState extends State<RateAppPage>
                                   style: AppTypography.labelM.copyWith(
                                     color: _stars > 0
                                         ? AppColors.catEntertainment
-                                        : AppColors.textTertiary,
+                                        : c.textTertiary,
                                   ),
                                 ),
                               ],
@@ -206,25 +217,31 @@ class _RateAppPageState extends State<RateAppPage>
                           4,
                           Container(
                             decoration: BoxDecoration(
-                              color: AppColors.card,
+                              color: c.card,
                               borderRadius: BorderRadius.circular(
-                                  AppSpacing.cardRadius),
+                                AppSpacing.cardRadius,
+                              ),
                               border: Border.all(
-                                  color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder,
+                                width: 0.5,
+                              ),
                             ),
                             child: TextField(
                               controller: _reviewController,
                               maxLines: 4,
-                              style: AppTypography.bodyM
-                                  .copyWith(color: AppColors.textPrimary),
+                              style: AppTypography.bodyM.copyWith(
+                                color: c.textPrimary,
+                              ),
                               decoration: InputDecoration(
-                                contentPadding:
-                                    const EdgeInsets.all(AppSpacing.lg),
+                                contentPadding: const EdgeInsets.all(
+                                  AppSpacing.lg,
+                                ),
                                 border: InputBorder.none,
                                 hintText:
                                     'Cuéntanos qué mejorarías o qué te encanta… (opcional)',
-                                hintStyle: AppTypography.bodyM
-                                    .copyWith(color: AppColors.textTertiary),
+                                hintStyle: AppTypography.bodyM.copyWith(
+                                  color: c.textTertiary,
+                                ),
                               ),
                             ),
                           ),
@@ -239,26 +256,29 @@ class _RateAppPageState extends State<RateAppPage>
                             child: Container(
                               width: double.infinity,
                               padding: const EdgeInsets.symmetric(
-                                  vertical: AppSpacing.lg),
+                                vertical: AppSpacing.lg,
+                              ),
                               decoration: BoxDecoration(
                                 gradient: _stars > 0
                                     ? const LinearGradient(
                                         colors: [
                                           AppColors.emerald,
-                                          AppColors.emeraldDim
+                                          AppColors.emeraldDim,
                                         ],
                                       )
                                     : null,
                                 color: _stars == 0
-                                    ? AppColors.glassLight
+                                    ? c.glass
                                     : null,
                                 borderRadius: BorderRadius.circular(
-                                    AppSpacing.cardRadius),
+                                  AppSpacing.cardRadius,
+                                ),
                                 boxShadow: _stars > 0
                                     ? [
                                         BoxShadow(
-                                          color: AppColors.emerald
-                                              .withValues(alpha: 0.25),
+                                          color: AppColors.emerald.withValues(
+                                            alpha: 0.25,
+                                          ),
                                           blurRadius: 20,
                                           offset: const Offset(0, 6),
                                         ),
@@ -271,7 +291,7 @@ class _RateAppPageState extends State<RateAppPage>
                                 style: AppTypography.labelL.copyWith(
                                   color: _stars > 0
                                       ? AppColors.textInverse
-                                      : AppColors.textTertiary,
+                                      : c.textTertiary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -305,20 +325,23 @@ class _ThankYouCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Icon(Icons.check_circle_outline_rounded,
-              color: AppColors.emerald, size: 48),
+          const Icon(
+            Icons.check_circle_outline_rounded,
+            color: AppColors.emerald,
+            size: 48,
+          ),
           const SizedBox(height: AppSpacing.lg),
           Text(
             '¡Gracias por tu valoración!',
-            style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary),
+            style: AppTypography.headingS.copyWith(
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             'Tu opinión nos ayuda a mejorar Vexa para todos.',
             textAlign: TextAlign.center,
-            style:
-                AppTypography.bodyS.copyWith(color: AppColors.textSecondary),
+            style: AppTypography.bodyS.copyWith(color: context.colors.textSecondary),
           ),
         ],
       ),
@@ -334,6 +357,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -342,19 +366,21 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.arrow_back_ios_rounded,
+              size: 16,
+              color: c.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(
           title,
-          style:
-              AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+          style: AppTypography.headingS.copyWith(color: c.textPrimary),
         ),
       ],
     );
@@ -367,7 +393,7 @@ class _ProfileSubBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -100,
             right: -80,

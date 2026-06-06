@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/services/local_auth_service.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
@@ -99,15 +100,16 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: c.background,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
@@ -134,16 +136,14 @@ class _LoginPageState extends State<LoginPage> {
 
               Text(
                 _isRegistration ? 'Crea tu cuenta' : 'Bienvenido de vuelta',
-                style: AppTypography.headingL
-                    .copyWith(color: AppColors.textPrimary),
+                style: AppTypography.headingL.copyWith(color: c.textPrimary),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
                 _isRegistration
                     ? 'Configura tu acceso a Vexa.'
                     : 'Inicia sesión para continuar.',
-                style: AppTypography.bodyM
-                    .copyWith(color: AppColors.textTertiary),
+                style: AppTypography.bodyM.copyWith(color: c.textTertiary),
               ),
               const SizedBox(height: AppSpacing.xxxl),
 
@@ -253,7 +253,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(text,
       style: AppTypography.labelM.copyWith(
-          color: AppColors.textSecondary, fontWeight: FontWeight.w600));
+          color: context.colors.textSecondary, fontWeight: FontWeight.w600));
 }
 
 class _Field extends StatelessWidget {
@@ -272,26 +272,24 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: readOnly
-            ? AppColors.glassLight.withValues(alpha: 0.5)
-            : Colors.white.withValues(alpha: 0.04),
+        color: readOnly ? c.glass.withValues(alpha: 0.5) : c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         readOnly: readOnly,
         style: AppTypography.bodyM.copyWith(
-          color: readOnly ? AppColors.textTertiary : AppColors.textPrimary,
+          color: readOnly ? c.textTertiary : c.textPrimary,
         ),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
+          prefixIcon: Icon(icon, size: 18, color: c.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -317,23 +315,23 @@ class _PasswordField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         obscureText: obscure,
         onSubmitted: onSubmitted,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: const Icon(Icons.lock_outline_rounded,
-              size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
+          prefixIcon: Icon(Icons.lock_outline_rounded,
+              size: 18, color: c.textTertiary),
           suffixIcon: GestureDetector(
             onTap: onToggle,
             child: Icon(
@@ -341,7 +339,7 @@ class _PasswordField extends StatelessWidget {
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
               size: 18,
-              color: AppColors.textTertiary,
+              color: c.textTertiary,
             ),
           ),
           border: InputBorder.none,

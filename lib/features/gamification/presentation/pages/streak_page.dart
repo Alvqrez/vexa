@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../providers/gamification_provider.dart';
 
@@ -40,8 +41,9 @@ class _StreakPageState extends ConsumerState<StreakPage>
     final streak = ref.watch(streakProvider);
     const flameColor = Color(0xFFFF6B35);
 
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           // Glow background
@@ -69,7 +71,8 @@ class _StreakPageState extends ConsumerState<StreakPage>
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
@@ -89,16 +92,19 @@ class _StreakPageState extends ConsumerState<StreakPage>
                                 color: Colors.white.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(11),
                               ),
-                              child: const Icon(Icons.arrow_back_rounded,
-                                  size: 18,
-                                  color: AppColors.textSecondary),
+                              child: Icon(
+                                Icons.arrow_back_rounded,
+                                size: 18,
+                                color: c.textSecondary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Text(
                             'Mi racha',
-                            style: AppTypography.headingM
-                                .copyWith(color: AppColors.textPrimary),
+                            style: AppTypography.headingM.copyWith(
+                              color: c.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -144,22 +150,26 @@ class _StreakPageState extends ConsumerState<StreakPage>
                                   ? 'día seguido'
                                   : 'días seguidos',
                               style: AppTypography.bodyL.copyWith(
-                                  color: AppColors.textSecondary),
+                                color: c.textSecondary,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.md),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 6),
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: streak.isActiveToday
                                     ? flameColor.withValues(alpha: 0.14)
-                                    : AppColors.glassLight,
+                                    : c.glass,
                                 borderRadius: BorderRadius.circular(
-                                    AppSpacing.pillRadius),
+                                  AppSpacing.pillRadius,
+                                ),
                                 border: Border.all(
                                   color: streak.isActiveToday
                                       ? flameColor.withValues(alpha: 0.30)
-                                      : AppColors.glassBorder,
+                                      : c.glassBorder,
                                   width: 0.5,
                                 ),
                               ),
@@ -173,7 +183,7 @@ class _StreakPageState extends ConsumerState<StreakPage>
                                     size: 12,
                                     color: streak.isActiveToday
                                         ? flameColor
-                                        : AppColors.textTertiary,
+                                        : c.textTertiary,
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
@@ -183,7 +193,7 @@ class _StreakPageState extends ConsumerState<StreakPage>
                                     style: AppTypography.labelM.copyWith(
                                       color: streak.isActiveToday
                                           ? flameColor
-                                          : AppColors.textTertiary,
+                                          : c.textTertiary,
                                     ),
                                   ),
                                 ],
@@ -221,14 +231,14 @@ class _StreakPageState extends ConsumerState<StreakPage>
                       // Tips
                       Text(
                         'Cómo mantener tu racha',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       ..._tips.map(
                         (t) => Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: AppSpacing.md),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: _TipRow(tip: t),
                         ),
                       ),
@@ -248,17 +258,17 @@ class _StreakPageState extends ConsumerState<StreakPage>
   static const _tips = [
     (
       icon: Icons.add_circle_outline_rounded,
-      text: 'Registra al menos una transacción al día para mantener tu racha.'
+      text: 'Registra al menos una transacción al día para mantener tu racha.',
     ),
     (
       icon: Icons.notifications_outlined,
       text:
-          'Activa las notificaciones para recibir un recordatorio si no has registrado nada.'
+          'Activa las notificaciones para recibir un recordatorio si no has registrado nada.',
     ),
     (
       icon: Icons.calendar_today_rounded,
       text:
-          'Hazlo parte de tu rutina: revisa tus gastos cada noche antes de dormir.'
+          'Hazlo parte de tu rutina: revisa tus gastos cada noche antes de dormir.',
     ),
   ];
 }
@@ -277,15 +287,13 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-          color: color.withValues(alpha: 0.20),
-          width: 0.5,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.20), width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,8 +318,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: AppTypography.labelS
-                .copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelS.copyWith(color: c.textTertiary),
           ),
         ],
       ),
@@ -343,8 +350,10 @@ class _TipRow extends StatelessWidget {
             padding: const EdgeInsets.only(top: 6),
             child: Text(
               tip.text,
-              style: AppTypography.bodyS
-                  .copyWith(color: AppColors.textSecondary, height: 1.5),
+              style: AppTypography.bodyS.copyWith(
+                color: context.colors.textSecondary,
+                height: 1.5,
+              ),
             ),
           ),
         ),

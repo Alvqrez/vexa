@@ -1,12 +1,16 @@
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../features/home/domain/models/transaction.dart';
+import '../../features/home/domain/models/account.dart';
 
 abstract final class ExportUtils {
-  static String buildCsv(List<Transaction> transactions) {
+  static String buildCsv(
+    List<Transaction> transactions, {
+    List<Account> accounts = const [],
+  }) {
+    final accountMap = {for (final a in accounts) a.id: a.name};
     final buf = StringBuffer();
 
-    // Header row
     buf.writeln(
         'Fecha,Hora,Descripción,Tipo,Categoría,Monto,Cuenta,Etiquetas,Nota');
 
@@ -14,6 +18,8 @@ abstract final class ExportUtils {
     final timeFmt = DateFormat('HH:mm', 'es');
 
     for (final t in transactions) {
+      final accountName =
+          t.accountId != null ? (accountMap[t.accountId] ?? t.accountId!) : '';
       final row = [
         dateFmt.format(t.date),
         timeFmt.format(t.date),
@@ -21,7 +27,7 @@ abstract final class ExportUtils {
         t.isIncome ? 'Ingreso' : 'Gasto',
         t.category.label,
         (t.isIncome ? t.amount : -t.amount).toStringAsFixed(2),
-        t.accountId ?? '',
+        _escape(accountName),
         t.tags.join(' | '),
         _escape(t.note ?? ''),
       ].join(',');
@@ -39,8 +45,11 @@ abstract final class ExportUtils {
   }
 
   /// Copies the CSV to clipboard and returns the number of rows exported.
-  static Future<int> copyToClipboard(List<Transaction> transactions) async {
-    final csv = buildCsv(transactions);
+  static Future<int> copyToClipboard(
+    List<Transaction> transactions, {
+    List<Account> accounts = const [],
+  }) async {
+    final csv = buildCsv(transactions, accounts: accounts);
     await Clipboard.setData(ClipboardData(text: csv));
     return transactions.length;
   }

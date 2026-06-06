@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_typography.dart';
+import '../../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_health.dart';
 import '../pages/financial_health_page.dart';
@@ -29,9 +30,10 @@ class _HealthScoreWidgetState extends ConsumerState<HealthScoreWidget>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    _scoreAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic),
-    );
+    _scoreAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) _ctrl.forward();
     });
@@ -51,111 +53,122 @@ class _HealthScoreWidgetState extends ConsumerState<HealthScoreWidget>
     if (widget.compact) return _CompactHealth(health: health, color: color);
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const FinancialHealthPage()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const FinancialHealthPage())),
       child: Container(
-      padding: const EdgeInsets.all(2.5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.025),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+          color: Colors.white.withValues(alpha: 0.025),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 0.5,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: context.colors.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+          child: Builder(builder: (ctx) {
+          final c = ctx.colors;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(Icons.favorite_rounded, size: 15, color: color),
                   ),
-                  child: Icon(Icons.favorite_rounded, size: 15, color: color),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'SALUD FINANCIERA',
-                  style: AppTypography.eyebrow
-                      .copyWith(color: AppColors.textTertiary),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+                  const SizedBox(width: AppSpacing.sm),
+                  Text(
+                    'SALUD FINANCIERA',
+                    style: AppTypography.eyebrow.copyWith(
+                      color: c.textTertiary,
+                    ),
                   ),
-                  child: Text(
-                    health.status.label,
-                    style: AppTypography.labelS
-                        .copyWith(color: color, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Row(
-              children: [
-                AnimatedBuilder(
-                  animation: _scoreAnim,
-                  builder: (context, _) => _ScoreGauge(
-                    score: health.score * _scoreAnim.value,
-                    color: color,
-                    size: 80,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        health.status.description,
-                        style: AppTypography.bodyS
-                            .copyWith(color: AppColors.textSecondary),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.pillRadius,
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      _ScoreBar(
-                        label: 'Ahorro',
-                        value: health.savingsScore / 100,
-                        color: AppColors.emerald,
+                    ),
+                    child: Text(
+                      health.status.label,
+                      style: AppTypography.labelS.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w700,
                       ),
-                      const SizedBox(height: AppSpacing.sm),
-                      _ScoreBar(
-                        label: 'Presupuesto',
-                        value: health.budgetScore / 100,
-                        color: AppColors.petroleum,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  AnimatedBuilder(
+                    animation: _scoreAnim,
+                    builder: (context, _) => _ScoreGauge(
+                      score: health.score * _scoreAnim.value,
+                      color: color,
+                      size: 80,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          health.status.description,
+                          style: AppTypography.bodyS.copyWith(
+                            color: c.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _ScoreBar(
+                          label: 'Ahorro',
+                          value: health.savingsScore / 100,
+                          color: AppColors.emerald,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _ScoreBar(
+                          label: 'Presupuesto',
+                          value: health.budgetScore / 100,
+                          color: AppColors.petroleum,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        }),
         ),
       ),
-    ),
-  );
+    );
   }
 
   Color _colorForStatus(HealthStatus status) => switch (status) {
-        HealthStatus.excellent => AppColors.emerald,
-        HealthStatus.regular => AppColors.warning,
-        HealthStatus.risky => AppColors.negative,
-      };
+    HealthStatus.excellent => AppColors.emerald,
+    HealthStatus.regular => AppColors.warning,
+    HealthStatus.risky => AppColors.negative,
+  };
 }
 
 // ── Score gauge ───────────────────────────────────────────────────────────────
@@ -192,8 +205,9 @@ class _ScoreGauge extends StatelessWidget {
               ),
               Text(
                 '/100',
-                style: AppTypography.labelS
-                    .copyWith(color: AppColors.textTertiary),
+                style: AppTypography.labelS.copyWith(
+                  color: context.colors.textTertiary,
+                ),
               ),
             ],
           ),
@@ -269,11 +283,16 @@ class _ScoreBar extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label,
-                style:
-                    AppTypography.labelS.copyWith(color: AppColors.textTertiary)),
-            Text('${(value * 100).toStringAsFixed(0)}%',
-                style: AppTypography.labelS.copyWith(color: color)),
+            Text(
+              label,
+              style: AppTypography.labelS.copyWith(
+                color: context.colors.textTertiary,
+              ),
+            ),
+            Text(
+              '${(value * 100).toStringAsFixed(0)}%',
+              style: AppTypography.labelS.copyWith(color: color),
+            ),
           ],
         ),
         const SizedBox(height: 3),
@@ -307,13 +326,15 @@ class _CompactHealth extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           health.status.label,
-          style: AppTypography.labelS
-              .copyWith(color: color, fontWeight: FontWeight.w600),
+          style: AppTypography.labelS.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(width: 6),
         Text(
           '${health.score.toStringAsFixed(0)}/100',
-          style: AppTypography.labelS.copyWith(color: AppColors.textTertiary),
+          style: AppTypography.labelS.copyWith(color: context.colors.textTertiary),
         ),
       ],
     );

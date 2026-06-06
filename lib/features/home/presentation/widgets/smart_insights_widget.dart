@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
@@ -15,6 +16,7 @@ class SmartInsightsWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     if (!ref.watch(notifPrefsProvider).prediction) return const SizedBox.shrink();
     final insights = _buildInsights(ref);
     if (insights.isEmpty) return const SizedBox.shrink();
@@ -43,7 +45,7 @@ class SmartInsightsWidget extends ConsumerWidget {
             Text(
               'Insights',
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.4,
               ),
@@ -230,6 +232,7 @@ class _InsightCardState extends State<_InsightCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final d = widget.insight;
     return FadeTransition(
       opacity: _fade,
@@ -239,7 +242,7 @@ class _InsightCardState extends State<_InsightCard>
           width: 200,
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
             border: Border.all(
               color: d.color.withValues(alpha: 0.15),
@@ -250,7 +253,7 @@ class _InsightCardState extends State<_InsightCard>
               end: Alignment.bottomRight,
               colors: [
                 d.color.withValues(alpha: 0.06),
-                AppColors.card,
+                c.card,
               ],
             ),
           ),
@@ -283,7 +286,7 @@ class _InsightCardState extends State<_InsightCard>
                 child: Text(
                   d.body,
                   style: AppTypography.labelS.copyWith(
-                    color: AppColors.textSecondary,
+                    color: c.textSecondary,
                     height: 1.45,
                   ),
                   maxLines: 3,

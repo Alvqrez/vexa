@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/services/local_auth_service.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
@@ -111,15 +112,16 @@ class _LockScreenPageState extends State<LockScreenPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: c.background,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(
@@ -143,8 +145,7 @@ class _LockScreenPageState extends State<LockScreenPage>
               const SizedBox(height: AppSpacing.xl),
               Text(
                 _usePassword ? 'Introduce tu contraseña' : 'Introduce tu PIN',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary),
+                style: AppTypography.headingS.copyWith(color: c.textPrimary),
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -154,7 +155,7 @@ class _LockScreenPageState extends State<LockScreenPage>
                         : 'PIN incorrecto')
                     : 'Vexa está protegida',
                 style: AppTypography.labelM.copyWith(
-                  color: _error ? AppColors.negative : AppColors.textTertiary,
+                  color: _error ? AppColors.negative : c.textTertiary,
                 ),
               ),
               const SizedBox(height: AppSpacing.xxl),
@@ -174,12 +175,12 @@ class _LockScreenPageState extends State<LockScreenPage>
                   ),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.glassLight,
+                      color: c.glass,
                       borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                       border: Border.all(
                         color: _error
                             ? AppColors.negative.withValues(alpha: 0.4)
-                            : AppColors.glassBorder,
+                            : c.glassBorder,
                         width: _error ? 1.5 : 0.5,
                       ),
                     ),
@@ -187,15 +188,14 @@ class _LockScreenPageState extends State<LockScreenPage>
                       controller: _passCtrl,
                       obscureText: _obscure,
                       autofocus: true,
-                      style: AppTypography.bodyM
-                          .copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.bodyM.copyWith(color: c.textPrimary),
                       onSubmitted: (_) => _verifyPassword(),
                       decoration: InputDecoration(
                         hintText: 'Contraseña',
                         hintStyle: AppTypography.bodyM
-                            .copyWith(color: AppColors.textTertiary),
-                        prefixIcon: const Icon(Icons.lock_outline_rounded,
-                            size: 18, color: AppColors.textTertiary),
+                            .copyWith(color: c.textTertiary),
+                        prefixIcon: Icon(Icons.lock_outline_rounded,
+                            size: 18, color: c.textTertiary),
                         suffixIcon: GestureDetector(
                           onTap: () =>
                               setState(() => _obscure = !_obscure),
@@ -204,7 +204,7 @@ class _LockScreenPageState extends State<LockScreenPage>
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined,
                             size: 18,
-                            color: AppColors.textTertiary,
+                            color: c.textTertiary,
                           ),
                         ),
                         border: InputBorder.none,
@@ -267,11 +267,11 @@ class _LockScreenPageState extends State<LockScreenPage>
                                 ? (_error
                                     ? AppColors.negative
                                     : AppColors.emerald)
-                                : AppColors.glassLight,
+                                : c.glass,
                             border: Border.all(
                               color: filled
                                   ? Colors.transparent
-                                  : AppColors.glassBorderStrong,
+                                  : c.glassBorderStrong,
                               width: 1.5,
                             ),
                           ),
@@ -374,21 +374,22 @@ class _KeyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 72,
         height: 72,
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: c.glassBorder, width: 0.5),
         ),
         child: Center(
           child: Text(
             label,
             style: AppTypography.headingS.copyWith(
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
               fontSize: 24,
             ),
           ),
@@ -410,9 +411,9 @@ class _DeleteButton extends StatelessWidget {
         width: 72,
         height: 72,
         decoration: const BoxDecoration(shape: BoxShape.circle),
-        child: const Center(
+        child: Center(
           child: Icon(Icons.backspace_outlined,
-              size: 22, color: AppColors.textSecondary),
+              size: 22, color: context.colors.textSecondary),
         ),
       ),
     );

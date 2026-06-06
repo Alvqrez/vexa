@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/wallet_category.dart';
@@ -83,12 +84,17 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
     final end = (start + 0.5).clamp(0.0, 1.0);
     return FadeTransition(
       opacity: CurvedAnimation(
-          parent: _stagger, curve: Interval(start, end, curve: AppCurves.gentle)),
+        parent: _stagger,
+        curve: Interval(start, end, curve: AppCurves.gentle),
+      ),
       child: SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-            .animate(CurvedAnimation(
+            .animate(
+              CurvedAnimation(
                 parent: _stagger,
-                curve: Interval(start, end, curve: AppCurves.spring))),
+                curve: Interval(start, end, curve: AppCurves.spring),
+              ),
+            ),
         child: child,
       ),
     );
@@ -124,27 +130,37 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
+        backgroundColor: context.colors.card,
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
-        title: Text('Eliminar categoría',
-            style: AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
-        content: Text('¿Eliminar "${cat.name}"?',
-            style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary)),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text(
+          'Eliminar categoría',
+          style: AppTypography.headingS.copyWith(color: context.colors.textPrimary),
+        ),
+        content: Text(
+          '¿Eliminar "${cat.name}"?',
+          style: AppTypography.bodyM.copyWith(color: context.colors.textSecondary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancelar',
-                style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+            child: Text(
+              'Cancelar',
+              style: AppTypography.labelM.copyWith(
+                color: context.colors.textTertiary,
+              ),
+            ),
           ),
           TextButton(
             onPressed: () {
               ref.read(walletCategoriesProvider.notifier).delete(cat.id);
               Navigator.pop(context);
             },
-            child: Text('Eliminar',
-                style: AppTypography.labelM.copyWith(color: AppColors.negative)),
+            child: Text(
+              'Eliminar',
+              style: AppTypography.labelM.copyWith(color: AppColors.negative),
+            ),
           ),
         ],
       ),
@@ -153,8 +169,9 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _CatBg(),
@@ -164,14 +181,18 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenPadding, AppSpacing.lg,
-                      AppSpacing.screenPadding, 0),
+                    AppSpacing.screenPadding,
+                    AppSpacing.lg,
+                    AppSpacing.screenPadding,
+                    0,
+                  ),
                   child: _reveal(0, _CatHeader()),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   child: _reveal(1, _CatTabBar(controller: _tabCtrl)),
                 ),
                 const SizedBox(height: AppSpacing.xl),
@@ -183,7 +204,8 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
                       children: [
                         _CategoryList(
                           type: WalletCategoryType.expense,
-                          onAdd: () => _showAddSheet(WalletCategoryType.expense),
+                          onAdd: () =>
+                              _showAddSheet(WalletCategoryType.expense),
                           onEdit: _showEditSheet,
                           onDelete: _confirmDelete,
                         ),
@@ -214,7 +236,7 @@ class _CatBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -60,
             left: -80,
@@ -223,10 +245,12 @@ class _CatBg extends StatelessWidget {
               height: 260,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.emerald.withValues(alpha: 0.08),
-                  Colors.transparent,
-                ]),
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.emerald.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
@@ -249,24 +273,33 @@ class _CatHeader extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: context.colors.glass,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: context.colors.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_rounded,
-                size: 18, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.arrow_back_rounded,
+              size: 18,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Categorías',
-                style: AppTypography.headingM
-                    .copyWith(color: AppColors.textPrimary)),
-            Text('Personaliza tus categorías',
-                style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+            Text(
+              'Categorías',
+              style: AppTypography.headingM.copyWith(
+                color: context.colors.textPrimary,
+              ),
+            ),
+            Text(
+              'Personaliza tus categorías',
+              style: AppTypography.labelM.copyWith(
+                color: context.colors.textTertiary,
+              ),
+            ),
           ],
         ),
       ],
@@ -285,9 +318,9 @@ class _CatTabBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: TabBar(
         controller: controller,
@@ -295,15 +328,19 @@ class _CatTabBar extends StatelessWidget {
           color: AppColors.emeraldSurface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: AppColors.emerald.withValues(alpha: 0.3), width: 0.5),
+            color: AppColors.emerald.withValues(alpha: 0.3),
+            width: 0.5,
+          ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        labelStyle: AppTypography.labelM
-            .copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+        labelStyle: AppTypography.labelM.copyWith(
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+        ),
         unselectedLabelStyle: AppTypography.labelM.copyWith(fontSize: 13),
         labelColor: AppColors.emerald,
-        unselectedLabelColor: AppColors.textTertiary,
+        unselectedLabelColor: context.colors.textTertiary,
         tabs: const [
           Tab(text: 'Gastos'),
           Tab(text: 'Ingresos'),
@@ -335,8 +372,11 @@ class _CategoryList extends ConsumerWidget {
 
     return ReorderableListView.builder(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenPadding, 0,
-          AppSpacing.screenPadding, AppSpacing.xxxl),
+        AppSpacing.screenPadding,
+        0,
+        AppSpacing.screenPadding,
+        AppSpacing.xxxl,
+      ),
       onReorderItem: (oldIndex, newIndex) {
         ref
             .read(walletCategoriesProvider.notifier)
@@ -366,8 +406,11 @@ class _CategoryList extends ConsumerWidget {
 // ── Category tile ─────────────────────────────────────────────────────────────
 
 class _CategoryTile extends StatelessWidget {
-  const _CategoryTile(
-      {required this.category, required this.onEdit, required this.onDelete});
+  const _CategoryTile({
+    required this.category,
+    required this.onEdit,
+    required this.onDelete,
+  });
   final WalletCategory category;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -380,77 +423,93 @@ class _CategoryTile extends StatelessWidget {
         onEdit();
       },
       child: Container(
-      padding: const EdgeInsets.all(2.5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.02),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
-      ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+          color: Colors.white.withValues(alpha: 0.02),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+            width: 0.5,
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: category.surface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(category.icon, size: 18, color: category.color),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(category.name,
-                      style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
-                  Text(category.type.label,
-                      style: AppTypography.labelS
-                          .copyWith(color: AppColors.textTertiary)),
-                ],
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.selectionClick();
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => _CategoryActionSheet(
-                    category: category,
-                    onEdit: onEdit,
-                    onDelete: onDelete,
-                  ),
-                );
-              },
-              child: Container(
-                width: 30,
-                height: 30,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            color: context.colors.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  color: AppColors.glassLight,
-                  borderRadius: BorderRadius.circular(9),
+                  color: category.surface,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.more_vert_rounded,
-                    size: 14, color: AppColors.textSecondary),
+                child: Icon(category.icon, size: 18, color: category.color),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Icon(Icons.drag_handle_rounded,
-                size: 18, color: AppColors.textTertiary),
-          ],
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      category.name,
+                      style: AppTypography.labelL.copyWith(
+                        color: context.colors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      category.type.label,
+                      style: AppTypography.labelS.copyWith(
+                        color: context.colors.textTertiary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => _CategoryActionSheet(
+                      category: category,
+                      onEdit: onEdit,
+                      onDelete: onDelete,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    color: context.colors.glass,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    Icons.more_vert_rounded,
+                    size: 14,
+                    color: context.colors.textSecondary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Icon(
+                Icons.drag_handle_rounded,
+                size: 18,
+                color: context.colors.textTertiary,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
     );
   }
 }
@@ -471,9 +530,9 @@ class _AddCategoryButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: context.colors.glass,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+          border: Border.all(color: context.colors.glassBorderStrong, width: 0.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -485,13 +544,17 @@ class _AddCategoryButton extends StatelessWidget {
                 color: AppColors.emeraldSurface,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.add_rounded,
-                  size: 16, color: AppColors.emerald),
+              child: const Icon(
+                Icons.add_rounded,
+                size: 16,
+                color: AppColors.emerald,
+              ),
             ),
             const SizedBox(width: AppSpacing.md),
-            Text('Nueva categoría',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.emerald)),
+            Text(
+              'Nueva categoría',
+              style: AppTypography.labelL.copyWith(color: AppColors.emerald),
+            ),
           ],
         ),
       ),
@@ -524,8 +587,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
   @override
   void initState() {
     super.initState();
-    _nameCtrl =
-        TextEditingController(text: widget.existing?.name ?? '');
+    _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
     _icon = widget.existing?.icon ?? _kIconOptions.first;
     _color = widget.existing?.color ?? _kColorOptions.first;
     _type = widget.existing?.type ?? widget.type;
@@ -544,19 +606,20 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
       return;
     }
     final cats = ref.read(walletCategoriesProvider);
-    final sortOrder = widget.existing?.sortOrder ??
-        cats.where((c) => c.type == _type).length;
+    final sortOrder =
+        widget.existing?.sortOrder ?? cats.where((c) => c.type == _type).length;
 
-    widget.onSave(WalletCategory(
-      id: widget.existing?.id ??
-          generateId(),
-      name: name,
-      color: _color,
-      icon: _icon,
-      type: _type,
-      sortOrder: sortOrder,
-      isDefault: widget.existing?.isDefault ?? false,
-    ));
+    widget.onSave(
+      WalletCategory(
+        id: widget.existing?.id ?? generateId(),
+        name: name,
+        color: _color,
+        icon: _icon,
+        type: _type,
+        sortOrder: sortOrder,
+        isDefault: widget.existing?.isDefault ?? false,
+      ),
+    );
     HapticFeedback.mediumImpact();
     Navigator.pop(context);
   }
@@ -568,11 +631,16 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
       builder: (_) => StatefulBuilder(
         builder: (ctx, setModalState) => Container(
           padding: const EdgeInsets.fromLTRB(
-              AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-          decoration: const BoxDecoration(
-            color: AppColors.card,
-            borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppSpacing.cardRadiusL)),
+            AppSpacing.xxl,
+            AppSpacing.md,
+            AppSpacing.xxl,
+            AppSpacing.xxl,
+          ),
+          decoration: BoxDecoration(
+            color: ctx.colors.card,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -584,14 +652,17 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    color: ctx.colors.textTertiary.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              Text('Elige un icono',
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.textPrimary)),
+              Text(
+                'Elige un icono',
+                style: AppTypography.headingS.copyWith(
+                  color: ctx.colors.textPrimary,
+                ),
+              ),
               const SizedBox(height: AppSpacing.lg),
               _IconPickerGrid(
                 icons: _kIconOptions,
@@ -620,11 +691,16 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
       ),
       child: Container(
         padding: EdgeInsets.fromLTRB(
-            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.lg + bottom),
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL)),
+          AppSpacing.xxl,
+          AppSpacing.md,
+          AppSpacing.xxl,
+          AppSpacing.lg + bottom,
+        ),
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL),
+          ),
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -637,14 +713,17 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: AppColors.textTertiary.withValues(alpha: 0.4),
+                    color: context.colors.textTertiary.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              Text(isEdit ? 'Editar categoría' : 'Nueva categoría',
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.textPrimary)),
+              Text(
+                isEdit ? 'Editar categoría' : 'Nueva categoría',
+                style: AppTypography.headingS.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
               const SizedBox(height: AppSpacing.lg),
               // Nombre + Icono en la misma fila
               Row(
@@ -684,9 +763,10 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                   return Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(
-                          right: t == WalletCategoryType.expense
-                              ? AppSpacing.sm
-                              : 0),
+                        right: t == WalletCategoryType.expense
+                            ? AppSpacing.sm
+                            : 0,
+                      ),
                       child: GestureDetector(
                         onTap: () {
                           HapticFeedback.selectionClick();
@@ -699,24 +779,27 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                             color: active
                                 ? AppColors.emeraldSurface
                                 : Colors.white.withValues(alpha: 0.04),
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.cardRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.cardRadius,
+                            ),
                             border: Border.all(
                               color: active
                                   ? AppColors.emerald.withValues(alpha: 0.4)
                                   : Colors.white.withValues(alpha: 0.08),
                             ),
                           ),
-                          child: Text(t.label,
-                              textAlign: TextAlign.center,
-                              style: AppTypography.labelM.copyWith(
-                                color: active
-                                    ? AppColors.emerald
-                                    : AppColors.textTertiary,
-                                fontWeight: active
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              )),
+                          child: Text(
+                            t.label,
+                            textAlign: TextAlign.center,
+                            style: AppTypography.labelM.copyWith(
+                              color: active
+                                  ? AppColors.emerald
+                                  : context.colors.textTertiary,
+                              fontWeight: active
+                                  ? FontWeight.w600
+                                  : FontWeight.w400,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -726,9 +809,10 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
               const SizedBox(height: AppSpacing.md),
               // Colores
               _ColorPickerRow(
-                  colors: _kColorOptions,
-                  selected: _color,
-                  onChanged: (c) => setState(() => _color = c)),
+                colors: _kColorOptions,
+                selected: _color,
+                onChanged: (c) => setState(() => _color = c),
+              ),
               const SizedBox(height: AppSpacing.md),
               // Vista previa
               Container(
@@ -737,7 +821,9 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                   color: Colors.white.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.06), width: 0.5),
+                    color: Colors.white.withValues(alpha: 0.06),
+                    width: 0.5,
+                  ),
                 ),
                 child: Row(
                   children: [
@@ -753,26 +839,32 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                     const SizedBox(width: AppSpacing.md),
                     Text(
                       _nameCtrl.text.isEmpty ? 'Categoría' : _nameCtrl.text,
-                      style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.labelL.copyWith(
+                        color: context.colors.textPrimary,
+                      ),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: _type == WalletCategoryType.expense
                             ? AppColors.negativeSurface
                             : AppColors.positiveSurface,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.pillRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.pillRadius,
+                        ),
                       ),
-                      child: Text(_type.label,
-                          style: AppTypography.eyebrow.copyWith(
-                            color: _type == WalletCategoryType.expense
-                                ? AppColors.negative
-                                : AppColors.positive,
-                          )),
+                      child: Text(
+                        _type.label,
+                        style: AppTypography.eyebrow.copyWith(
+                          color: _type == WalletCategoryType.expense
+                              ? AppColors.negative
+                              : AppColors.positive,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -783,13 +875,16 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                 child: GestureDetector(
                   onTap: _submit,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.lg,
+                    ),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                          colors: [AppColors.emerald, AppColors.emeraldDim]),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.cardRadius),
+                        colors: [AppColors.emerald, AppColors.emeraldDim],
+                      ),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.cardRadius,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.emerald.withValues(alpha: 0.3),
@@ -798,12 +893,14 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                         ),
                       ],
                     ),
-                    child: Text(isEdit ? 'Guardar cambios' : 'Crear categoría',
-                        style: AppTypography.labelL.copyWith(
-                          color: AppColors.textInverse,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      isEdit ? 'Guardar cambios' : 'Crear categoría',
+                      style: AppTypography.labelL.copyWith(
+                        color: AppColors.textInverse,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
@@ -816,7 +913,6 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
 }
 
 // ── Form shared widgets ───────────────────────────────────────────────────────
-
 
 class _FormTextField extends StatelessWidget {
   const _FormTextField({
@@ -835,19 +931,24 @@ class _FormTextField extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
       child: TextField(
         controller: controller,
         autofocus: autofocus,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(
+            color: context.colors.textTertiary,
+          ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
         ),
       ),
     );
@@ -894,8 +995,11 @@ class _IconPickerGrid extends StatelessWidget {
                 width: isSel ? 1.5 : 1,
               ),
             ),
-            child: Icon(ic,
-                size: 20, color: isSel ? color : AppColors.textTertiary),
+            child: Icon(
+              ic,
+              size: 20,
+              color: isSel ? color : context.colors.textTertiary,
+            ),
           ),
         );
       }).toList(),
@@ -919,11 +1023,16 @@ class _CategoryActionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cardRadiusL)),
+        AppSpacing.xxl,
+        AppSpacing.md,
+        AppSpacing.xxl,
+        AppSpacing.xxl,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -934,7 +1043,7 @@ class _CategoryActionSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: context.colors.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -951,9 +1060,12 @@ class _CategoryActionSheet extends StatelessWidget {
                 child: Icon(category.icon, size: 22, color: category.color),
               ),
               const SizedBox(width: AppSpacing.md),
-              Text(category.name,
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.textPrimary)),
+              Text(
+                category.name,
+                style: AppTypography.headingS.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.xxl),
@@ -1003,7 +1115,9 @@ class _CategoryActionTile extends StatelessWidget {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
@@ -1059,13 +1173,16 @@ class _ColorPickerRow extends StatelessWidget {
               color: c,
               shape: BoxShape.circle,
               border: Border.all(
-                  color: isSel ? Colors.white : Colors.transparent, width: 2.5),
+                color: isSel ? Colors.white : Colors.transparent,
+                width: 2.5,
+              ),
               boxShadow: isSel
                   ? [
                       BoxShadow(
-                          color: c.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          spreadRadius: -2)
+                        color: c.withValues(alpha: 0.5),
+                        blurRadius: 10,
+                        spreadRadius: -2,
+                      ),
                     ]
                   : null,
             ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -74,9 +75,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   Future<void> _complete() async {
     HapticFeedback.mediumImpact();
     final name = _nameCtrl.text.trim();
-    await ref.read(userProfileProvider.notifier).update(
-          name: name.isNotEmpty ? name : 'Usuario',
-        );
+    await ref
+        .read(userProfileProvider.notifier)
+        .update(name: name.isNotEmpty ? name : 'Usuario');
     final currency = _currencies[_selectedCurrencyIndex];
     await LocalPrefsService.setString('currency_symbol', currency.symbol);
     await LocalPrefsService.setString('currency_code', currency.code);
@@ -90,10 +91,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         transitionDuration: const Duration(milliseconds: 500),
         transitionsBuilder: (ctx, animation, secondary, child) {
           return FadeTransition(
-            opacity: CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            ),
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
             child: child,
           );
         },
@@ -133,7 +131,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         statusBarIconBrightness: Brightness.light,
       ),
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.colors.background,
         body: Stack(
           children: [
             // Animated background blob
@@ -145,8 +143,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   // Skip button
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.screenPadding, AppSpacing.lg,
-                        AppSpacing.screenPadding, 0),
+                      AppSpacing.screenPadding,
+                      AppSpacing.lg,
+                      AppSpacing.screenPadding,
+                      0,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -155,17 +156,25 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                             onTap: _skipToCurrency,
                             child: Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 7),
-                              decoration: BoxDecoration(
-                                color: AppColors.glassLight,
-                                borderRadius:
-                                    BorderRadius.circular(AppSpacing.pillRadius),
-                                border: Border.all(
-                                    color: AppColors.glassBorder, width: 0.5),
+                                horizontal: 14,
+                                vertical: 7,
                               ),
-                              child: Text('Omitir',
-                                  style: AppTypography.labelM.copyWith(
-                                      color: AppColors.textTertiary)),
+                              decoration: BoxDecoration(
+                                color: context.colors.glass,
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.pillRadius,
+                                ),
+                                border: Border.all(
+                                  color: context.colors.glassBorder,
+                                  width: 0.5,
+                                ),
+                              ),
+                              child: Text(
+                                'Omitir',
+                                style: AppTypography.labelM.copyWith(
+                                  color: context.colors.textTertiary,
+                                ),
+                              ),
                             ),
                           ),
                       ],
@@ -197,12 +206,17 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
                   // Bottom area: dots + button
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.screenPadding, 0,
-                        AppSpacing.screenPadding, AppSpacing.huge),
+                      AppSpacing.screenPadding,
+                      0,
+                      AppSpacing.screenPadding,
+                      AppSpacing.huge,
+                    ),
                     child: Column(
                       children: [
                         _PageIndicator(
-                            current: _page, count: _slides.length + 2),
+                          current: _page,
+                          count: _slides.length + 2,
+                        ),
                         const SizedBox(height: AppSpacing.xxl),
                         _NextButton(
                           isLast: _page == _slides.length + 1,
@@ -251,40 +265,62 @@ class _OnboardingBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           AnimatedPositioned(
             duration: const Duration(milliseconds: 600),
             curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-            top: page == 0 ? -80 : page == 1 ? 100 : -40,
-            right: page == 0 ? -60 : page == 1 ? -80 : 60,
+            top: page == 0
+                ? -80
+                : page == 1
+                ? 100
+                : -40,
+            right: page == 0
+                ? -60
+                : page == 1
+                ? -80
+                : 60,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 600),
               width: 340,
               height: 340,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  slides[page.clamp(0, slides.length - 1)].accentColor.withValues(alpha: 0.14),
-                  Colors.transparent,
-                ]),
+                gradient: RadialGradient(
+                  colors: [
+                    slides[page.clamp(0, slides.length - 1)].accentColor
+                        .withValues(alpha: 0.14),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
           AnimatedPositioned(
             duration: const Duration(milliseconds: 700),
             curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-            bottom: page == 0 ? 120 : page == 1 ? 60 : 180,
-            left: page == 0 ? -80 : page == 1 ? 40 : -60,
+            bottom: page == 0
+                ? 120
+                : page == 1
+                ? 60
+                : 180,
+            left: page == 0
+                ? -80
+                : page == 1
+                ? 40
+                : -60,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 700),
               width: 200,
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  slides[page.clamp(0, slides.length - 1)].accentColor.withValues(alpha: 0.07),
-                  Colors.transparent,
-                ]),
+                gradient: RadialGradient(
+                  colors: [
+                    slides[page.clamp(0, slides.length - 1)].accentColor
+                        .withValues(alpha: 0.07),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
@@ -333,13 +369,13 @@ class _SlidePageState extends State<_SlidePage>
         curve: const Interval(0.0, 0.4, curve: Curves.easeOut),
       ),
     );
-    _textSlide = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _ctrl,
-      curve: const Interval(0.3, 0.9, curve: AppCurves.spring),
-    ));
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _ctrl,
+            curve: const Interval(0.3, 0.9, curve: AppCurves.spring),
+          ),
+        );
     _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _ctrl,
@@ -384,7 +420,7 @@ class _SlidePageState extends State<_SlidePage>
                     s.title,
                     textAlign: TextAlign.center,
                     style: AppTypography.displayM.copyWith(
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                       height: 1.15,
                       letterSpacing: -1.0,
                     ),
@@ -394,7 +430,7 @@ class _SlidePageState extends State<_SlidePage>
                     s.body,
                     textAlign: TextAlign.center,
                     style: AppTypography.bodyL.copyWith(
-                      color: AppColors.textSecondary,
+                      color: context.colors.textSecondary,
                       height: 1.6,
                     ),
                   ),
@@ -444,10 +480,7 @@ class _IllustrationCardState extends State<_IllustrationCard>
       animation: _float,
       builder: (_, child) {
         final offset = math.sin(_float.value * math.pi) * 6.0;
-        return Transform.translate(
-          offset: Offset(0, offset),
-          child: child,
-        );
+        return Transform.translate(offset: Offset(0, offset), child: child);
       },
       child: Container(
         width: 180,
@@ -506,7 +539,7 @@ class _PageIndicator extends StatelessWidget {
           decoration: BoxDecoration(
             color: active
                 ? AppColors.emerald
-                : AppColors.textTertiary.withValues(alpha: 0.4),
+                : context.colors.textTertiary.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(3),
           ),
         );
@@ -518,8 +551,11 @@ class _PageIndicator extends StatelessWidget {
 // ── Next button ───────────────────────────────────────────────────────────────
 
 class _NextButton extends StatefulWidget {
-  const _NextButton(
-      {required this.isLast, required this.accent, required this.onTap});
+  const _NextButton({
+    required this.isLast,
+    required this.accent,
+    required this.onTap,
+  });
   final bool isLast;
   final Color accent;
   final VoidCallback onTap;
@@ -568,10 +604,7 @@ class _NextButtonState extends State<_NextButton>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                widget.accent,
-                widget.accent.withValues(alpha: 0.75),
-              ],
+              colors: [widget.accent, widget.accent.withValues(alpha: 0.75)],
             ),
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
@@ -596,8 +629,11 @@ class _NextButtonState extends State<_NextButton>
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward_rounded,
-                  color: Colors.white, size: 18),
+              const Icon(
+                Icons.arrow_forward_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ],
           ),
         ),
@@ -666,15 +702,18 @@ class _NameInputSlide extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.person_outline_rounded,
-                size: 40, color: AppColors.emerald),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              size: 40,
+              color: AppColors.emerald,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxl),
           Text(
             '¿Cómo te llamas?',
             textAlign: TextAlign.center,
             style: AppTypography.displayM.copyWith(
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
               height: 1.15,
               letterSpacing: -1.0,
             ),
@@ -684,14 +723,14 @@ class _NameInputSlide extends StatelessWidget {
             'Así te saludaremos cada vez que abras Vexa.',
             textAlign: TextAlign.center,
             style: AppTypography.bodyL.copyWith(
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
               height: 1.6,
             ),
           ),
           const SizedBox(height: AppSpacing.xxxl),
           Container(
             decoration: BoxDecoration(
-              color: AppColors.card,
+              color: context.colors.card,
               borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
               border: Border.all(
                 color: AppColors.emerald.withValues(alpha: 0.30),
@@ -703,17 +742,19 @@ class _NameInputSlide extends StatelessWidget {
               autofocus: false,
               textCapitalization: TextCapitalization.words,
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: context.colors.textPrimary,
               ),
               textAlign: TextAlign.center,
               decoration: InputDecoration(
                 hintText: 'Tu nombre',
                 hintStyle: AppTypography.headingS.copyWith(
-                  color: AppColors.textTertiary,
+                  color: context.colors.textTertiary,
                 ),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
+                  horizontal: AppSpacing.xl,
+                  vertical: AppSpacing.lg,
+                ),
               ),
             ),
           ),
@@ -721,8 +762,7 @@ class _NameInputSlide extends StatelessWidget {
           Text(
             'Puedes cambiarlo después en tu perfil.',
             textAlign: TextAlign.center,
-            style: AppTypography.labelS
-                .copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelS.copyWith(color: context.colors.textTertiary),
           ),
         ],
       ),
@@ -733,18 +773,14 @@ class _NameInputSlide extends StatelessWidget {
 // ── Currency slide ────────────────────────────────────────────────────────────
 
 class _CurrencySlide extends StatelessWidget {
-  const _CurrencySlide({
-    required this.selectedIndex,
-    required this.onSelect,
-  });
+  const _CurrencySlide({required this.selectedIndex, required this.onSelect});
   final int selectedIndex;
   final ValueChanged<int> onSelect;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.screenPadding),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -767,15 +803,18 @@ class _CurrencySlide extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.currency_exchange_rounded,
-                size: 40, color: AppColors.emerald),
+            child: const Icon(
+              Icons.currency_exchange_rounded,
+              size: 40,
+              color: AppColors.emerald,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxl),
           Text(
             'Tu moneda',
             textAlign: TextAlign.center,
             style: AppTypography.displayM.copyWith(
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
               height: 1.15,
               letterSpacing: -1.0,
             ),
@@ -785,7 +824,7 @@ class _CurrencySlide extends StatelessWidget {
             'Elige la moneda que usas en tu día a día.',
             textAlign: TextAlign.center,
             style: AppTypography.bodyL.copyWith(
-              color: AppColors.textSecondary,
+              color: context.colors.textSecondary,
               height: 1.6,
             ),
           ),
@@ -808,24 +847,26 @@ class _CurrencySlide extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.lg, vertical: 14),
+                      horizontal: AppSpacing.lg,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: selected
                           ? AppColors.emerald.withValues(alpha: 0.10)
-                          : AppColors.card,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.cardRadius),
+                          : context.colors.card,
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.cardRadius,
+                      ),
                       border: Border.all(
                         color: selected
                             ? AppColors.emerald.withValues(alpha: 0.40)
-                            : AppColors.glassBorder,
+                            : context.colors.glassBorder,
                         width: selected ? 1.5 : 0.5,
                       ),
                     ),
                     child: Row(
                       children: [
-                        Text(c.flag,
-                            style: const TextStyle(fontSize: 22)),
+                        Text(c.flag, style: const TextStyle(fontSize: 22)),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Column(
@@ -834,12 +875,14 @@ class _CurrencySlide extends StatelessWidget {
                               Text(
                                 c.name,
                                 style: AppTypography.labelL.copyWith(
-                                    color: AppColors.textPrimary),
+                                  color: context.colors.textPrimary,
+                                ),
                               ),
                               Text(
                                 c.code,
                                 style: AppTypography.labelS.copyWith(
-                                    color: AppColors.textTertiary),
+                                  color: context.colors.textTertiary,
+                                ),
                               ),
                             ],
                           ),
@@ -849,13 +892,12 @@ class _CurrencySlide extends StatelessWidget {
                           style: AppTypography.headingS.copyWith(
                             color: selected
                                 ? AppColors.emerald
-                                : AppColors.textSecondary,
+                                : context.colors.textSecondary,
                           ),
                         ),
                         if (selected)
                           Padding(
-                            padding:
-                                const EdgeInsets.only(left: AppSpacing.sm),
+                            padding: const EdgeInsets.only(left: AppSpacing.sm),
                             child: Container(
                               width: 20,
                               height: 20,
@@ -863,9 +905,11 @@ class _CurrencySlide extends StatelessWidget {
                                 color: AppColors.emerald,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.check_rounded,
-                                  size: 12,
-                                  color: AppColors.textInverse),
+                              child: const Icon(
+                                Icons.check_rounded,
+                                size: 12,
+                                color: AppColors.textInverse,
+                              ),
                             ),
                           )
                         else

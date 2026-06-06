@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -145,47 +146,51 @@ class _SecurityPageState extends State<SecurityPage>
 
   // ── Confirm disable ───────────────────────────────────────────────────────────
 
-  Future<bool?> _confirmDisable(String what) => showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: AppColors.card,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
-          title: Text('Desactivar $what',
-              style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary)),
-          content: Text(
-              '¿Seguro que quieres desactivar el $what? La app quedará sin protección.',
-              style: AppTypography.bodyM
-                  .copyWith(color: AppColors.textSecondary)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text('Cancelar',
-                  style: AppTypography.labelM
-                      .copyWith(color: AppColors.textTertiary)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Desactivar',
-                  style: AppTypography.labelM
-                      .copyWith(color: AppColors.negative)),
-            ),
-          ],
-        ),
-      );
+  Future<bool?> _confirmDisable(String what) {
+    final c = context.colors;
+    return showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+        title: Text('Desactivar $what',
+            style: AppTypography.headingS
+                .copyWith(color: c.textPrimary)),
+        content: Text(
+            '¿Seguro que quieres desactivar el $what? La app quedará sin protección.',
+            style: AppTypography.bodyM
+                .copyWith(color: c.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelM
+                    .copyWith(color: c.textTertiary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Desactivar',
+                style: AppTypography.labelM
+                    .copyWith(color: AppColors.negative)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: c.background,
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -225,9 +230,7 @@ class _SecurityPageState extends State<SecurityPage>
                           child: Row(
                             children: [
                               Icon(
-                                _anyActive
-                                    ? Icons.shield_outlined
-                                    : Icons.shield_outlined,
+                                Icons.shield_outlined,
                                 color: _anyActive
                                     ? AppColors.emerald
                                     : AppColors.negative,
@@ -277,11 +280,11 @@ class _SecurityPageState extends State<SecurityPage>
                         4,
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder, width: 0.5),
                           ),
                           child: Column(
                             children: [
@@ -293,7 +296,7 @@ class _SecurityPageState extends State<SecurityPage>
                                 value: _biometricEnabled,
                                 onChanged: _onBiometricToggle,
                               ),
-                              _divider(),
+                              _divider(c),
                               _SecurityToggle(
                                 icon: Icons.pin_outlined,
                                 color: AppColors.catTransport,
@@ -305,7 +308,7 @@ class _SecurityPageState extends State<SecurityPage>
                                 onChanged: _onPinToggle,
                               ),
                               if (_pinEnabled) ...[
-                                _divider(),
+                                _divider(c),
                                 _SecurityAction(
                                   icon: Icons.edit_rounded,
                                   color: AppColors.catTransport,
@@ -314,7 +317,7 @@ class _SecurityPageState extends State<SecurityPage>
                                   onTap: _changePin,
                                 ),
                               ],
-                              _divider(),
+                              _divider(c),
                               _SecurityToggle(
                                 icon: Icons.lock_outline_rounded,
                                 color: AppColors.warning,
@@ -326,7 +329,7 @@ class _SecurityPageState extends State<SecurityPage>
                                 onChanged: _onPasswordToggle,
                               ),
                               if (_passwordEnabled) ...[
-                                _divider(),
+                                _divider(c),
                                 _SecurityAction(
                                   icon: Icons.edit_rounded,
                                   color: AppColors.warning,
@@ -351,11 +354,11 @@ class _SecurityPageState extends State<SecurityPage>
     );
   }
 
-  Widget _divider() => Padding(
+  Widget _divider(VexaColors c) => Padding(
         padding:
             const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         child: Divider(
-            height: 1, thickness: 0.5, color: AppColors.glassBorder),
+            height: 1, thickness: 0.5, color: c.glassBorder),
       );
 }
 
@@ -417,13 +420,14 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -433,7 +437,7 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
               width: 36, height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -443,13 +447,13 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
                 ? (widget.isChange ? 'Nuevo PIN' : 'Elige un PIN')
                 : 'Confirma el PIN',
             style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary),
+                .copyWith(color: c.textPrimary),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             _error ? 'Los PINs no coinciden. Inténtalo de nuevo.' : 'Introduce 4 dígitos',
             style: AppTypography.labelM.copyWith(
-              color: _error ? AppColors.negative : AppColors.textTertiary,
+              color: _error ? AppColors.negative : c.textTertiary,
             ),
           ),
           const SizedBox(height: AppSpacing.xxl),
@@ -465,11 +469,11 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
                   width: 14, height: 14,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: filled ? AppColors.emerald : AppColors.glassLight,
+                    color: filled ? AppColors.emerald : c.glass,
                     border: Border.all(
                       color: filled
                           ? Colors.transparent
-                          : AppColors.glassBorderStrong,
+                          : c.glassBorderStrong,
                       width: 1.5,
                     ),
                   ),
@@ -528,14 +532,15 @@ class _PasswordSetupSheetState extends State<_PasswordSetupSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -547,15 +552,14 @@ class _PasswordSetupSheetState extends State<_PasswordSetupSheet> {
                 width: 36, height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text(
               widget.isChange ? 'Nueva contraseña' : 'Elige una contraseña',
-              style:
-                  AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+              style: AppTypography.headingS.copyWith(color: c.textPrimary),
             ),
             const SizedBox(height: AppSpacing.xl),
             _PassField(
@@ -620,23 +624,23 @@ class _PassField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         obscureText: obscure,
         onSubmitted: onSubmitted,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: const Icon(Icons.lock_outline_rounded,
-              size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
+          prefixIcon: Icon(Icons.lock_outline_rounded,
+              size: 18, color: c.textTertiary),
           suffixIcon: GestureDetector(
             onTap: onToggle,
             child: Icon(
@@ -644,7 +648,7 @@ class _PassField extends StatelessWidget {
                   ? Icons.visibility_off_outlined
                   : Icons.visibility_outlined,
               size: 18,
-              color: AppColors.textTertiary,
+              color: c.textTertiary,
             ),
           ),
           border: InputBorder.none,
@@ -676,6 +680,7 @@ class _SecurityToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -696,11 +701,11 @@ class _SecurityToggle extends StatelessWidget {
               children: [
                 Text(title,
                     style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: c.textPrimary)),
                 const SizedBox(height: 2),
                 Text(subtitle,
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ],
             ),
           ),
@@ -709,8 +714,8 @@ class _SecurityToggle extends StatelessWidget {
             onChanged: onChanged,
             activeThumbColor: AppColors.emerald,
             activeTrackColor: AppColors.emeraldSurface,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.glassLight,
+            inactiveThumbColor: c.textTertiary,
+            inactiveTrackColor: c.glass,
           ),
         ],
       ),
@@ -734,6 +739,7 @@ class _SecurityAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -760,16 +766,16 @@ class _SecurityAction extends StatelessWidget {
                 children: [
                   Text(title,
                       style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: c.textPrimary)),
                   const SizedBox(height: 2),
                   Text(subtitle,
                       style: AppTypography.labelS
-                          .copyWith(color: AppColors.textTertiary)),
+                          .copyWith(color: c.textTertiary)),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: c.textTertiary),
           ],
         ),
       ),
@@ -784,6 +790,7 @@ class _Keypad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       children: [
         _KeyRow(keys: const ['1', '2', '3'], onDigit: onDigit),
@@ -804,9 +811,9 @@ class _Keypad extends StatelessWidget {
               child: Container(
                 width: 72, height: 72,
                 decoration: const BoxDecoration(shape: BoxShape.circle),
-                child: const Center(
+                child: Center(
                   child: Icon(Icons.backspace_outlined,
-                      size: 22, color: AppColors.textSecondary),
+                      size: 22, color: c.textSecondary),
                 ),
               ),
             ),
@@ -843,19 +850,20 @@ class _KeyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 72, height: 72,
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: c.glass,
           shape: BoxShape.circle,
-          border: Border.all(color: AppColors.glassBorder, width: 0.5),
+          border: Border.all(color: c.glassBorder, width: 0.5),
         ),
         child: Center(
           child: Text(label,
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 22,
               )),
         ),
@@ -872,6 +880,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -879,18 +888,18 @@ class _SubPageHeader extends StatelessWidget {
           child: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(title,
             style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary)),
+                .copyWith(color: c.textPrimary)),
       ],
     );
   }
@@ -899,10 +908,11 @@ class _SubPageHeader extends StatelessWidget {
 class _ProfileSubBg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             right: -80,

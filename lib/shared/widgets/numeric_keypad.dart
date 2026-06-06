@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/vexa_colors_ext.dart';
 
 /// Premium numeric keypad that replaces the native keyboard.
 ///
@@ -74,7 +75,7 @@ class NumericKeypad extends StatelessWidget {
     final btnBgAlt = isDark
         ? Colors.white.withValues(alpha: 0.03)
         : Colors.black.withValues(alpha: 0.03);
-    final btnFg = isDark ? AppColors.textPrimary : const Color(0xFF0D0D14);
+    final btnFg = context.colors.textPrimary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -92,7 +93,7 @@ class NumericKeypad extends StatelessWidget {
                     label: key,
                     bg: isBackspace ? btnBgAlt : btnBg,
                     fg: isBackspace
-                        ? (isDark ? AppColors.textSecondary : const Color(0xFF5A5A7A))
+                        ? context.colors.textSecondary
                         : btnFg,
                     isDot: isDot,
                     isBackspace: isBackspace,
@@ -189,23 +190,23 @@ class _KeyButtonState extends State<_KeyButton>
           child: widget.isBackspace
               ? Icon(Icons.backspace_outlined, size: 20, color: widget.fg)
               : widget.isDot
-                  ? Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: widget.fg,
-                        shape: BoxShape.circle,
-                      ),
-                    )
-                  : Text(
-                      widget.label,
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: widget.fg,
-                        height: 1,
-                      ),
-                    ),
+              ? Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: widget.fg,
+                    shape: BoxShape.circle,
+                  ),
+                )
+              : Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: widget.fg,
+                    height: 1,
+                  ),
+                ),
         ),
       ),
     );
@@ -215,7 +216,11 @@ class _KeyButtonState extends State<_KeyButton>
 // ── Confirm button ─────────────────────────────────────────────────────────────
 
 class _ConfirmButton extends StatefulWidget {
-  const _ConfirmButton({required this.color, required this.height, required this.onTap});
+  const _ConfirmButton({
+    required this.color,
+    required this.height,
+    required this.onTap,
+  });
   final Color color;
   final double height;
   final VoidCallback onTap;
@@ -262,10 +267,7 @@ class _ConfirmButtonState extends State<_ConfirmButton>
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                widget.color,
-                widget.color.withValues(alpha: 0.78),
-              ],
+              colors: [widget.color, widget.color.withValues(alpha: 0.78)],
             ),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [

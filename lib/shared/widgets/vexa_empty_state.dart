@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/vexa_colors_ext.dart';
+
 import '../../core/theme/app_typography.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_curves.dart';
@@ -63,7 +65,8 @@ class _VexaEmptyStateState extends State<VexaEmptyState>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.iconColor ?? AppColors.textTertiary;
+    final c = context.colors;
+    final color = widget.iconColor ?? c.textTertiary;
 
     return FadeTransition(
       opacity: _fade,
@@ -99,7 +102,7 @@ class _VexaEmptyStateState extends State<VexaEmptyState>
                 widget.title,
                 textAlign: TextAlign.center,
                 style: AppTypography.headingS.copyWith(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -108,7 +111,7 @@ class _VexaEmptyStateState extends State<VexaEmptyState>
                 widget.body,
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyM.copyWith(
-                  color: AppColors.textTertiary,
+                  color: c.textTertiary,
                   height: 1.55,
                 ),
               ),

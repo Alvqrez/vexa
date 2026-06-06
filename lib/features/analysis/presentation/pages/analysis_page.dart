@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../../calendar/presentation/pages/financial_calendar_page.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/domain/models/transaction.dart';
@@ -116,10 +117,11 @@ class _AnalysisBg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             left: -80,
@@ -167,6 +169,7 @@ class _AnalysisHeader extends StatelessWidget {
     final label = DateFormat('MMMM yyyy', 'es').format(now);
     final capitalized = label[0].toUpperCase() + label.substring(1);
 
+    final c = context.colors;
     return Row(
       children: [
         Expanded(
@@ -175,11 +178,11 @@ class _AnalysisHeader extends StatelessWidget {
             children: [
               Text('Análisis',
                   style: AppTypography.headingM
-                      .copyWith(color: AppColors.textPrimary)),
+                      .copyWith(color: c.textPrimary)),
               const SizedBox(height: 2),
               Text(capitalized,
                   style: AppTypography.labelM
-                      .copyWith(color: AppColors.textTertiary)),
+                      .copyWith(color: c.textTertiary)),
             ],
           ),
         ),
@@ -193,13 +196,13 @@ class _AnalysisHeader extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(11),
               border:
-                  Border.all(color: AppColors.glassBorder, width: 0.5),
+                  Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.calendar_month_rounded,
-                size: 17, color: AppColors.textSecondary),
+            child: Icon(Icons.calendar_month_rounded,
+                size: 17, color: c.textSecondary),
           ),
         ),
       ],
@@ -275,14 +278,14 @@ class _StatTile extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius:
             BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.03),
+        color: context.colors.glass,
         border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+            color: context.colors.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -300,11 +303,11 @@ class _StatTile extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(value,
                 style: AppTypography.headingS.copyWith(
-                    color: AppColors.textPrimary, fontSize: 15)),
+                    color: context.colors.textPrimary, fontSize: 15)),
             const SizedBox(height: 2),
             Text(label,
                 style: AppTypography.labelS
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: context.colors.textTertiary)),
           ],
         ),
       ),
@@ -368,6 +371,7 @@ class _BalanceLineChartCardState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final transactions = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
     final spots = _buildSpots(transactions);
@@ -405,7 +409,7 @@ class _BalanceLineChartCardState
                   drawVerticalLine: false,
                   horizontalInterval: (maxY - minY) / 4,
                   getDrawingHorizontalLine: (_) => FlLine(
-                    color: AppColors.glassBorder,
+                    color: c.glassBorder,
                     strokeWidth: 0.5,
                   ),
                 ),
@@ -431,7 +435,7 @@ class _BalanceLineChartCardState
                           style: AppTypography.labelS.copyWith(
                             color: i == 6
                                 ? AppColors.emerald
-                                : AppColors.textTertiary,
+                                : c.textTertiary,
                             fontSize: 10,
                           ),
                         );
@@ -441,8 +445,7 @@ class _BalanceLineChartCardState
                 ),
                 lineTouchData: LineTouchData(
                   touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) =>
-                        AppColors.cardElevated,
+                    getTooltipColor: (_) => c.cardElevated,
                     getTooltipItems: (spots) => spots
                         .map((s) => LineTooltipItem(
                               '$currency${s.y.toStringAsFixed(0)}',
@@ -474,7 +477,7 @@ class _BalanceLineChartCardState
                           radius: 4,
                           color: AppColors.emerald,
                           strokeWidth: 2,
-                          strokeColor: AppColors.background,
+                          strokeColor: c.background,
                         );
                       },
                     ),
@@ -547,31 +550,42 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
         children: [
           AnimatedBuilder(
             animation: _barAnim,
-            builder: (context, child) => SizedBox(
-              height: 120,
-              child: CustomPaint(
-                painter: _BarChartPainter(
-                    data: data, progress: _barAnim.value, currentLabel: currentLabel),
-                size: Size.infinite,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: data.map((d) {
-              final isCurrent = d.label == currentLabel;
-              return Text(
-                d.label,
-                style: AppTypography.labelS.copyWith(
-                  color: isCurrent
-                      ? AppColors.emerald
-                      : AppColors.textTertiary,
-                  fontWeight:
-                      isCurrent ? FontWeight.w600 : FontWeight.w400,
+            builder: (context, child) {
+              final c = context.colors;
+              return SizedBox(
+                height: 120,
+                child: CustomPaint(
+                  painter: _BarChartPainter(
+                    data: data,
+                    progress: _barAnim.value,
+                    currentLabel: currentLabel,
+                    barColor: c.glassMedium,
+                    lineColor: c.glassBorder,
+                  ),
+                  size: Size.infinite,
                 ),
               );
-            }).toList(),
+            },
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Builder(
+            builder: (context) {
+              final c = context.colors;
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: data.map((d) {
+                  final isCurrent = d.label == currentLabel;
+                  return Text(
+                    d.label,
+                    style: AppTypography.labelS.copyWith(
+                      color: isCurrent ? AppColors.emerald : c.textTertiary,
+                      fontWeight:
+                          isCurrent ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  );
+                }).toList(),
+              );
+            },
           ),
         ],
       ),
@@ -592,10 +606,14 @@ class _BarChartPainter extends CustomPainter {
     required this.data,
     required this.progress,
     required this.currentLabel,
+    required this.barColor,
+    required this.lineColor,
   });
   final List<({String label, double value})> data;
   final double progress;
   final String currentLabel;
+  final Color barColor;
+  final Color lineColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -633,7 +651,7 @@ class _BarChartPainter extends CustomPainter {
         canvas.drawRRect(
           rect,
           Paint()
-            ..color = AppColors.glassMedium
+            ..color = barColor
             ..style = PaintingStyle.fill,
         );
         canvas.drawRRect(
@@ -646,7 +664,7 @@ class _BarChartPainter extends CustomPainter {
       }
     }
     final linePaint = Paint()
-      ..color = AppColors.glassBorder
+      ..color = lineColor
       ..strokeWidth = 0.5;
     canvas.drawLine(
       Offset(0, size.height),
@@ -657,7 +675,8 @@ class _BarChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarChartPainter old) =>
-      old.progress != progress || old.currentLabel != currentLabel;
+      old.progress != progress || old.currentLabel != currentLabel ||
+      old.barColor != barColor || old.lineColor != lineColor;
 }
 
 // ── Category pie chart (fl_chart) ─────────────────────────────────────────────
@@ -758,6 +777,7 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: entries.take(5).map((entry) {
                 final pct = entry.value / total;
+                final c = context.colors;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Row(
@@ -774,12 +794,12 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
                       Expanded(
                         child: Text(entry.key.label,
                             style: AppTypography.labelS.copyWith(
-                                color: AppColors.textSecondary)),
+                                color: c.textSecondary)),
                       ),
                       Text(
                         '${(pct * 100).toStringAsFixed(0)}%',
                         style: AppTypography.labelS.copyWith(
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             fontWeight: FontWeight.w600),
                       ),
                     ],
@@ -839,7 +859,7 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
             const SizedBox(width: AppSpacing.md),
             Text('Inteligencia financiera',
                 style: AppTypography.headingS.copyWith(
-                    color: AppColors.textPrimary,
+                    color: context.colors.textPrimary,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4)),
           ],
@@ -1050,15 +1070,16 @@ class _InsightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bgColor = switch (insight.type) {
       _InsightType.positive => AppColors.positive.withValues(alpha: 0.05),
       _InsightType.warning => AppColors.warning.withValues(alpha: 0.05),
-      _InsightType.neutral => AppColors.glassMedium,
+      _InsightType.neutral => c.glassMedium,
     };
     final borderColor = switch (insight.type) {
       _InsightType.positive => AppColors.positive.withValues(alpha: 0.15),
       _InsightType.warning => AppColors.warning.withValues(alpha: 0.15),
-      _InsightType.neutral => AppColors.glassBorder,
+      _InsightType.neutral => c.glassBorder,
     };
 
     return Container(
@@ -1087,12 +1108,12 @@ class _InsightCard extends StatelessWidget {
               children: [
                 Text(insight.title,
                     style: AppTypography.labelL.copyWith(
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                         fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(insight.body,
                     style: AppTypography.labelM.copyWith(
-                        color: AppColors.textSecondary, height: 1.5)),
+                        color: c.textSecondary, height: 1.5)),
               ],
             ),
           ),
@@ -1122,7 +1143,7 @@ class _CategoryBreakdown extends ConsumerWidget {
       children: [
         Text('Por categoría',
             style: AppTypography.headingS.copyWith(
-              color: AppColors.textPrimary,
+              color: context.colors.textPrimary,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.4,
             )),
@@ -1145,7 +1166,7 @@ class _CategoryBreakdown extends ConsumerWidget {
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
-                      color: AppColors.glassBorder,
+                      color: context.colors.glassBorder,
                     ),
                   ),
               ],
@@ -1196,6 +1217,7 @@ class _CatBarState extends State<_CatBar>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final ratio = widget.total > 0 ? widget.spent / widget.total : 0.0;
     final color = widget.category.color;
     return Row(
@@ -1219,10 +1241,10 @@ class _CatBarState extends State<_CatBar>
                 children: [
                   Text(widget.category.label,
                       style: AppTypography.labelM
-                          .copyWith(color: AppColors.textSecondary)),
+                          .copyWith(color: c.textSecondary)),
                   Text('${widget.currency}${widget.spent.toStringAsFixed(2)}',
                       style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: c.textPrimary)),
                 ],
               ),
               const SizedBox(height: 6),
@@ -1261,6 +1283,7 @@ class _TopSpendsList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final transactions = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
     final expenses = transactions.where((t) => !t.isIncome).toList()
@@ -1274,7 +1297,7 @@ class _TopSpendsList extends ConsumerWidget {
       children: [
         Text('Mayores gastos',
             style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.4)),
         const SizedBox(height: AppSpacing.md),
@@ -1304,10 +1327,10 @@ class _TopSpendsList extends ConsumerWidget {
                           children: [
                             Text(top[i].merchant,
                                 style: AppTypography.labelL.copyWith(
-                                    color: AppColors.textPrimary)),
+                                    color: c.textPrimary)),
                             Text(top[i].category.label,
                                 style: AppTypography.labelS.copyWith(
-                                    color: AppColors.textTertiary)),
+                                    color: c.textTertiary)),
                           ],
                         ),
                       ),
@@ -1324,7 +1347,7 @@ class _TopSpendsList extends ConsumerWidget {
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
-                      color: AppColors.glassBorder,
+                      color: c.glassBorder,
                     ),
                   ),
               ],
@@ -1352,36 +1375,20 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius:
             BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [
-              Color(0xFF1C1C32),
-              Color(0xFF141428),
-              Color(0xFF0F0F1E)
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          color: c.cardElevated,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1391,7 +1398,7 @@ class _SectionCard extends StatelessWidget {
               children: [
                 Text(title,
                     style: AppTypography.headingS
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: context.colors.textPrimary)),
                 Container(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
@@ -1422,6 +1429,7 @@ class _InterpretCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
@@ -1446,7 +1454,7 @@ class _InterpretCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: Border.all(
               color: AppColors.petroleum.withValues(alpha: 0.30),
@@ -1471,20 +1479,20 @@ class _InterpretCard extends ConsumerWidget {
                 children: [
                   Text('Interpretar análisis',
                       style: AppTypography.labelL.copyWith(
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(preview,
                       style: AppTypography.labelS
-                          .copyWith(color: AppColors.textSecondary),
+                          .copyWith(color: c.textSecondary),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: c.textTertiary),
           ],
         ),
       ),
@@ -1619,10 +1627,10 @@ class _InterpretSheet extends ConsumerWidget {
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (_, scrollCtrl) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
+        decoration: BoxDecoration(
+          color: context.colors.card,
           borderRadius:
-              BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+              const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
         ),
         child: Column(
           children: [
@@ -1632,7 +1640,7 @@ class _InterpretSheet extends ConsumerWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: context.colors.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1655,7 +1663,7 @@ class _InterpretSheet extends ConsumerWidget {
                   const SizedBox(width: AppSpacing.md),
                   Text('Interpretación del mes',
                       style: AppTypography.headingS
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: context.colors.textPrimary)),
                 ],
               ),
             ),
@@ -1698,12 +1706,12 @@ class _InterpretSheet extends ConsumerWidget {
                             children: [
                               Text(ins.title,
                                   style: AppTypography.labelL.copyWith(
-                                      color: AppColors.textPrimary,
+                                      color: context.colors.textPrimary,
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               Text(ins.body,
                                   style: AppTypography.bodyS.copyWith(
-                                      color: AppColors.textSecondary,
+                                      color: context.colors.textSecondary,
                                       height: 1.5)),
                             ],
                           ),
@@ -1746,9 +1754,9 @@ class SurfaceCard extends StatelessWidget {
     return Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),

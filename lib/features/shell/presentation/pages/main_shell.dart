@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/utils/id_gen.dart';
@@ -525,14 +526,15 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding:
           EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -544,14 +546,14 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
-          const Text('Nueva meta',
+          Text('Nueva meta',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.xl),
@@ -573,16 +575,16 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
                   decoration: BoxDecoration(
                     color: sel
                         ? _color.withValues(alpha: 0.18)
-                        : Colors.white.withValues(alpha: 0.04),
+                        : c.glass,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                         color: sel
                             ? _color.withValues(alpha: 0.5)
-                            : Colors.white.withValues(alpha: 0.06)),
+                            : c.glassBorder),
                   ),
                   child: Icon(ic,
                       size: 20,
-                      color: sel ? _color : AppColors.textTertiary),
+                      color: sel ? _color : c.textTertiary),
                 ),
               );
             }).toList(),
@@ -653,25 +655,23 @@ class _GoalField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         autofocus: !numeric,
         keyboardType:
             numeric ? const TextInputType.numberWithOptions(decimal: true) : null,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: c.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-          prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textTertiary),
+          hintStyle: TextStyle(color: c.textTertiary, fontSize: 14),
+          prefixIcon: Icon(icon, size: 18, color: c.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -830,13 +830,13 @@ class _TutorialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        border: Border.all(
-            color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: c.glassBorderStrong, width: 0.5),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withValues(alpha: 0.45),
@@ -870,18 +870,17 @@ class _TutorialCard extends StatelessWidget {
                 },
                 child: Text('Omitir',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           Text(title,
-              style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary)),
+              style: AppTypography.headingS.copyWith(color: c.textPrimary)),
           const SizedBox(height: AppSpacing.sm),
           Text(description,
               style: AppTypography.bodyM.copyWith(
-                  color: AppColors.textSecondary, height: 1.5)),
+                  color: c.textSecondary, height: 1.5)),
           const SizedBox(height: AppSpacing.lg),
           GestureDetector(
             onTap: () {
@@ -951,10 +950,11 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
   }
 
   void _showError(String msg) {
+    final c = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg,
-          style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
-      backgroundColor: AppColors.card,
+          style: AppTypography.labelM.copyWith(color: c.textPrimary)),
+      backgroundColor: c.card,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
@@ -1009,78 +1009,80 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.card,
-          borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL)),
-        ),
-        padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
-                decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+      builder: (sheetCtx) {
+        final sc = sheetCtx.colors;
+        return Container(
+          decoration: BoxDecoration(
+            color: sc.card,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.cardRadiusL)),
+          ),
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36, height: 4,
+                  margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  decoration: BoxDecoration(
+                    color: sc.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Text(isFrom ? 'Cuenta origen' : 'Cuenta destino',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
-            const SizedBox(height: AppSpacing.lg),
-            ...accounts.map((a) {
-              final sel = isFrom ? a.id == _fromId : a.id == _toId;
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() {
-                    if (isFrom) { _fromId = a.id; } else { _toId = a.id; }
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: sel
-                        ? a.color.withValues(alpha: 0.12)
-                        : AppColors.glassLight,
-                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                    border: Border.all(
+              Text(isFrom ? 'Cuenta origen' : 'Cuenta destino',
+                  style: AppTypography.headingS.copyWith(color: sc.textPrimary)),
+              const SizedBox(height: AppSpacing.lg),
+              ...accounts.map((a) {
+                final sel = isFrom ? a.id == _fromId : a.id == _toId;
+                return GestureDetector(
+                  onTap: () {
+                    HapticFeedback.selectionClick();
+                    setState(() {
+                      if (isFrom) { _fromId = a.id; } else { _toId = a.id; }
+                    });
+                    Navigator.of(context).pop();
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                    decoration: BoxDecoration(
                       color: sel
-                          ? a.color.withValues(alpha: 0.35)
-                          : AppColors.glassBorder,
-                      width: sel ? 1.5 : 0.5,
+                          ? a.color.withValues(alpha: 0.12)
+                          : sc.glass,
+                      borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                      border: Border.all(
+                        color: sel
+                            ? a.color.withValues(alpha: 0.35)
+                            : sc.glassBorder,
+                        width: sel ? 1.5 : 0.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(a.icon.iconData, size: 18, color: a.color),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Text(a.name,
+                              style: AppTypography.labelL
+                                  .copyWith(color: sc.textPrimary)),
+                        ),
+                        if (sel)
+                          Icon(Icons.check_circle_rounded,
+                              size: 18, color: a.color),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(a.icon.iconData, size: 18, color: a.color),
-                      const SizedBox(width: AppSpacing.md),
-                      Expanded(
-                        child: Text(a.name,
-                            style: AppTypography.labelL
-                                .copyWith(color: AppColors.textPrimary)),
-                      ),
-                      if (sel)
-                        Icon(Icons.check_circle_rounded,
-                            size: 18, color: a.color),
-                    ],
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1092,10 +1094,11 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final toAccount = accounts.where((a) => a.id == _toId).firstOrNull;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
+    final c = context.colors;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       padding: EdgeInsets.fromLTRB(AppSpacing.xxl, AppSpacing.md,
@@ -1108,7 +1111,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
               width: 36, height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.lg),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1126,17 +1129,15 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
               ),
               const SizedBox(width: AppSpacing.md),
               Text('Transferencia',
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.textPrimary)),
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: c.glass,
               borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.10), width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
             child: TextField(
               controller: _amountCtrl,
@@ -1149,7 +1150,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
               decoration: InputDecoration(
                 hintText: '${currency}0.00',
                 hintStyle: AppTypography.headingM.copyWith(
-                    color: AppColors.textTertiary, fontSize: 28),
+                    color: c.textTertiary, fontSize: 28),
                 border: InputBorder.none,
                 contentPadding:
                     const EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -1164,7 +1165,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                   onTap: () => _pickAccount(isFrom: true),
                   child: _TransferAccountChip(
                     label: fromAccount?.name ?? 'Origen',
-                    color: fromAccount?.color ?? AppColors.textTertiary,
+                    color: fromAccount?.color ?? c.textTertiary,
                     icon: fromAccount?.icon.iconData ??
                         Icons.account_balance_wallet_rounded,
                   ),
@@ -1174,14 +1175,14 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Icon(Icons.arrow_forward_rounded,
-                    size: 18, color: AppColors.textTertiary),
+                    size: 18, color: c.textTertiary),
               ),
               Expanded(
                 child: GestureDetector(
                   onTap: () => _pickAccount(isFrom: false),
                   child: _TransferAccountChip(
                     label: toAccount?.name ?? 'Destino',
-                    color: toAccount?.color ?? AppColors.textTertiary,
+                    color: toAccount?.color ?? c.textTertiary,
                     icon: toAccount?.icon.iconData ??
                         Icons.account_balance_wallet_rounded,
                   ),
@@ -1268,10 +1269,11 @@ class _SavingsExplainerSheet extends StatelessWidget {
     const savingsColor = Color(0xFF7C5CFC);
     final greeting = name.isEmpty ? '' : '$name, ';
 
+    final c = context.colors;
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       padding: const EdgeInsets.fromLTRB(
@@ -1287,7 +1289,7 @@ class _SavingsExplainerSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1310,8 +1312,7 @@ class _SavingsExplainerSheet extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Tu cuenta de Ahorro',
-                  style: AppTypography.headingS
-                      .copyWith(color: AppColors.textPrimary),
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary),
                 ),
               ),
             ],
@@ -1319,9 +1320,10 @@ class _SavingsExplainerSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.xl),
 
           // Body text
-          _Paragraph(
+          Text(
             'Lo más importante para una buena gestión de finanzas es el ahorro. '
             'Hemos creado una cuenta especialmente para ello.',
+            style: AppTypography.bodyM.copyWith(color: c.textSecondary, height: 1.55),
           ),
           const SizedBox(height: AppSpacing.lg),
 
@@ -1345,7 +1347,7 @@ class _SavingsExplainerSheet extends StatelessWidget {
                     'con un corte, una cartera, una lata —cualquier recipiente '
                     'donde puedas guardar monedas y billetes. Ponle "Ahorro" con plumón.',
                     style: AppTypography.bodyM.copyWith(
-                        color: AppColors.textSecondary, height: 1.55),
+                        color: c.textSecondary, height: 1.55),
                   ),
                 ),
               ],
@@ -1353,10 +1355,11 @@ class _SavingsExplainerSheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
 
-          _Paragraph(
+          Text(
             'Cada vez que metas dinero en ese recipiente, regístralo en esta cuenta. '
             'Vexa usará ese dato para darte predicciones del mes y mostrarte '
             'información financiera más precisa.',
+            style: AppTypography.bodyM.copyWith(color: c.textSecondary, height: 1.55),
           ),
           const SizedBox(height: AppSpacing.xxl),
 
@@ -1393,20 +1396,6 @@ class _SavingsExplainerSheet extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _Paragraph extends StatelessWidget {
-  const _Paragraph(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTypography.bodyM
-          .copyWith(color: AppColors.textSecondary, height: 1.55),
     );
   }
 }

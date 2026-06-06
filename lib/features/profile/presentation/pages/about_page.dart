@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 
@@ -35,15 +36,17 @@ class _AboutPageState extends State<AboutPage>
     final end = (start + 0.6).clamp(0.0, 1.0);
     return FadeTransition(
       opacity: CurvedAnimation(
-          parent: _stagger,
-          curve: Interval(start, end, curve: AppCurves.gentle)),
+        parent: _stagger,
+        curve: Interval(start, end, curve: AppCurves.gentle),
+      ),
       child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-            parent: _stagger,
-            curve: Interval(start, end, curve: AppCurves.spring))),
+        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+            .animate(
+              CurvedAnimation(
+                parent: _stagger,
+                curve: Interval(start, end, curve: AppCurves.spring),
+              ),
+            ),
         child: child,
       ),
     );
@@ -51,8 +54,9 @@ class _AboutPageState extends State<AboutPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -62,7 +66,8 @@ class _AboutPageState extends State<AboutPage>
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
@@ -86,13 +91,14 @@ class _AboutPageState extends State<AboutPage>
                                     end: Alignment.bottomRight,
                                     colors: [
                                       AppColors.petroleum,
-                                      AppColors.emeraldDim
+                                      AppColors.emeraldDim,
                                     ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.petroleum
-                                          .withValues(alpha: 0.30),
+                                      color: AppColors.petroleum.withValues(
+                                        alpha: 0.30,
+                                      ),
                                       blurRadius: 32,
                                       spreadRadius: -4,
                                       offset: const Offset(0, 12),
@@ -103,7 +109,7 @@ class _AboutPageState extends State<AboutPage>
                                   child: Text(
                                     'V',
                                     style: AppTypography.headingM.copyWith(
-                                      color: AppColors.textPrimary,
+                                      color: c.textPrimary,
                                       fontWeight: FontWeight.w800,
                                       fontSize: 36,
                                     ),
@@ -114,13 +120,15 @@ class _AboutPageState extends State<AboutPage>
                               Text(
                                 'Vexa Finance',
                                 style: AppTypography.headingM.copyWith(
-                                    color: AppColors.textPrimary),
+                                  color: c.textPrimary,
+                                ),
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 'Versión 1.0.0 (build 1)',
-                                style: AppTypography.labelM
-                                    .copyWith(color: AppColors.textTertiary),
+                                style: AppTypography.labelM.copyWith(
+                                  color: c.textTertiary,
+                                ),
                               ),
                             ],
                           ),
@@ -134,11 +142,14 @@ class _AboutPageState extends State<AboutPage>
                         4,
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.cardRadius),
+                            color: c.card,
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.cardRadius,
+                            ),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                              color: c.glassBorder,
+                              width: 0.5,
+                            ),
                           ),
                           child: Column(
                             children: [
@@ -151,7 +162,7 @@ class _AboutPageState extends State<AboutPage>
                               _Divider(),
                               _InfoRow(
                                 icon: Icons.build_outlined,
-                                color: AppColors.textSecondary,
+                                color: c.textSecondary,
                                 title: 'Build',
                                 value: '1',
                               ),
@@ -174,11 +185,14 @@ class _AboutPageState extends State<AboutPage>
                         4,
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
-                            borderRadius:
-                                BorderRadius.circular(AppSpacing.cardRadius),
+                            color: c.card,
+                            borderRadius: BorderRadius.circular(
+                              AppSpacing.cardRadius,
+                            ),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                              color: c.glassBorder,
+                              width: 0.5,
+                            ),
                           ),
                           child: Column(
                             children: [
@@ -196,7 +210,7 @@ class _AboutPageState extends State<AboutPage>
                               _Divider(),
                               _LinkRow(
                                 icon: Icons.code_rounded,
-                                color: AppColors.textTertiary,
+                                color: c.textTertiary,
                                 title: 'Licencias de código abierto',
                               ),
                             ],
@@ -211,8 +225,9 @@ class _AboutPageState extends State<AboutPage>
                         Center(
                           child: Text(
                             'Hecho con ♥ para ti',
-                            style: AppTypography.labelS
-                                .copyWith(color: AppColors.textTertiary),
+                            style: AppTypography.labelS.copyWith(
+                              color: c.textTertiary,
+                            ),
                           ),
                         ),
                       ),
@@ -245,7 +260,9 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.md,
+      ),
       child: Row(
         children: [
           Container(
@@ -259,13 +276,17 @@ class _InfoRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(title,
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.textPrimary)),
+            child: Text(
+              title,
+              style: AppTypography.labelL.copyWith(
+                color: context.colors.textPrimary,
+              ),
+            ),
           ),
-          Text(value,
-              style: AppTypography.labelM
-                  .copyWith(color: AppColors.textTertiary)),
+          Text(
+            value,
+            style: AppTypography.labelM.copyWith(color: context.colors.textTertiary),
+          ),
         ],
       ),
     );
@@ -289,7 +310,9 @@ class _LinkRow extends StatelessWidget {
       onTap: () {},
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         child: Row(
           children: [
             Container(
@@ -303,12 +326,18 @@ class _LinkRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
-              child: Text(title,
-                  style: AppTypography.labelL
-                      .copyWith(color: AppColors.textPrimary)),
+              child: Text(
+                title,
+                style: AppTypography.labelL.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
             ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
+            Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: context.colors.textTertiary,
+            ),
           ],
         ),
       ),
@@ -321,8 +350,7 @@ class _Divider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      child: Divider(
-          height: 1, thickness: 0.5, color: AppColors.glassBorder),
+      child: Divider(height: 1, thickness: 0.5, color: context.colors.glassBorder),
     );
   }
 }
@@ -343,19 +371,21 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: context.colors.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: context.colors.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.arrow_back_ios_rounded,
+              size: 16,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(
           title,
-          style:
-              AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+          style: AppTypography.headingS.copyWith(color: context.colors.textPrimary),
         ),
       ],
     );
@@ -368,7 +398,7 @@ class _ProfileSubBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -100,
             right: -80,

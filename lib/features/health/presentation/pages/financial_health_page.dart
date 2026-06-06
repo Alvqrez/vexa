@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_health.dart';
 import '../providers/health_provider.dart';
@@ -31,8 +32,9 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
       duration: const Duration(milliseconds: 1400),
     );
     _scoreAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
-    Future.delayed(const Duration(milliseconds: 300),
-        () { if (mounted) _ctrl.forward(); });
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) _ctrl.forward();
+    });
   }
 
   @override
@@ -51,8 +53,9 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
     final savings = income - expenses;
     final color = _colorFor(health.status);
 
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           Positioned(
@@ -64,10 +67,7 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
-                  colors: [
-                    color.withValues(alpha: 0.12),
-                    Colors.transparent,
-                  ],
+                  colors: [color.withValues(alpha: 0.12), Colors.transparent],
                 ),
               ),
             ),
@@ -79,7 +79,8 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
@@ -96,20 +97,22 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                               width: 36,
                               height: 36,
                               decoration: BoxDecoration(
-                                color:
-                                    Colors.white.withValues(alpha: 0.06),
+                                color: Colors.white.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(11),
                               ),
-                              child: const Icon(Icons.arrow_back_rounded,
-                                  size: 18,
-                                  color: AppColors.textSecondary),
+                              child: Icon(
+                                Icons.arrow_back_rounded,
+                                size: 18,
+                                color: c.textSecondary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
                           Text(
                             'Salud financiera',
-                            style: AppTypography.headingM
-                                .copyWith(color: AppColors.textPrimary),
+                            style: AppTypography.headingM.copyWith(
+                              color: c.textPrimary,
+                            ),
                           ),
                         ],
                       ),
@@ -131,11 +134,14 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                             const SizedBox(height: AppSpacing.lg),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 7),
+                                horizontal: 16,
+                                vertical: 7,
+                              ),
                               decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.14),
                                 borderRadius: BorderRadius.circular(
-                                    AppSpacing.pillRadius),
+                                  AppSpacing.pillRadius,
+                                ),
                                 border: Border.all(
                                   color: color.withValues(alpha: 0.30),
                                   width: 0.5,
@@ -152,11 +158,13 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                             const SizedBox(height: AppSpacing.md),
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xl),
+                                horizontal: AppSpacing.xl,
+                              ),
                               child: Text(
                                 health.status.description,
                                 style: AppTypography.bodyS.copyWith(
-                                    color: AppColors.textSecondary),
+                                  color: c.textSecondary,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                             ),
@@ -168,8 +176,9 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                       // Monthly summary
                       Text(
                         'Este mes',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -211,8 +220,9 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                       // Score breakdown
                       Text(
                         'Desglose',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       _ScoreBreakdown(health: health),
@@ -221,16 +231,22 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
                       // Recommendations
                       Text(
                         'Recomendaciones',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      ..._recommendations(health, income, expenses, savings)
-                          .map((r) => Padding(
-                                padding: const EdgeInsets.only(
-                                    bottom: AppSpacing.md),
-                                child: _RecommendationCard(rec: r),
-                              )),
+                      ..._recommendations(
+                        health,
+                        income,
+                        expenses,
+                        savings,
+                      ).map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                          child: _RecommendationCard(rec: r),
+                        ),
+                      ),
 
                       const SizedBox(height: 120),
                     ]),
@@ -245,67 +261,81 @@ class _FinancialHealthPageState extends ConsumerState<FinancialHealthPage>
   }
 
   List<_Rec> _recommendations(
-      FinancialHealth h, double income, double expenses, double savings) {
+    FinancialHealth h,
+    double income,
+    double expenses,
+    double savings,
+  ) {
     final recs = <_Rec>[];
 
     if (savings < 0) {
-      recs.add(const _Rec(
-        icon: Icons.warning_rounded,
-        color: AppColors.negative,
-        title: 'Gastos mayores que ingresos',
-        body:
-            'Este mes estás gastando más de lo que ganas. Revisa tus egresos y elimina gastos no esenciales.',
-      ));
+      recs.add(
+        const _Rec(
+          icon: Icons.warning_rounded,
+          color: AppColors.negative,
+          title: 'Gastos mayores que ingresos',
+          body:
+              'Este mes estás gastando más de lo que ganas. Revisa tus egresos y elimina gastos no esenciales.',
+        ),
+      );
     }
 
     if (income > 0 && savings / income < 0.10) {
-      recs.add(const _Rec(
-        icon: Icons.savings_rounded,
-        color: AppColors.warning,
-        title: 'Tasa de ahorro baja',
-        body:
-            'Intentá ahorrar al menos el 20% de tus ingresos. Empieza con el 10% si aún no llegas.',
-      ));
+      recs.add(
+        const _Rec(
+          icon: Icons.savings_rounded,
+          color: AppColors.warning,
+          title: 'Tasa de ahorro baja',
+          body:
+              'Intentá ahorrar al menos el 20% de tus ingresos. Empieza con el 10% si aún no llegas.',
+        ),
+      );
     }
 
     if (h.budgetScore >= 80) {
-      recs.add(const _Rec(
-        icon: Icons.check_circle_outline_rounded,
-        color: AppColors.emerald,
-        title: 'Buen control del presupuesto',
-        body:
-            'Estás gastando dentro de tus posibilidades. Sigue así para mejorar tu score.',
-      ));
+      recs.add(
+        const _Rec(
+          icon: Icons.check_circle_outline_rounded,
+          color: AppColors.emerald,
+          title: 'Buen control del presupuesto',
+          body:
+              'Estás gastando dentro de tus posibilidades. Sigue así para mejorar tu score.',
+        ),
+      );
     }
 
     if (h.savingsScore < 50) {
-      recs.add(const _Rec(
-        icon: Icons.lightbulb_outline_rounded,
-        color: AppColors.petroleum,
-        title: 'Regla 50/30/20',
-        body:
-            'Destina el 50% a necesidades, 30% a deseos y al menos 20% al ahorro.',
-      ));
+      recs.add(
+        const _Rec(
+          icon: Icons.lightbulb_outline_rounded,
+          color: AppColors.petroleum,
+          title: 'Regla 50/30/20',
+          body:
+              'Destina el 50% a necesidades, 30% a deseos y al menos 20% al ahorro.',
+        ),
+      );
     }
 
     if (recs.isEmpty) {
-      recs.add(const _Rec(
-        icon: Icons.star_rounded,
-        color: AppColors.catEntertainment,
-        title: '¡Excelente gestión financiera!',
-        body:
-            'Tu salud financiera es óptima. Considera invertir tu excedente de ahorro.',
-      ));
+      recs.add(
+        const _Rec(
+          icon: Icons.star_rounded,
+          color: AppColors.catEntertainment,
+          title: '¡Excelente gestión financiera!',
+          body:
+              'Tu salud financiera es óptima. Considera invertir tu excedente de ahorro.',
+        ),
+      );
     }
 
     return recs;
   }
 
   Color _colorFor(HealthStatus s) => switch (s) {
-        HealthStatus.excellent => AppColors.emerald,
-        HealthStatus.regular => AppColors.warning,
-        HealthStatus.risky => AppColors.negative,
-      };
+    HealthStatus.excellent => AppColors.emerald,
+    HealthStatus.regular => AppColors.warning,
+    HealthStatus.risky => AppColors.negative,
+  };
 }
 
 // ── Big gauge ─────────────────────────────────────────────────────────────────
@@ -335,8 +365,9 @@ class _BigGauge extends StatelessWidget {
               ),
               Text(
                 'de 100',
-                style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary),
+                style: AppTypography.labelM.copyWith(
+                  color: context.colors.textTertiary,
+                ),
               ),
             ],
           ),
@@ -408,10 +439,12 @@ class _ScoreBreakdown extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+          color: Colors.white.withValues(alpha: 0.05),
+          width: 0.5,
+        ),
       ),
       child: Column(
         children: [
@@ -479,10 +512,13 @@ class _BreakdownRow extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(label,
-                      style: AppTypography.labelL.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    label,
+                    style: AppTypography.labelL.copyWith(
+                      color: context.colors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(
                     '${(value * 100).toStringAsFixed(0)} pts',
                     style: AppTypography.labelM.copyWith(color: color),
@@ -490,9 +526,12 @@ class _BreakdownRow extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 3),
-              Text(description,
-                  style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary)),
+              Text(
+                description,
+                style: AppTypography.labelS.copyWith(
+                  color: context.colors.textTertiary,
+                ),
+              ),
               const SizedBox(height: 6),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
@@ -532,21 +571,22 @@ class _MonthStat extends StatelessWidget {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: color.withValues(alpha: 0.18), width: 0.5),
+        border: Border.all(color: color.withValues(alpha: 0.18), width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 14, color: color),
           const SizedBox(height: 6),
-          Text(value,
-              style: AppTypography.headingS
-                  .copyWith(color: color, fontSize: 13)),
+          Text(
+            value,
+            style: AppTypography.headingS.copyWith(color: color, fontSize: 13),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: AppTypography.labelS
-                  .copyWith(color: AppColors.textTertiary)),
+          Text(
+            label,
+            style: AppTypography.labelS.copyWith(color: context.colors.textTertiary),
+          ),
         ],
       ),
     );
@@ -580,7 +620,9 @@ class _RecommendationCard extends StatelessWidget {
         color: rec.color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-            color: rec.color.withValues(alpha: 0.18), width: 0.5),
+          color: rec.color.withValues(alpha: 0.18),
+          width: 0.5,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,15 +641,21 @@ class _RecommendationCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rec.title,
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    )),
+                Text(
+                  rec.title,
+                  style: AppTypography.labelL.copyWith(
+                    color: context.colors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 3),
-                Text(rec.body,
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textSecondary, height: 1.5)),
+                Text(
+                  rec.body,
+                  style: AppTypography.labelS.copyWith(
+                    color: context.colors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),

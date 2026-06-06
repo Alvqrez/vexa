@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../shared/widgets/animated_number.dart';
@@ -43,6 +44,7 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final balance = ref.watch(totalBalanceProvider);
     final animated = ref.watch(animationsEnabledProvider);
 
@@ -59,10 +61,10 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.glassLight,
+                color: c.glass,
                 borderRadius: BorderRadius.circular(100),
                 border: Border.all(
-                  color: AppColors.glassBorderStrong,
+                  color: c.glassBorderStrong,
                   width: 0.5,
                 ),
               ),
@@ -81,7 +83,7 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
                   Text(
                     'BALANCE TOTAL',
                     style: AppTypography.eyebrow.copyWith(
-                      color: AppColors.textTertiary,
+                      color: c.textTertiary,
                     ),
                   ),
                 ],
@@ -92,7 +94,7 @@ class _BalanceDisplayState extends ConsumerState<BalanceDisplay>
             AnimatedNumber(
               value: balance,
               style: AppTypography.displayL.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
               ),
               showChangeBadge: true,
               animate: animated,

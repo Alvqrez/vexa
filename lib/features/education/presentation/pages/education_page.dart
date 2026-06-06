@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_tip.dart';
 import 'tip_detail_page.dart';
@@ -25,8 +26,9 @@ class _EducationPageState extends State<EducationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           Positioned(
@@ -53,7 +55,8 @@ class _EducationPageState extends State<EducationPage> {
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
@@ -73,9 +76,11 @@ class _EducationPageState extends State<EducationPage> {
                                 color: Colors.white.withValues(alpha: 0.06),
                                 borderRadius: BorderRadius.circular(11),
                               ),
-                              child: const Icon(Icons.arrow_back_rounded,
-                                  size: 18,
-                                  color: AppColors.textSecondary),
+                              child: Icon(
+                                Icons.arrow_back_rounded,
+                                size: 18,
+                                color: c.textSecondary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -84,13 +89,15 @@ class _EducationPageState extends State<EducationPage> {
                             children: [
                               Text(
                                 'Educación financiera',
-                                style: AppTypography.headingM
-                                    .copyWith(color: AppColors.textPrimary),
+                                style: AppTypography.headingM.copyWith(
+                                  color: c.textPrimary,
+                                ),
                               ),
                               Text(
                                 '${FinancialTips.all.length} consejos',
-                                style: AppTypography.labelS
-                                    .copyWith(color: AppColors.textTertiary),
+                                style: AppTypography.labelS.copyWith(
+                                  color: c.textTertiary,
+                                ),
                               ),
                             ],
                           ),
@@ -105,8 +112,9 @@ class _EducationPageState extends State<EducationPage> {
                       // Category filters
                       Text(
                         'Categorías',
-                        style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.headingS.copyWith(
+                          color: c.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.md),
                       SizedBox(
@@ -133,8 +141,8 @@ class _EducationPageState extends State<EducationPage> {
                               icon: cat.icon,
                               color: cat.color,
                               selected: _selectedCategory == cat,
-                              onTap: () => setState(
-                                  () => _selectedCategory = cat),
+                              onTap: () =>
+                                  setState(() => _selectedCategory = cat),
                             );
                           },
                         ),
@@ -144,8 +152,7 @@ class _EducationPageState extends State<EducationPage> {
                       // Tips list
                       ..._filtered.map(
                         (tip) => Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: AppSpacing.md),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.md),
                           child: _TipCard(tip: tip),
                         ),
                       ),
@@ -178,16 +185,10 @@ class _FeaturedTipCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color.withValues(alpha: 0.16),
-            AppColors.card,
-          ],
+          colors: [color.withValues(alpha: 0.16), context.colors.card],
         ),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-          color: color.withValues(alpha: 0.25),
-          width: 0.5,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.25), width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -195,12 +196,13 @@ class _FeaturedTipCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.18),
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.pillRadius),
+                  borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -219,14 +221,17 @@ class _FeaturedTipCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           Text(
             tip.title,
-            style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary),
+            style: AppTypography.headingS.copyWith(
+              color: context.colors.textPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             tip.content,
-            style: AppTypography.bodyS
-                .copyWith(color: AppColors.textSecondary, height: 1.5),
+            style: AppTypography.bodyS.copyWith(
+              color: context.colors.textSecondary,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -271,8 +276,7 @@ class _CategoryChip extends StatelessWidget {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: selected
               ? color.withValues(alpha: 0.18)
@@ -288,14 +292,17 @@ class _CategoryChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 12, color: selected ? color : AppColors.textTertiary),
+            Icon(
+              icon,
+              size: 12,
+              color: selected ? color : context.colors.textTertiary,
+            ),
             const SizedBox(width: 5),
             Text(
               label,
               style: AppTypography.labelM.copyWith(
-                color: selected ? color : AppColors.textSecondary,
-                fontWeight:
-                    selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? color : context.colors.textSecondary,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ],
@@ -322,7 +329,7 @@ class _TipCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: Border.all(
             color: Colors.white.withValues(alpha: 0.05),
@@ -349,15 +356,16 @@ class _TipCard extends StatelessWidget {
                   Text(
                     tip.title,
                     style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
+                      color: context.colors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     tip.content,
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textSecondary),
+                    style: AppTypography.labelS.copyWith(
+                      color: context.colors.textSecondary,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -368,7 +376,7 @@ class _TipCard extends StatelessWidget {
             Icon(
               Icons.chevron_right_rounded,
               size: 16,
-              color: AppColors.textTertiary,
+              color: context.colors.textTertiary,
             ),
           ],
         ),
@@ -377,8 +385,8 @@ class _TipCard extends StatelessWidget {
   }
 
   void _showDetail(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => TipDetailPage(tip: tip)),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TipDetailPage(tip: tip)));
   }
 }

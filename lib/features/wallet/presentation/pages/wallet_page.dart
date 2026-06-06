@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
@@ -113,10 +114,11 @@ class _WalletBg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             right: -80,
@@ -160,16 +162,17 @@ class _WalletHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Mi Cartera',
             style: AppTypography.headingM
-                .copyWith(color: AppColors.textPrimary)),
+                .copyWith(color: c.textPrimary)),
         const SizedBox(height: 2),
         Text('Cuentas, suscripciones y categorías',
             style: AppTypography.labelM
-                .copyWith(color: AppColors.textTertiary)),
+                .copyWith(color: c.textTertiary)),
       ],
     );
   }
@@ -182,6 +185,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final total = ref.watch(totalBalanceProvider);
     final accounts = ref.watch(accountsProvider);
     final income = ref.watch(monthlyIncomeProvider);
@@ -192,33 +196,14 @@ class _AccountsOverviewCard extends ConsumerWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.emerald.withValues(alpha: 0.06),
-              blurRadius: 60,
-              spreadRadius: -8,
-              offset: const Offset(0, 24),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          color: c.cardElevated,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,12 +216,12 @@ class _AccountsOverviewCard extends ConsumerWidget {
                   children: [
                     Text('Balance total',
                         style: AppTypography.labelM
-                            .copyWith(color: AppColors.textTertiary)),
+                            .copyWith(color: c.textTertiary)),
                     const SizedBox(height: 4),
                     Text(
                       '$currency${total.toStringAsFixed(2)}',
                       style: AppTypography.headingL
-                          .copyWith(color: AppColors.textPrimary),
+                          .copyWith(color: c.textPrimary),
                     ),
                   ],
                 ),
@@ -336,6 +321,7 @@ class _MiniKpi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
@@ -362,7 +348,7 @@ class _MiniKpi extends StatelessWidget {
               children: [
                 Text(label,
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
                 Text(value,
                     style: AppTypography.labelL.copyWith(
                         color: color, fontWeight: FontWeight.w700)),
@@ -398,7 +384,7 @@ class _SubscriptionsPreviewSection extends ConsumerWidget {
               child: Center(
                 child: Text('Sin suscripciones',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: context.colors.textTertiary)),
               ),
             )
           : Column(
@@ -419,6 +405,7 @@ class _SubsPreviewTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final currency = ref.watch(currencySymbolProvider);
     return Row(
       children: [
@@ -435,7 +422,7 @@ class _SubsPreviewTile extends ConsumerWidget {
         Expanded(
           child: Text(subscription.name,
               style:
-                  AppTypography.labelL.copyWith(color: AppColors.textPrimary)),
+                  AppTypography.labelL.copyWith(color: c.textPrimary)),
         ),
         Text('-$currency${subscription.amount.toStringAsFixed(2)}',
             style: AppTypography.labelM.copyWith(
@@ -448,7 +435,7 @@ class _SubsPreviewTile extends ConsumerWidget {
           style: AppTypography.labelS.copyWith(
             color: subscription.isDueSoon
                 ? AppColors.warning
-                : AppColors.textTertiary,
+                : c.textTertiary,
           ),
         ),
       ],
@@ -484,7 +471,7 @@ class _LoansPreviewSection extends ConsumerWidget {
               child: Center(
                 child: Text('Sin préstamos activos',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: context.colors.textTertiary)),
               ),
             )
           : Column(
@@ -492,6 +479,7 @@ class _LoansPreviewSection extends ConsumerWidget {
                 final isLent = l.type == LoanType.lentByMe;
                 final accentColor =
                     isLent ? AppColors.positive : AppColors.negative;
+                final cc = context.colors;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                   child: Row(
@@ -512,10 +500,10 @@ class _LoansPreviewSection extends ConsumerWidget {
                           children: [
                             Text(l.name,
                                 style: AppTypography.labelL
-                                    .copyWith(color: AppColors.textPrimary)),
+                                    .copyWith(color: cc.textPrimary)),
                             Text(l.type.label,
                                 style: AppTypography.labelS
-                                    .copyWith(color: AppColors.textTertiary)),
+                                    .copyWith(color: cc.textTertiary)),
                           ],
                         ),
                       ),
@@ -596,6 +584,7 @@ class _WalletSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
@@ -607,7 +596,7 @@ class _WalletSection extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -631,11 +620,11 @@ class _WalletSection extends StatelessWidget {
                     children: [
                       Text(title,
                           style: AppTypography.labelL.copyWith(
-                              color: AppColors.textPrimary,
+                              color: c.textPrimary,
                               fontWeight: FontWeight.w600)),
                       Text(subtitle,
                           style: AppTypography.labelS
-                              .copyWith(color: AppColors.textTertiary)),
+                              .copyWith(color: c.textTertiary)),
                     ],
                   ),
                 ),
@@ -645,21 +634,21 @@ class _WalletSection extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
-                      color: AppColors.glassLight,
+                      color: c.glass,
                       borderRadius:
                           BorderRadius.circular(AppSpacing.pillRadius),
                       border: Border.all(
-                          color: AppColors.glassBorder, width: 0.5),
+                          color: c.glassBorder, width: 0.5),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text('Ver todo',
                             style: AppTypography.labelS.copyWith(
-                                color: AppColors.textSecondary)),
+                                color: c.textSecondary)),
                         const SizedBox(width: 3),
-                        const Icon(Icons.arrow_forward_ios_rounded,
-                            size: 10, color: AppColors.textTertiary),
+                        Icon(Icons.arrow_forward_ios_rounded,
+                            size: 10, color: c.textTertiary),
                       ],
                     ),
                   ),
@@ -667,7 +656,7 @@ class _WalletSection extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.lg),
-            Divider(height: 1, thickness: 0.5, color: AppColors.glassBorder),
+            Divider(height: 1, thickness: 0.5, color: c.glassBorder),
             const SizedBox(height: AppSpacing.lg),
             child,
           ],
@@ -702,11 +691,12 @@ class _RecurringTransactionsCard extends ConsumerWidget {
               child: Text(
                 'Sin transacciones recurrentes. Toca "Ver todo" para agregar.',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary),
+                    .copyWith(color: context.colors.textTertiary),
               ),
             )
           : Column(
               children: preview.map((r) {
+                final cc = context.colors;
                 final cat = TransactionCategory.values.firstWhere(
                   (c) => c.name == r.category,
                   orElse: () => TransactionCategory.other,
@@ -735,11 +725,11 @@ class _RecurringTransactionsCard extends ConsumerWidget {
                           children: [
                             Text(r.merchant,
                                 style: AppTypography.labelL
-                                    .copyWith(color: AppColors.textPrimary)),
+                                    .copyWith(color: cc.textPrimary)),
                             Text(
                               '$freqShort${account != null ? ' · ${account.name}' : ''}',
                               style: AppTypography.labelS
-                                  .copyWith(color: AppColors.textTertiary),
+                                  .copyWith(color: cc.textTertiary),
                             ),
                           ],
                         ),
@@ -749,7 +739,7 @@ class _RecurringTransactionsCard extends ConsumerWidget {
                         style: AppTypography.labelL.copyWith(
                           color: isIncome
                               ? AppColors.positive
-                              : AppColors.textPrimary,
+                              : cc.textPrimary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

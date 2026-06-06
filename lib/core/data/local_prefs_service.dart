@@ -81,6 +81,12 @@ class LocalPrefsService {
     await _flush();
   }
 
+  static Future<void> remove(String key) async {
+    await _read();
+    _cache!.remove(key);
+    await _flush();
+  }
+
   static Future<void> clear() async {
     try {
       final file = await _getFile();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
@@ -11,6 +12,7 @@ class PredictionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final p = ref.watch(predictionProvider);
     final currency = ref.watch(currencySymbolProvider);
 
@@ -20,14 +22,13 @@ class PredictionCard extends ConsumerWidget {
         padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-          color: Colors.white.withValues(alpha: 0.025),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+          color: c.glass,
+          border: Border.all(color: c.glassBorder, width: 0.5),
         ),
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
           child: Row(
@@ -36,18 +37,18 @@ class PredictionCard extends ConsumerWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.glassLight,
+                  color: c.glass,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.auto_graph_rounded,
-                    size: 15, color: AppColors.textTertiary),
+                child: Icon(Icons.auto_graph_rounded,
+                    size: 15, color: c.textTertiary),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
                   'Registra ingresos y gastos para ver la predicción del mes.',
                   style: AppTypography.labelM
-                      .copyWith(color: AppColors.textSecondary),
+                      .copyWith(color: c.textSecondary),
                 ),
               ),
             ],
@@ -62,16 +63,16 @@ class PredictionCard extends ConsumerWidget {
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.025),
+        color: c.glass,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: c.glassBorder,
           width: 0.5,
         ),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -96,13 +97,13 @@ class PredictionCard extends ConsumerWidget {
                 Text(
                   'PREDICCIÓN DEL MES',
                   style: AppTypography.eyebrow
-                      .copyWith(color: AppColors.textTertiary),
+                      .copyWith(color: c.textTertiary),
                 ),
                 const Spacer(),
                 Text(
                   '${p.daysLeft} días restantes',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary),
+                      .copyWith(color: c.textTertiary),
                 ),
               ],
             ),
@@ -195,6 +196,7 @@ class _PredItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -205,7 +207,7 @@ class _PredItem extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelS
-                  .copyWith(color: AppColors.textTertiary),
+                  .copyWith(color: c.textTertiary),
             ),
           ],
         ),

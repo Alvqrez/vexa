@@ -97,6 +97,10 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   }
 
   void chargeSubscription(Subscription s) {
+    final accounts = _ref.read(accountsProvider);
+    final account = accounts.isEmpty
+        ? null
+        : accounts.firstWhere((a) => !a.isSavings, orElse: () => accounts.first);
     final transaction = Transaction(
       id: generateId(),
       merchant: s.name,
@@ -104,6 +108,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
       type: TransactionType.expense,
       category: s.category,
       date: DateTime.now(),
+      accountId: account?.id,
     );
     _ref.read(transactionsProvider.notifier).add(transaction);
 

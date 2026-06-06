@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'app_colors.dart';
 
 abstract final class AppTypography {
-  // Plus Jakarta Sans — premium geometric grotesque, not banned
+  // No color set — styles inherit from the active theme's textTheme so they
+  // work correctly in both light and dark mode. Apply .copyWith(color: …) at
+  // the call-site only when a specific color is needed.
   static TextStyle get _base => GoogleFonts.plusJakartaSans(
-        color: AppColors.textPrimary,
         letterSpacing: -0.3,
       );
 
@@ -109,14 +109,12 @@ abstract final class AppTypography {
   static TextStyle get monoL => GoogleFonts.jetBrainsMono(
         fontSize: 16,
         fontWeight: FontWeight.w500,
-        color: AppColors.textPrimary,
         letterSpacing: -0.5,
       );
 
   static TextStyle get monoS => GoogleFonts.jetBrainsMono(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        color: AppColors.textSecondary,
         letterSpacing: 0.5,
       );
 }

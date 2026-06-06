@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/confetti_overlay.dart';
 import '../../domain/models/financial_goal.dart';
@@ -76,9 +77,10 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
       orElse: () => goals.first,
     );
     final color = goal.isCompleted ? AppColors.emerald : goal.color;
+    final c = context.colors;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           Positioned(
@@ -122,8 +124,8 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                             color: Colors.white.withValues(alpha: 0.06),
                             borderRadius: BorderRadius.circular(11),
                           ),
-                          child: const Icon(Icons.arrow_back_rounded,
-                              size: 18, color: AppColors.textSecondary),
+                          child: Icon(Icons.arrow_back_rounded,
+                              size: 18, color: c.textSecondary),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xxl),
@@ -155,7 +157,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                             Text(
                               goal.title,
                               style: AppTypography.headingM
-                                  .copyWith(color: AppColors.textPrimary),
+                                  .copyWith(color: c.textPrimary),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 4),
@@ -180,7 +182,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                               Text(
                                 'Plazo: ${goal.deadlineLabel}',
                                 style: AppTypography.labelM
-                                    .copyWith(color: AppColors.textTertiary),
+                                    .copyWith(color: c.textTertiary),
                               ),
                           ],
                         ),
@@ -214,7 +216,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                                     Text(
                                       'completado',
                                       style: AppTypography.labelS.copyWith(
-                                          color: AppColors.textTertiary),
+                                          color: c.textTertiary),
                                     ),
                                   ],
                                 ),
@@ -241,7 +243,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                             child: _StatCard(
                               label: 'Objetivo',
                               value: '\$${_fmt(goal.target)}',
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               icon: Icons.flag_outlined,
                             ),
                           ),
@@ -265,11 +267,11 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                         Container(
                           padding: const EdgeInsets.all(AppSpacing.lg),
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder, width: 0.5),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -277,7 +279,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                               Text(
                                 'Falta por ahorrar',
                                 style: AppTypography.bodyM
-                                    .copyWith(color: AppColors.textSecondary),
+                                    .copyWith(color: c.textSecondary),
                               ),
                               Text(
                                 '\$${_fmt(goal.target - goal.current)}',
@@ -452,7 +454,7 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: context.colors.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
             color: Colors.white.withValues(alpha: 0.05), width: 0.5),
@@ -474,7 +476,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(label,
               style:
-                  AppTypography.labelS.copyWith(color: AppColors.textTertiary)),
+                  AppTypography.labelS.copyWith(color: context.colors.textTertiary)),
         ],
       ),
     );
@@ -515,13 +517,14 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
     final color = widget.goal.color;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
+    final c = context.colors;
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -532,7 +535,7 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -540,11 +543,11 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
           const SizedBox(height: AppSpacing.xl),
           Text('Añadir progreso',
               style: AppTypography.headingS
-                  .copyWith(color: AppColors.textPrimary)),
+                  .copyWith(color: c.textPrimary)),
           const SizedBox(height: 4),
           Text(
             '${widget.goal.title} · \$${(widget.goal.target - widget.goal.current).toStringAsFixed(0)} restantes',
-            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelM.copyWith(color: c.textTertiary),
           ),
           const SizedBox(height: AppSpacing.xl),
           Container(
@@ -559,13 +562,13 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
               autofocus: true,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+              style: AppTypography.bodyM.copyWith(color: c.textPrimary),
               decoration: InputDecoration(
                 hintText: 'Monto a agregar',
                 hintStyle: AppTypography.bodyM
-                    .copyWith(color: AppColors.textTertiary),
-                prefixIcon: const Icon(Icons.attach_money_rounded,
-                    size: 18, color: AppColors.textTertiary),
+                    .copyWith(color: c.textTertiary),
+                prefixIcon: Icon(Icons.attach_money_rounded,
+                    size: 18, color: c.textTertiary),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg, vertical: AppSpacing.md),

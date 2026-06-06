@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -167,8 +168,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
           colorScheme: ColorScheme.dark(
             primary: AppColors.emerald,
             onPrimary: Colors.white,
-            surface: AppColors.card,
-            onSurface: AppColors.textPrimary,
+            surface: ctx.colors.card,
+            onSurface: ctx.colors.textPrimary,
           ),
         ),
         child: child!,
@@ -224,7 +225,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       );
       ref.read(transactionsProvider.notifier).add(transaction);
       ref.read(streakProvider.notifier).recordTransaction();
-      ref.read(achievementsProvider.notifier).checkAndUnlock();
     }
 
     if (_selectedAccountId != null) {
@@ -265,11 +265,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               Text(
                 '$label de $amountStr ${_isEditing ? 'actualizado' : 'registrado'}',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textPrimary),
+                    .copyWith(color: context.colors.textPrimary),
               ),
             ],
           ),
-          backgroundColor: AppColors.card,
+          backgroundColor: context.colors.card,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
           margin: const EdgeInsets.fromLTRB(
@@ -291,7 +291,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: AppColors.cardElevated,
+        backgroundColor: context.colors.cardElevated,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
@@ -370,19 +370,17 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final accounts = ref.watch(accountsProvider);
     final currency = ref.watch(currencySymbolProvider);
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedAccount =
         accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
     final split = _splitDisplay;
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surface
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: c.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppSpacing.cardRadiusL),
         ),
@@ -407,9 +405,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 Text(
                   _isEditing ? 'Editar transacción' : 'Nueva transacción',
                   style: TextStyle(
-                    color: isDark
-                        ? AppColors.textSecondary
-                        : const Color(0xFF5A5A7A),
+                    color: c.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
@@ -459,11 +455,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                         width: 30,
                         height: 30,
                         decoration: BoxDecoration(
-                          color: AppColors.glassMedium,
+                          color: c.glassMedium,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.close_rounded,
-                            color: AppColors.textSecondary, size: 16),
+                        child: Icon(Icons.close_rounded,
+                            color: c.textSecondary, size: 16),
                       ),
                     ),
                   ],
@@ -497,9 +493,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                       icon: selectedAccount?.icon.iconData ??
                           Icons.account_balance_wallet_rounded,
                       label: selectedAccount?.name ?? 'Sin cuenta',
-                      color: selectedAccount?.color ?? AppColors.textTertiary,
+                      color: selectedAccount?.color ?? c.textTertiary,
                       surface:
-                          (selectedAccount?.color ?? AppColors.textTertiary)
+                          (selectedAccount?.color ?? c.textTertiary)
                               .withValues(alpha: 0.10),
                       onTap: _openAccountSheet,
                     ),
@@ -507,8 +503,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                     _CompactChip(
                       icon: Icons.calendar_today_rounded,
                       label: _dateLabel,
-                      color: AppColors.textSecondary,
-                      surface: AppColors.glassLight,
+                      color: c.textSecondary,
+                      surface: c.glass,
                       onTap: _openDatePicker,
                     ),
                   ],
@@ -579,26 +575,26 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             child: Container(
               height: 36,
               decoration: BoxDecoration(
-                color: AppColors.glassLight,
+                color: c.glass,
                 borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
                 border: Border.all(
-                    color: AppColors.glassBorder, width: 0.5),
+                    color: c.glassBorder, width: 0.5),
               ),
               child: TextField(
                 controller: _merchantCtrl,
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
+                style: TextStyle(
+                    color: c.textPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w500),
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: '¿Dónde? (opcional)',
-                  hintStyle: const TextStyle(
-                      color: AppColors.textTertiary,
+                  hintStyle: TextStyle(
+                      color: c.textTertiary,
                       fontSize: 13,
                       fontWeight: FontWeight.w400),
-                  prefixIcon: const Icon(Icons.storefront_outlined,
-                      size: 15, color: AppColors.textTertiary),
+                  prefixIcon: Icon(Icons.storefront_outlined,
+                      size: 15, color: c.textTertiary),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
@@ -622,12 +618,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.repeat_rounded,
-                            size: 14, color: AppColors.textTertiary),
+                        Icon(Icons.repeat_rounded,
+                            size: 14, color: c.textTertiary),
                         const SizedBox(width: 5),
-                        const Text('Repetir',
+                        Text('Repetir',
                             style: TextStyle(
-                                color: AppColors.textTertiary,
+                                color: c.textTertiary,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500)),
                         const Spacer(),
@@ -639,8 +635,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                 setState(() => _isRecurring = v),
                             activeThumbColor: AppColors.emerald,
                             activeTrackColor: AppColors.emeraldSurface,
-                            inactiveThumbColor: AppColors.textTertiary,
-                            inactiveTrackColor: AppColors.glassLight,
+                            inactiveThumbColor: c.textTertiary,
+                            inactiveTrackColor: c.glass,
                           ),
                         ),
                       ],
@@ -665,14 +661,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                   decoration: BoxDecoration(
                                     color: sel
                                         ? AppColors.emeraldSurface
-                                        : AppColors.glassLight,
+                                        : c.glass,
                                     borderRadius: BorderRadius.circular(
                                         AppSpacing.pillRadius),
                                     border: Border.all(
                                       color: sel
                                           ? AppColors.emerald
                                               .withValues(alpha: 0.4)
-                                          : AppColors.glassBorder,
+                                          : c.glassBorder,
                                       width: 0.5,
                                     ),
                                   ),
@@ -680,7 +676,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                                       style: TextStyle(
                                         color: sel
                                             ? AppColors.emerald
-                                            : AppColors.textTertiary,
+                                            : c.textTertiary,
                                         fontSize: 11,
                                         fontWeight: sel
                                             ? FontWeight.w600
@@ -746,6 +742,7 @@ class _DragHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: AppSpacing.md),
@@ -753,7 +750,7 @@ class _DragHandle extends StatelessWidget {
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.glassBorderStrong,
+            color: c.glassBorderStrong,
             borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           ),
         ),
@@ -821,22 +818,23 @@ class _NoteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Align(
       alignment: Alignment.centerLeft,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.add_rounded, size: 13, color: AppColors.textTertiary),
-              SizedBox(width: 3),
+              Icon(Icons.add_rounded, size: 13, color: c.textTertiary),
+              const SizedBox(width: 3),
               Text(
                 'Nota',
                 style: TextStyle(
-                  color: AppColors.textTertiary,
+                  color: c.textTertiary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -864,19 +862,20 @@ class _ExpandedNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder),
+        border: Border.all(color: c.glassBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 12, top: 11),
+          Padding(
+            padding: const EdgeInsets.only(left: 12, top: 11),
             child: Icon(Icons.notes_rounded,
-                size: 15, color: AppColors.textTertiary),
+                size: 15, color: c.textTertiary),
           ),
           Expanded(
             child: TextField(
@@ -884,25 +883,25 @@ class _ExpandedNote extends StatelessWidget {
               focusNode: focusNode,
               maxLines: 3,
               minLines: 1,
-              style: const TextStyle(
-                  color: AppColors.textPrimary, fontSize: 13),
-              decoration: const InputDecoration(
+              style: TextStyle(
+                  color: c.textPrimary, fontSize: 13),
+              decoration: InputDecoration(
                 hintText: 'Añade una nota…',
                 hintStyle:
-                    TextStyle(color: AppColors.textTertiary, fontSize: 13),
+                    TextStyle(color: c.textTertiary, fontSize: 13),
                 border: InputBorder.none,
                 contentPadding:
-                    EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 alignLabelWithHint: true,
               ),
             ),
           ),
           GestureDetector(
             onTap: onCollapse,
-            child: const Padding(
-              padding: EdgeInsets.only(right: 8, top: 8),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 8, top: 8),
               child: Icon(Icons.close_rounded,
-                  size: 15, color: AppColors.textTertiary),
+                  size: 15, color: c.textTertiary),
             ),
           ),
         ],
@@ -967,7 +966,7 @@ class _SheetItem extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? color : AppColors.textPrimary,
+                  color: isSelected ? color : context.colors.textPrimary,
                   fontSize: 15,
                   fontWeight:
                       isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -1005,12 +1004,10 @@ class _CategorySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surface
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: c.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppSpacing.cardRadiusL),
         ),
@@ -1023,8 +1020,8 @@ class _CategorySheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _DragHandle(),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenPadding,
               AppSpacing.sm,
               AppSpacing.screenPadding,
@@ -1033,7 +1030,7 @@ class _CategorySheet extends StatelessWidget {
             child: Text(
               'Categoría',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -1072,12 +1069,10 @@ class _AccountSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surface
-            : Theme.of(context).scaffoldBackgroundColor,
+        color: c.surface,
         borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppSpacing.cardRadiusL),
         ),
@@ -1090,8 +1085,8 @@ class _AccountSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const _DragHandle(),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenPadding,
               AppSpacing.sm,
               AppSpacing.screenPadding,
@@ -1100,7 +1095,7 @@ class _AccountSheet extends StatelessWidget {
             child: Text(
               'Cuenta',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),

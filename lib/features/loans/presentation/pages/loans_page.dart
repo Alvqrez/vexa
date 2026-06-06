@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/utils/id_gen.dart';
@@ -87,8 +88,9 @@ class _LoansPageState extends State<LoansPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           const _LoansBg(),
@@ -132,10 +134,11 @@ class _LoansBg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -80,
             right: -60,
@@ -180,6 +183,7 @@ class _LoansHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -188,12 +192,12 @@ class _LoansHeader extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_rounded,
-                size: 18, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_rounded,
+                size: 18, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -203,10 +207,10 @@ class _LoansHeader extends StatelessWidget {
             children: [
               Text('Préstamos',
                   style: AppTypography.headingM
-                      .copyWith(color: AppColors.textPrimary)),
+                      .copyWith(color: c.textPrimary)),
               Text('Yo presté / Pedí prestado',
                   style: AppTypography.labelM
-                      .copyWith(color: AppColors.textTertiary)),
+                      .copyWith(color: c.textTertiary)),
             ],
           ),
         ),
@@ -267,6 +271,7 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final totalLent = ref.watch(totalLentProvider);
     final totalBorrowed = ref.watch(totalBorrowedProvider);
     final lentCount = ref.watch(lentByMeProvider).length;
@@ -276,27 +281,14 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+        color: context.colors.glass,
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          color: context.colors.cardElevated,
         ),
         child: Row(
           children: [
@@ -310,6 +302,7 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
                     lent: totalLent,
                     borrowed: totalBorrowed,
                     progress: _arcAnim.value,
+                    trackColor: context.colors.glassMedium,
                   ),
                   child: Center(
                     child: Column(
@@ -318,14 +311,14 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
                         Text(
                           '\$${(totalLent - totalBorrowed).abs().toStringAsFixed(0)}',
                           style: AppTypography.headingS.copyWith(
-                            color: AppColors.textPrimary,
+                            color: c.textPrimary,
                             fontSize: 18,
                           ),
                         ),
                         Text(
                           totalLent >= totalBorrowed ? 'a cobrar' : 'a pagar',
                           style: AppTypography.eyebrow
-                              .copyWith(color: AppColors.textTertiary),
+                              .copyWith(color: c.textTertiary),
                         ),
                       ],
                     ),
@@ -389,6 +382,7 @@ class _LoanInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Container(
@@ -404,12 +398,12 @@ class _LoanInfoRow extends StatelessWidget {
         Expanded(
           child: Text(label,
               style:
-                  AppTypography.labelM.copyWith(color: AppColors.textSecondary)),
+                  AppTypography.labelM.copyWith(color: c.textSecondary)),
         ),
         if (count != null) ...[
           Text('$count',
               style: AppTypography.labelS
-                  .copyWith(color: AppColors.textTertiary)),
+                  .copyWith(color: c.textTertiary)),
           const SizedBox(width: 6),
         ],
         Text(value,
@@ -425,10 +419,12 @@ class _LoansArcPainter extends CustomPainter {
     required this.lent,
     required this.borrowed,
     required this.progress,
+    required this.trackColor,
   });
   final double lent;
   final double borrowed;
   final double progress;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -444,7 +440,7 @@ class _LoansArcPainter extends CustomPainter {
       sweepAngle,
       false,
       Paint()
-        ..color = AppColors.glassMedium
+        ..color = trackColor
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke,
     );
@@ -487,7 +483,8 @@ class _LoansArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_LoansArcPainter old) =>
-      old.progress != progress || old.lent != lent || old.borrowed != borrowed;
+      old.progress != progress || old.lent != lent || old.borrowed != borrowed ||
+      old.trackColor != trackColor;
 }
 
 // ── Loans section ─────────────────────────────────────────────────────────────
@@ -498,6 +495,7 @@ class _LoansSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final loans = type == LoanType.lentByMe
         ? ref.watch(lentByMeProvider)
         : ref.watch(borrowedByMeProvider);
@@ -522,7 +520,7 @@ class _LoansSection extends ConsumerWidget {
             Text(
               type.label,
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.4,
               ),
@@ -530,7 +528,7 @@ class _LoansSection extends ConsumerWidget {
             const SizedBox(width: 8),
             Text(
               '${loans.length}',
-              style: AppTypography.labelS.copyWith(color: AppColors.textTertiary),
+              style: AppTypography.labelS.copyWith(color: c.textTertiary),
             ),
           ],
         ),
@@ -558,6 +556,7 @@ class _SettledLoansSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final settled = ref.watch(settledLoansProvider);
     if (settled.isEmpty) return const SizedBox.shrink();
 
@@ -569,13 +568,13 @@ class _SettledLoansSection extends ConsumerWidget {
           children: [
             Text('Saldados',
                 style: AppTypography.headingS.copyWith(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.4,
                 )),
             Text('${settled.length} total',
                 style: AppTypography.labelS
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
@@ -597,10 +596,11 @@ class _LoanCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final l = loan;
     final isLent = l.type == LoanType.lentByMe;
     final accentColor = settled
-        ? AppColors.textTertiary
+        ? c.textTertiary
         : isLent
             ? AppColors.positive
             : AppColors.negative;
@@ -626,20 +626,20 @@ class _LoanCard extends ConsumerWidget {
             ? AppColors.negative.withValues(alpha: 0.04)
             : l.isDueSoon && !settled
                 ? AppColors.warning.withValues(alpha: 0.04)
-                : Colors.white.withValues(alpha: 0.02),
+                : c.glass,
         border: Border.all(
           color: l.isOverdue && !settled
               ? AppColors.negative.withValues(alpha: 0.18)
               : l.isDueSoon && !settled
                   ? AppColors.warning.withValues(alpha: 0.15)
-                  : Colors.white.withValues(alpha: 0.05),
+                  : c.glassBorder,
           width: 0.5,
         ),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -666,7 +666,7 @@ class _LoanCard extends ConsumerWidget {
                     children: [
                       Text(l.name,
                           style: AppTypography.labelL
-                              .copyWith(color: AppColors.textPrimary)),
+                              .copyWith(color: c.textPrimary)),
                       const SizedBox(height: 2),
                       Row(
                         children: [
@@ -688,8 +688,8 @@ class _LoanCard extends ConsumerWidget {
                             Container(
                               width: 3,
                               height: 3,
-                              decoration: const BoxDecoration(
-                                color: AppColors.textTertiary,
+                              decoration: BoxDecoration(
+                                color: c.textTertiary,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -701,7 +701,7 @@ class _LoanCard extends ConsumerWidget {
                                     ? AppColors.negative
                                     : l.isDueSoon && !settled
                                         ? AppColors.warning
-                                        : AppColors.textTertiary,
+                                        : c.textTertiary,
                               ),
                             ),
                           ],
@@ -723,7 +723,7 @@ class _LoanCard extends ConsumerWidget {
                     Text(
                       'de \$${l.amount.toStringAsFixed(2)}',
                       style: AppTypography.labelS
-                          .copyWith(color: AppColors.textTertiary),
+                          .copyWith(color: c.textTertiary),
                     ),
                   ],
                 ),
@@ -770,6 +770,7 @@ class _LoanMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -798,7 +799,7 @@ class _LoanMenu extends ConsumerWidget {
                 );
               }
             },
-            onDelete: () => ref.read(loansProvider.notifier).delete(loan.id),
+            onDelete: () => ref.read(loansProvider.notifier).delete(loan.id), // async — fire-and-forget is fine here
           ),
         );
       },
@@ -806,11 +807,11 @@ class _LoanMenu extends ConsumerWidget {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: c.glass,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: const Icon(Icons.more_vert_rounded,
-            size: 14, color: AppColors.textSecondary),
+        child: Icon(Icons.more_vert_rounded,
+            size: 14, color: c.textSecondary),
       ),
     );
   }
@@ -832,13 +833,14 @@ class _LoanActionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -849,7 +851,7 @@ class _LoanActionSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -871,11 +873,11 @@ class _LoanActionSheet extends StatelessWidget {
                 children: [
                   Text(loan.name,
                       style: AppTypography.headingS
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: c.textPrimary)),
                   Text(
                       '${loan.type.label} · \$${loan.remainingAmount.toStringAsFixed(2)} pendiente',
                       style: AppTypography.labelM
-                          .copyWith(color: AppColors.textTertiary)),
+                          .copyWith(color: c.textTertiary)),
                 ],
               ),
             ],
@@ -1002,6 +1004,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final l = widget.loan;
     final isLent = l.type == LoanType.lentByMe;
@@ -1010,10 +1013,10 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1025,29 +1028,28 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
           ),
           Text(l.type.actionLabel,
               style:
-                  AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
+                  AppTypography.headingS.copyWith(color: c.textPrimary)),
           const SizedBox(height: 4),
           Text(
             '${l.name} · pendiente \$${l.remainingAmount.toStringAsFixed(2)}',
-            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+            style: AppTypography.labelM.copyWith(color: c.textTertiary),
           ),
           const SizedBox(height: AppSpacing.xxl),
           Text('Monto abonado',
-              style: AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
+              style: AppTypography.labelM.copyWith(color: c.textTertiary)),
           const SizedBox(height: AppSpacing.sm),
           Container(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.04),
+              color: c.glass,
               borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-              border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
             child: TextField(
               controller: _amountCtrl,
@@ -1055,13 +1057,13 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               style:
-                  AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+                  AppTypography.bodyM.copyWith(color: c.textPrimary),
               decoration: InputDecoration(
                 hintText: 'ej. ${l.remainingAmount.toStringAsFixed(2)}',
                 hintStyle: AppTypography.bodyM
-                    .copyWith(color: AppColors.textTertiary),
-                prefixIcon: const Icon(Icons.attach_money_rounded,
-                    size: 18, color: AppColors.textTertiary),
+                    .copyWith(color: c.textTertiary),
+                prefixIcon: Icon(Icons.attach_money_rounded,
+                    size: 18, color: c.textTertiary),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -1253,16 +1255,17 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final isEdit = widget.existing != null;
 
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
+      decoration: BoxDecoration(
+        color: c.card,
         borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1275,20 +1278,20 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text(isEdit ? 'Editar préstamo' : 'Nuevo préstamo',
                 style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+                    .copyWith(color: c.textPrimary)),
             const SizedBox(height: AppSpacing.xxl),
 
             // Type selector
             Text('Tipo',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             Row(
               children: LoanType.values.map((t) {
@@ -1311,13 +1314,13 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                         decoration: BoxDecoration(
                           color: active
                               ? tColor.withValues(alpha: 0.12)
-                              : Colors.white.withValues(alpha: 0.04),
+                              : c.glass,
                           borderRadius: BorderRadius.circular(
                               AppSpacing.cardRadius),
                           border: Border.all(
                             color: active
                                 ? tColor.withValues(alpha: 0.4)
-                                : Colors.white.withValues(alpha: 0.08),
+                                : c.glassBorder,
                           ),
                         ),
                         child: Column(
@@ -1327,14 +1330,14 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                                   ? Icons.arrow_upward_rounded
                                   : Icons.arrow_downward_rounded,
                               size: 18,
-                              color: active ? tColor : AppColors.textTertiary,
+                              color: active ? tColor : c.textTertiary,
                             ),
                             const SizedBox(height: 4),
                             Text(t.label,
                                 style: AppTypography.labelM.copyWith(
                                   color: active
                                       ? tColor
-                                      : AppColors.textTertiary,
+                                      : c.textTertiary,
                                   fontWeight: active
                                       ? FontWeight.w600
                                       : FontWeight.w400,
@@ -1352,7 +1355,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             // Name
             Text('Nombre / Contacto',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
                 controller: _nameCtrl,
@@ -1364,7 +1367,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             // Amount
             Text('Monto total',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
                 controller: _amountCtrl,
@@ -1377,7 +1380,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             // Due date
             Text('Fecha límite (opcional)',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             GestureDetector(
               onTap: () async {
@@ -1391,11 +1394,11 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                   lastDate: DateTime(now.year + 10),
                   builder: (ctx, child) => Theme(
                     data: Theme.of(ctx).copyWith(
-                      colorScheme: const ColorScheme.dark(
-                        primary: Color(0xFF6366F1),
+                      colorScheme: ColorScheme.dark(
+                        primary: const Color(0xFF6366F1),
                         onPrimary: Colors.white,
-                        surface: AppColors.card,
-                        onSurface: AppColors.textPrimary,
+                        surface: ctx.colors.card,
+                        onSurface: ctx.colors.textPrimary,
                       ),
                     ),
                     child: child!,
@@ -1407,16 +1410,16 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                 padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                  color: c.glass,
                   borderRadius:
                       BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                      color: c.glassBorder, width: 0.5),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(Icons.calendar_today_rounded,
+                        size: 16, color: c.textTertiary),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
@@ -1425,19 +1428,19 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                             : 'Sin fecha límite',
                         style: AppTypography.labelL.copyWith(
                             color: _dueDate != null
-                                ? AppColors.textPrimary
-                                : AppColors.textTertiary),
+                                ? c.textPrimary
+                                : c.textTertiary),
                       ),
                     ),
                     if (_dueDate != null)
                       GestureDetector(
                         onTap: () => setState(() => _dueDate = null),
-                        child: const Icon(Icons.close_rounded,
-                            size: 14, color: AppColors.textTertiary),
+                        child: Icon(Icons.close_rounded,
+                            size: 14, color: c.textTertiary),
                       )
                     else
-                      const Icon(Icons.chevron_right_rounded,
-                          size: 16, color: AppColors.textTertiary),
+                      Icon(Icons.chevron_right_rounded,
+                          size: 16, color: c.textTertiary),
                   ],
                 ),
               ),
@@ -1454,7 +1457,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             // Icon
             Text('Icono',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             _IconPicker(
                 icons: _iconOptions,
@@ -1466,12 +1469,12 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             // Color
             Text('Color',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary)),
+                    .copyWith(color: c.textTertiary)),
             const SizedBox(height: AppSpacing.sm),
             _ColorPicker(
                 colors: _colorOptions,
                 selected: _color,
-                onChanged: (c) => setState(() => _color = c)),
+                onChanged: (col) => setState(() => _color = col)),
             const SizedBox(height: AppSpacing.xxl),
 
             SizedBox(
@@ -1531,22 +1534,22 @@ class _SheetTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         autofocus: autofocus,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: c.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
+          prefixIcon: Icon(icon, size: 18, color: c.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -1570,6 +1573,7 @@ class _IconPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
@@ -1587,17 +1591,17 @@ class _IconPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSel
                   ? color.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.04),
+                  : c.glass,
               borderRadius: BorderRadius.circular(13),
               border: Border.all(
                 color: isSel
                     ? color.withValues(alpha: 0.5)
-                    : Colors.white.withValues(alpha: 0.06),
+                    : c.glassBorder,
                 width: isSel ? 1.5 : 1,
               ),
             ),
             child: Icon(ic,
-                size: 20, color: isSel ? color : AppColors.textTertiary),
+                size: 20, color: isSel ? color : c.textTertiary),
           ),
         );
       }).toList(),
@@ -1620,26 +1624,26 @@ class _ColorPicker extends StatelessWidget {
     return Wrap(
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
-      children: colors.map((c) {
-        final isSel = c.toARGB32() == selected.toARGB32();
+      children: colors.map((col) {
+        final isSel = col.toARGB32() == selected.toARGB32();
         return GestureDetector(
           onTap: () {
             HapticFeedback.selectionClick();
-            onChanged(c);
+            onChanged(col);
           },
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: c,
+              color: col,
               shape: BoxShape.circle,
               border: Border.all(
                   color: isSel ? Colors.white : Colors.transparent, width: 2.5),
               boxShadow: isSel
                   ? [
                       BoxShadow(
-                          color: c.withValues(alpha: 0.5),
+                          color: col.withValues(alpha: 0.5),
                           blurRadius: 10,
                           spreadRadius: -2)
                     ]
@@ -1662,15 +1666,15 @@ class _LoansOnboardingDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xxl),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+          border: Border.all(color: c.glassBorder, width: 0.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.3),
@@ -1698,7 +1702,7 @@ class _LoansOnboardingDialog extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             Text('Cómo funcionan los préstamos',
                 style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary),
+                    .copyWith(color: c.textPrimary),
                 textAlign: TextAlign.center),
             const SizedBox(height: AppSpacing.xl),
             _OnboardingRow(
@@ -1779,6 +1783,7 @@ class _OnboardingRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1798,12 +1803,12 @@ class _OnboardingRow extends StatelessWidget {
             children: [
               Text(title,
                   style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 3),
               Text(description,
                   style: AppTypography.labelM
-                      .copyWith(color: AppColors.textSecondary)),
+                      .copyWith(color: c.textSecondary)),
             ],
           ),
         ),
@@ -1824,6 +1829,7 @@ class _AccountPicker extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final accounts = ref.watch(accountsProvider);
     if (accounts.isEmpty) return const SizedBox.shrink();
 
@@ -1832,7 +1838,7 @@ class _AccountPicker extends ConsumerWidget {
       children: [
         Text('Cuenta',
             style:
-                AppTypography.labelM.copyWith(color: AppColors.textTertiary)),
+                AppTypography.labelM.copyWith(color: c.textTertiary)),
         const SizedBox(height: AppSpacing.sm),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -1840,7 +1846,7 @@ class _AccountPicker extends ConsumerWidget {
             children: [
               _AccountChip(
                 label: 'Sin cuenta',
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
                 isSelected: selectedId == null,
                 onTap: () => onChanged(null),
               ),
@@ -1876,6 +1882,7 @@ class _AccountChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -1888,12 +1895,12 @@ class _AccountChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected
               ? color.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.04),
+              : c.glass,
           borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           border: Border.all(
             color: isSelected
                 ? color.withValues(alpha: 0.4)
-                : Colors.white.withValues(alpha: 0.08),
+                : c.glassBorder,
           ),
         ),
         child: Row(
@@ -1908,7 +1915,7 @@ class _AccountChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(label,
                 style: AppTypography.labelM.copyWith(
-                  color: isSelected ? color : AppColors.textTertiary,
+                  color: isSelected ? color : c.textTertiary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 )),
           ],
@@ -1926,17 +1933,18 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.glassLight,
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Center(
         child: Text(message,
             style:
-                AppTypography.labelM.copyWith(color: AppColors.textTertiary),
+                AppTypography.labelM.copyWith(color: c.textTertiary),
             textAlign: TextAlign.center),
       ),
     );

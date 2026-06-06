@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/vexa_colors_ext.dart';
 import '../../core/theme/app_typography.dart';
 
 class FabAction {
@@ -274,29 +275,32 @@ class _ActionButtonState extends State<_ActionButton>
           mainAxisSize: MainAxisSize.min,
           children: [
             // Label
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                    color: a.color.withValues(alpha: 0.20), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.30),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Text(
-                a.label,
-                style: AppTypography.labelM.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500,
+            Builder(builder: (ctx) {
+              final c = ctx.colors;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: c.cardElevated,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: a.color.withValues(alpha: 0.20), width: 0.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.30),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-              ),
-            ),
+                child: Text(
+                  a.label,
+                  style: AppTypography.labelM.copyWith(
+                    color: c.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            }),
             const SizedBox(width: 10),
             // Icon button
             Container(

@@ -76,15 +76,20 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
     if (!mounted) return;
     final onboardingDone = await LocalPrefsService.getBool('onboarding_done');
     final savedSymbol = await LocalPrefsService.getString('currency_symbol');
+    final savedCode = await LocalPrefsService.getString('currency_code');
+    final savedTheme = await loadThemeMode();
+    final savedAnimations = await LocalPrefsService.getBool('settings_animations', defaultValue: true);
+    final savedHideAmounts = await LocalPrefsService.getBool('settings_hide_amounts', defaultValue: false);
     if (!mounted) return;
     if (savedSymbol != null) {
       ref.read(currencySymbolProvider.notifier).state = savedSymbol;
     }
-    final savedCode = await LocalPrefsService.getString('currency_code');
-    if (!mounted) return;
     if (savedCode != null) {
       ref.read(currencyCodeProvider.notifier).state = savedCode;
     }
+    ref.read(themeModeProvider.notifier).state = savedTheme;
+    ref.read(animationsEnabledProvider.notifier).state = savedAnimations;
+    ref.read(hideAmountsProvider.notifier).state = savedHideAmounts;
     Widget destination;
     if (!onboardingDone) {
       destination = const OnboardingPage();

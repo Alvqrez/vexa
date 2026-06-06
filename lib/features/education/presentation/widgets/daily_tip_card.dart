@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/financial_tip.dart';
 import '../pages/tip_detail_page.dart';
@@ -12,6 +12,7 @@ class DailyTipCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final tip = FinancialTips.daily;
     final color = tip.category.color;
 
@@ -25,10 +26,7 @@ class DailyTipCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(
-            color: color.withValues(alpha: 0.20),
-            width: 0.5,
-          ),
+          border: Border.all(color: color.withValues(alpha: 0.20), width: 0.5),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,16 +54,18 @@ class DailyTipCard extends ConsumerWidget {
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: color.withValues(alpha: 0.12),
-                          borderRadius:
-                              BorderRadius.circular(AppSpacing.pillRadius),
+                          borderRadius: BorderRadius.circular(
+                            AppSpacing.pillRadius,
+                          ),
                         ),
                         child: Text(
                           tip.category.label,
-                          style:
-                              AppTypography.labelS.copyWith(color: color),
+                          style: AppTypography.labelS.copyWith(color: color),
                         ),
                       ),
                     ],
@@ -74,15 +74,16 @@ class DailyTipCard extends ConsumerWidget {
                   Text(
                     tip.title,
                     style: AppTypography.labelL.copyWith(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     tip.content,
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textSecondary),
+                    style: AppTypography.labelS.copyWith(
+                      color: c.textSecondary,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -96,7 +97,8 @@ class DailyTipCard extends ConsumerWidget {
   }
 
   void _showFullTip(BuildContext context, FinancialTip tip) {
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => TipDetailPage(tip: tip)));
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TipDetailPage(tip: tip)));
   }
 }

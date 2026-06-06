@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/vexa_empty_state.dart';
 import '../providers/home_provider.dart';
@@ -13,6 +14,7 @@ class TransactionsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final transactions = ref.watch(filteredTransactionsProvider);
     final visible = transactions.take(5).toList();
 
@@ -25,7 +27,7 @@ class TransactionsSection extends ConsumerWidget {
             Text(
               'Recientes',
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
               ),
             ),
             GestureDetector(
@@ -56,16 +58,16 @@ class TransactionsSection extends ConsumerWidget {
         // List container
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
           ),
           child: visible.isEmpty
-              ? const VexaEmptyState(
+              ? VexaEmptyState(
                   icon: Icons.receipt_long_rounded,
                   title: 'Sin movimientos',
                   body: 'Registra tu primer gasto\no ingreso con el botón +.',
-                  iconColor: AppColors.textTertiary,
+                  iconColor: c.textTertiary,
                 )
               : Column(
                   children: [
@@ -82,7 +84,7 @@ class TransactionsSection extends ConsumerWidget {
                           child: Divider(
                             height: 1,
                             thickness: 0.5,
-                            color: AppColors.glassBorder,
+                            color: c.glassBorder,
                           ),
                         ),
                     ],

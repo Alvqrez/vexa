@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -79,8 +80,9 @@ class _HelpCenterPageState extends State<HelpCenterPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -104,11 +106,11 @@ class _HelpCenterPageState extends State<HelpCenterPage>
                         2,
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.card,
+                            color: c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: AppColors.glassBorder, width: 0.5),
+                                color: c.glassBorder, width: 0.5),
                           ),
                           child: Column(
                             children: [
@@ -126,7 +128,7 @@ class _HelpCenterPageState extends State<HelpCenterPage>
                                     child: Divider(
                                         height: 1,
                                         thickness: 0.5,
-                                        color: AppColors.glassBorder),
+                                        color: c.glassBorder),
                                   ),
                               ],
                             ],
@@ -218,13 +220,13 @@ class _FaqTile extends StatelessWidget {
                 Expanded(
                   child: Text(faq.q,
                       style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: context.colors.textPrimary)),
                 ),
                 AnimatedRotation(
                   turns: expanded ? 0.5 : 0,
                   duration: const Duration(milliseconds: 200),
-                  child: const Icon(Icons.expand_more_rounded,
-                      size: 18, color: AppColors.textTertiary),
+                  child: Icon(Icons.expand_more_rounded,
+                      size: 18, color: context.colors.textTertiary),
                 ),
               ],
             ),
@@ -234,7 +236,7 @@ class _FaqTile extends StatelessWidget {
                 padding: const EdgeInsets.only(top: AppSpacing.sm),
                 child: Text(faq.a,
                     style: AppTypography.bodyS
-                        .copyWith(color: AppColors.textSecondary)),
+                        .copyWith(color: context.colors.textSecondary)),
               ),
               crossFadeState: expanded
                   ? CrossFadeState.showSecond
@@ -256,6 +258,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -264,19 +267,19 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(
           title,
           style:
-              AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+              AppTypography.headingS.copyWith(color: c.textPrimary),
         ),
       ],
     );
@@ -289,7 +292,7 @@ class _ProfileSubBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -100,
             right: -80,

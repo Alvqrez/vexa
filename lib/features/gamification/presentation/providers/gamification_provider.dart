@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/streak.dart';
-import '../../domain/models/achievement.dart';
-import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
 
 // ── Streak ────────────────────────────────────────────────────────────────────
@@ -75,86 +73,3 @@ class StreakNotifier extends StateNotifier<Streak> {
 final streakProvider = StateNotifierProvider<StreakNotifier, Streak>(
   (ref) => StreakNotifier(),
 );
-
-// ── Achievements ──────────────────────────────────────────────────────────────
-
-class AchievementsNotifier extends StateNotifier<List<Achievement>> {
-  AchievementsNotifier(this.ref) : super(Achievements.all) {
-    _load();
-  }
-
-  final Ref ref;
-
-  static const _key = 'achievements_unlocked';
-
-  Future<void> _load() async {
-    final raw = await LocalPrefsService.getString(_key);
-    if (raw == null || raw.isEmpty) return;
-    final ids = raw.split(',').toSet();
-    state = state.map((a) => ids.contains(a.id) ? a.unlock() : a).toList();
-  }
-
-  Future<void> _save() async {
-    final ids = state.where((a) => a.isUnlocked).map((a) => a.id).join(',');
-    await LocalPrefsService.setString(_key, ids);
-  }
-
-  void checkAndUnlock() {
-    final transactions = ref.read(transactionsProvider);
-    final streak = ref.read(streakProvider);
-
-    final updates = <Achievement>[];
-    bool changed = false;
-
-    for (final a in state) {
-      if (a.isUnlocked) {
-        updates.add(a);
-        continue;
-      }
-
-      final shouldUnlock = switch (a.id) {
-        'first_transaction' => transactions.isNotEmpty,
-        'five_transactions' => transactions.length >= 5,
-        'twenty_transactions' => transactions.length >= 20,
-        'streak_7' => streak.currentStreak >= 7,
-        'streak_30' => streak.currentStreak >= 30,
-        _ => false,
-      };
-
-      if (shouldUnlock) changed = true;
-      updates.add(shouldUnlock ? a.unlock() : a);
-    }
-
-    state = updates;
-    if (changed) _save();
-  }
-
-  void unlockById(String id) {
-    state = state.map((a) => a.id == id ? a.unlock() : a).toList();
-    _save();
-  }
-
-  Future<void> reset() async {
-    state = Achievements.all;
-    await LocalPrefsService.setString(_key, '');
-  }
-}
-
-final achievementsProvider =
-    StateNotifierProvider<AchievementsNotifier, List<Achievement>>(
-  (ref) => AchievementsNotifier(ref),
-);
-
-final unlockedAchievementsProvider = Provider<List<Achievement>>((ref) {
-  return ref.watch(achievementsProvider).where((a) => a.isUnlocked).toList();
-});
-
-final lockedAchievementsProvider = Provider<List<Achievement>>((ref) {
-  return ref.watch(achievementsProvider).where((a) => !a.isUnlocked).toList();
-});
-
-final totalXpProvider = Provider<int>((ref) {
-  return ref
-      .watch(unlockedAchievementsProvider)
-      .fold(0, (sum, a) => sum + a.xpReward);
-});

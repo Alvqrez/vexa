@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -89,8 +90,9 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -202,7 +204,7 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
                               ),
                               _NotifItem(
                                 icon: Icons.campaign_outlined,
-                                color: AppColors.textTertiary,
+                                color: c.textTertiary,
                                 title: 'Ofertas y novedades',
                                 subtitle: 'Noticias y promociones de Vexa.',
                                 value: _marketing,
@@ -251,6 +253,7 @@ class _NotifSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -259,16 +262,16 @@ class _NotifSection extends StatelessWidget {
           child: Text(
             title,
             style: AppTypography.labelL.copyWith(
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
           ),
           child: Column(
             children: [
@@ -281,7 +284,7 @@ class _NotifSection extends StatelessWidget {
                     child: Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: AppColors.glassBorder),
+                        color: c.glassBorder),
                   ),
               ],
             ],
@@ -298,6 +301,7 @@ class _NotifRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -319,11 +323,11 @@ class _NotifRow extends StatelessWidget {
               children: [
                 Text(item.title,
                     style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: c.textPrimary)),
                 const SizedBox(height: 2),
                 Text(item.subtitle,
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ],
             ),
           ),
@@ -333,8 +337,8 @@ class _NotifRow extends StatelessWidget {
             onChanged: item.onChanged,
             activeThumbColor: AppColors.emerald,
             activeTrackColor: AppColors.emeraldSurface,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.glassLight,
+            inactiveThumbColor: c.textTertiary,
+            inactiveTrackColor: c.glass,
           ),
         ],
       ),
@@ -364,6 +368,7 @@ class _IntelligenceSectionState extends State<_IntelligenceSection> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -372,16 +377,16 @@ class _IntelligenceSectionState extends State<_IntelligenceSection> {
           child: Text(
             'Inteligencia financiera',
             style: AppTypography.labelL.copyWith(
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
           ),
           child: Column(
             children: [
@@ -434,6 +439,7 @@ class _IntelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       children: [
         Padding(
@@ -457,11 +463,11 @@ class _IntelRow extends StatelessWidget {
                   children: [
                     Text(title,
                         style: AppTypography.labelL
-                            .copyWith(color: AppColors.textPrimary)),
+                            .copyWith(color: c.textPrimary)),
                     const SizedBox(height: 2),
                     Text(subtitle,
                         style: AppTypography.labelS
-                            .copyWith(color: AppColors.textTertiary)),
+                            .copyWith(color: c.textTertiary)),
                   ],
                 ),
               ),
@@ -472,8 +478,8 @@ class _IntelRow extends StatelessWidget {
                   child: AnimatedRotation(
                     turns: expanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
-                    child: const Icon(Icons.expand_more_rounded,
-                        size: 18, color: AppColors.textTertiary),
+                    child: Icon(Icons.expand_more_rounded,
+                        size: 18, color: c.textTertiary),
                   ),
                 ),
               ),
@@ -482,8 +488,8 @@ class _IntelRow extends StatelessWidget {
                 onChanged: onChanged,
                 activeThumbColor: AppColors.emerald,
                 activeTrackColor: AppColors.emeraldSurface,
-                inactiveThumbColor: AppColors.textTertiary,
-                inactiveTrackColor: AppColors.glassLight,
+                inactiveThumbColor: c.textTertiary,
+                inactiveTrackColor: c.glass,
               ),
             ],
           ),
@@ -511,6 +517,7 @@ class _PredictionDetail extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final currency = ref.watch(currencySymbolProvider);
     final color =
         prediction.isOnTrack ? AppColors.emerald : AppColors.negative;
@@ -530,7 +537,7 @@ class _PredictionDetail extends ConsumerWidget {
             children: [
               Text('Gasto estimado',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary)),
+                      .copyWith(color: c.textTertiary)),
               Text('$currency${prediction.predictedExpenses.toStringAsFixed(0)}',
                   style: AppTypography.labelL
                       .copyWith(color: AppColors.negative)),
@@ -542,7 +549,7 @@ class _PredictionDetail extends ConsumerWidget {
             children: [
               Text(prediction.predictedIncome > 0 ? 'Neto estimado' : 'Gasto diario',
                   style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary)),
+                      .copyWith(color: c.textTertiary)),
               Text(
                 prediction.predictedIncome > 0
                     ? (prediction.predictedSavings >= 0
@@ -577,6 +584,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -585,19 +593,19 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(
           title,
           style:
-              AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+              AppTypography.headingS.copyWith(color: c.textPrimary),
         ),
       ],
     );
@@ -607,10 +615,11 @@ class _SubPageHeader extends StatelessWidget {
 class _ProfileSubBg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             right: -80,

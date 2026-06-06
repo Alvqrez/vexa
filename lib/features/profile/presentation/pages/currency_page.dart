@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
@@ -81,8 +82,9 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _ProfileSubBg(),
@@ -104,17 +106,17 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
                         child: Text(
                           'Elige la moneda principal para mostrar tus cifras.',
                           style: AppTypography.bodyS
-                              .copyWith(color: AppColors.textTertiary),
+                              .copyWith(color: c.textTertiary),
                         ),
                       )),
                       const SizedBox(height: AppSpacing.xl),
                       _reveal(2, 3, Container(
                         decoration: BoxDecoration(
-                          color: AppColors.card,
+                          color: c.card,
                           borderRadius:
                               BorderRadius.circular(AppSpacing.cardRadius),
                           border: Border.all(
-                              color: AppColors.glassBorder, width: 0.5),
+                              color: c.glassBorder, width: 0.5),
                         ),
                         child: Column(
                           children: [
@@ -137,7 +139,7 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
                                   child: Divider(
                                       height: 1,
                                       thickness: 0.5,
-                                      color: AppColors.glassBorder),
+                                      color: c.glassBorder),
                                 ),
                             ],
                           ],
@@ -176,6 +178,7 @@ class _CurrencyItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -190,12 +193,12 @@ class _CurrencyItem extends StatelessWidget {
               decoration: BoxDecoration(
                 color: selected
                     ? AppColors.emeraldSurface
-                    : AppColors.glassLight,
+                    : c.glass,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: selected
                       ? AppColors.emeraldGlow
-                      : AppColors.glassBorder,
+                      : c.glassBorder,
                   width: 0.5,
                 ),
               ),
@@ -205,7 +208,7 @@ class _CurrencyItem extends StatelessWidget {
                   style: AppTypography.headingS.copyWith(
                     color: selected
                         ? AppColors.emerald
-                        : AppColors.textSecondary,
+                        : c.textSecondary,
                     fontSize: 16,
                   ),
                 ),
@@ -219,13 +222,13 @@ class _CurrencyItem extends StatelessWidget {
                   Text(
                     currency.name,
                     style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary),
+                        .copyWith(color: c.textPrimary),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     '${currency.code} · ${currency.region}',
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary),
+                        .copyWith(color: c.textTertiary),
                   ),
                 ],
               ),
@@ -258,6 +261,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -266,12 +270,12 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -279,7 +283,7 @@ class _SubPageHeader extends StatelessWidget {
           child: Text(
             title,
             style:
-                AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+                AppTypography.headingS.copyWith(color: c.textPrimary),
           ),
         ),
       ],
@@ -290,10 +294,11 @@ class _SubPageHeader extends StatelessWidget {
 class _ProfileSubBg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             right: -80,

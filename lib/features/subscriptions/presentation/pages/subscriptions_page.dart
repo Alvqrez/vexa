@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/subscription.dart';
@@ -49,10 +50,12 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
       ),
       child: SlideTransition(
         position: Tween<Offset>(begin: const Offset(0, 0.10), end: Offset.zero)
-            .animate(CurvedAnimation(
-          parent: _stagger,
-          curve: Interval(start, end, curve: AppCurves.spring),
-        )),
+            .animate(
+              CurvedAnimation(
+                parent: _stagger,
+                curve: Interval(start, end, curve: AppCurves.spring),
+              ),
+            ),
         child: child,
       ),
     );
@@ -70,7 +73,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: Stack(
         children: [
           const _SubsBg(),
@@ -80,11 +83,15 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.screenPadding),
+                    horizontal: AppSpacing.screenPadding,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
-                      _reveal(0, _SubsHeader(onAdd: () => _showAddSheet(context))),
+                      _reveal(
+                        0,
+                        _SubsHeader(onAdd: () => _showAddSheet(context)),
+                      ),
                       const SizedBox(height: AppSpacing.xxl),
                       _reveal(1, const _MonthlyTotalCard()),
                       const SizedBox(height: AppSpacing.xl),
@@ -114,7 +121,7 @@ class _SubsBg extends StatelessWidget {
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: context.colors.background),
           Positioned(
             top: -80,
             right: -60,
@@ -171,12 +178,15 @@ class _SubsHeader extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: context.colors.glass,
               borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: context.colors.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_rounded,
-                size: 18, color: AppColors.textSecondary),
+            child: Icon(
+              Icons.arrow_back_rounded,
+              size: 18,
+              color: context.colors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -184,12 +194,18 @@ class _SubsHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Suscripciones',
-                  style: AppTypography.headingM
-                      .copyWith(color: AppColors.textPrimary)),
-              Text('Pagos recurrentes',
-                  style: AppTypography.labelM
-                      .copyWith(color: AppColors.textTertiary)),
+              Text(
+                'Suscripciones',
+                style: AppTypography.headingM.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+              ),
+              Text(
+                'Pagos recurrentes',
+                style: AppTypography.labelM.copyWith(
+                  color: context.colors.textTertiary,
+                ),
+              ),
             ],
           ),
         ),
@@ -205,10 +221,15 @@ class _SubsHeader extends StatelessWidget {
               color: AppColors.emeraldSurface,
               borderRadius: BorderRadius.circular(11),
               border: Border.all(
-                  color: AppColors.emerald.withValues(alpha: 0.3), width: 0.5),
+                color: AppColors.emerald.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
             ),
-            child: const Icon(Icons.add_rounded,
-                size: 18, color: AppColors.emerald),
+            child: const Icon(
+              Icons.add_rounded,
+              size: 18,
+              color: AppColors.emerald,
+            ),
           ),
         ),
       ],
@@ -234,7 +255,9 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
   void initState() {
     super.initState();
     _arc = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400));
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    );
     _arcAnim = CurvedAnimation(parent: _arc, curve: AppCurves.spring);
     Future.delayed(const Duration(milliseconds: 300), () {
       if (mounted) _arc.forward();
@@ -257,27 +280,14 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border:
-            Border.all(color: Colors.white.withValues(alpha: 0.05), width: 0.5),
+        color: context.colors.glass,
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [Color(0xFF1C1C32), Color(0xFF141428), Color(0xFF0F0F1E)],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          color: context.colors.cardElevated,
         ),
         child: Row(
           children: [
@@ -287,7 +297,10 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
                 width: 110,
                 height: 110,
                 child: CustomPaint(
-                  painter: _SubsArcPainter(progress: _arcAnim.value),
+                  painter: _SubsArcPainter(
+                    progress: _arcAnim.value,
+                    trackColor: context.colors.glassMedium,
+                  ),
                   child: Center(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -295,14 +308,15 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
                         Text(
                           '\$${total.toStringAsFixed(0)}',
                           style: AppTypography.headingS.copyWith(
-                            color: AppColors.textPrimary,
+                            color: context.colors.textPrimary,
                             fontSize: 18,
                           ),
                         ),
                         Text(
                           '/mes',
-                          style: AppTypography.eyebrow
-                              .copyWith(color: AppColors.textTertiary),
+                          style: AppTypography.eyebrow.copyWith(
+                            color: context.colors.textTertiary,
+                          ),
                         ),
                       ],
                     ),
@@ -346,11 +360,12 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
 }
 
 class _SubsInfoRow extends StatelessWidget {
-  const _SubsInfoRow(
-      {required this.icon,
-      required this.label,
-      required this.value,
-      required this.color});
+  const _SubsInfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final IconData icon;
   final String label;
   final String value;
@@ -371,21 +386,29 @@ class _SubsInfoRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(label,
-              style:
-                  AppTypography.labelM.copyWith(color: AppColors.textSecondary)),
+          child: Text(
+            label,
+            style: AppTypography.labelM.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
         ),
-        Text(value,
-            style: AppTypography.labelL.copyWith(
-                color: color, fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: AppTypography.labelL.copyWith(
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }
 }
 
 class _SubsArcPainter extends CustomPainter {
-  const _SubsArcPainter({required this.progress});
+  const _SubsArcPainter({required this.progress, required this.trackColor});
   final double progress;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -401,7 +424,7 @@ class _SubsArcPainter extends CustomPainter {
       sweepAngle,
       false,
       Paint()
-        ..color = AppColors.glassMedium
+        ..color = trackColor
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke,
     );
@@ -429,7 +452,8 @@ class _SubsArcPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SubsArcPainter old) => old.progress != progress;
+  bool shouldRepaint(_SubsArcPainter old) =>
+      old.progress != progress || old.trackColor != trackColor;
 }
 
 // ── Upcoming section ──────────────────────────────────────────────────────────
@@ -444,21 +468,26 @@ class _UpcomingSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Próximos pagos',
-            style: AppTypography.headingS.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
-            )),
+        Text(
+          'Próximos pagos',
+          style: AppTypography.headingS.copyWith(
+            color: context.colors.textPrimary,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.4,
+          ),
+        ),
         const SizedBox(height: AppSpacing.md),
         if (upcoming.isEmpty)
           _EmptyState(
-              message: 'No hay pagos próximos en los siguientes 30 días')
+            message: 'No hay pagos próximos en los siguientes 30 días',
+          )
         else
-          ...upcoming.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _SubscriptionCard(subscription: s),
-              )),
+          ...upcoming.map(
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _SubscriptionCard(subscription: s),
+            ),
+          ),
       ],
     );
   }
@@ -479,25 +508,32 @@ class _AllSubscriptionsSection extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Todas las suscripciones',
-                style: AppTypography.headingS.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.4,
-                )),
-            Text('${all.length} total',
-                style: AppTypography.labelS
-                    .copyWith(color: AppColors.textTertiary)),
+            Text(
+              'Todas las suscripciones',
+              style: AppTypography.headingS.copyWith(
+                color: context.colors.textPrimary,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.4,
+              ),
+            ),
+            Text(
+              '${all.length} total',
+              style: AppTypography.labelS.copyWith(
+                color: context.colors.textTertiary,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
         if (all.isEmpty)
           _EmptyState(message: 'Sin suscripciones aún. Agrega la primera.')
         else
-          ...all.map((s) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _SubscriptionCard(subscription: s, showControls: true),
-              )),
+          ...all.map(
+            (s) => Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _SubscriptionCard(subscription: s, showControls: true),
+            ),
+          ),
       ],
     );
   }
@@ -506,7 +542,10 @@ class _AllSubscriptionsSection extends ConsumerWidget {
 // ── Subscription card ─────────────────────────────────────────────────────────
 
 class _SubscriptionCard extends ConsumerWidget {
-  const _SubscriptionCard({required this.subscription, this.showControls = false});
+  const _SubscriptionCard({
+    required this.subscription,
+    this.showControls = false,
+  });
   final Subscription subscription;
   final bool showControls;
 
@@ -533,7 +572,7 @@ class _SubscriptionCard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Row(
@@ -552,21 +591,27 @@ class _SubscriptionCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(s.name,
-                      style: AppTypography.labelL
-                          .copyWith(color: AppColors.textPrimary)),
+                  Text(
+                    s.name,
+                    style: AppTypography.labelL.copyWith(
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(s.frequency.label,
-                          style: AppTypography.labelS
-                              .copyWith(color: AppColors.textTertiary)),
+                      Text(
+                        s.frequency.label,
+                        style: AppTypography.labelS.copyWith(
+                          color: context.colors.textTertiary,
+                        ),
+                      ),
                       const SizedBox(width: 6),
                       Container(
                         width: 3,
                         height: 3,
-                        decoration: const BoxDecoration(
-                          color: AppColors.textTertiary,
+                        decoration: BoxDecoration(
+                          color: context.colors.textTertiary,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -575,12 +620,12 @@ class _SubscriptionCard extends ConsumerWidget {
                         daysLeft == 0
                             ? 'Hoy'
                             : daysLeft == 1
-                                ? 'Mañana'
-                                : '$dateStr ($daysLeft días)',
+                            ? 'Mañana'
+                            : '$dateStr ($daysLeft días)',
                         style: AppTypography.labelS.copyWith(
                           color: s.isDueSoon
                               ? AppColors.warning
-                              : AppColors.textTertiary,
+                              : context.colors.textTertiary,
                         ),
                       ),
                     ],
@@ -598,9 +643,12 @@ class _SubscriptionCard extends ConsumerWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                Text(s.frequency.shortLabel,
-                    style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary)),
+                Text(
+                  s.frequency.shortLabel,
+                  style: AppTypography.labelS.copyWith(
+                    color: context.colors.textTertiary,
+                  ),
+                ),
               ],
             ),
             if (showControls) ...[
@@ -641,10 +689,12 @@ class _SubscriptionMenu extends ConsumerWidget {
                 ),
               );
             },
-            onToggle: () =>
-                ref.read(subscriptionsProvider.notifier).toggleActive(subscription.id),
-            onDelete: () =>
-                ref.read(subscriptionsProvider.notifier).delete(subscription.id),
+            onToggle: () => ref
+                .read(subscriptionsProvider.notifier)
+                .toggleActive(subscription.id),
+            onDelete: () => ref
+                .read(subscriptionsProvider.notifier)
+                .delete(subscription.id),
             onCharge: () => ref
                 .read(subscriptionsProvider.notifier)
                 .chargeSubscription(subscription),
@@ -655,11 +705,14 @@ class _SubscriptionMenu extends ConsumerWidget {
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: AppColors.glassLight,
+          color: context.colors.glass,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: const Icon(Icons.more_vert_rounded,
-            size: 14, color: AppColors.textSecondary),
+        child: Icon(
+          Icons.more_vert_rounded,
+          size: 14,
+          color: context.colors.textSecondary,
+        ),
       ),
     );
   }
@@ -685,11 +738,16 @@ class _SubsActionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cardRadiusL)),
+        AppSpacing.xxl,
+        AppSpacing.md,
+        AppSpacing.xxl,
+        AppSpacing.xxl,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -700,7 +758,7 @@ class _SubsActionSheet extends StatelessWidget {
               height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: context.colors.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -714,20 +772,28 @@ class _SubsActionSheet extends StatelessWidget {
                   color: subscription.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(subscription.icon,
-                    size: 22, color: subscription.color),
+                child: Icon(
+                  subscription.icon,
+                  size: 22,
+                  color: subscription.color,
+                ),
               ),
               const SizedBox(width: AppSpacing.md),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(subscription.name,
-                      style: AppTypography.headingS
-                          .copyWith(color: AppColors.textPrimary)),
                   Text(
-                      '\$${subscription.amount.toStringAsFixed(2)}${subscription.frequency.shortLabel}',
-                      style: AppTypography.labelM
-                          .copyWith(color: AppColors.textTertiary)),
+                    subscription.name,
+                    style: AppTypography.headingS.copyWith(
+                      color: context.colors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    '\$${subscription.amount.toStringAsFixed(2)}${subscription.frequency.shortLabel}',
+                    style: AppTypography.labelM.copyWith(
+                      color: context.colors.textTertiary,
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -754,7 +820,9 @@ class _SubsActionSheet extends StatelessWidget {
             icon: subscription.isActive
                 ? Icons.pause_rounded
                 : Icons.play_arrow_rounded,
-            label: subscription.isActive ? 'Pausar suscripción' : 'Activar suscripción',
+            label: subscription.isActive
+                ? 'Pausar suscripción'
+                : 'Activar suscripción',
             color: AppColors.warning,
             onTap: () {
               onToggle();
@@ -778,11 +846,12 @@ class _SubsActionSheet extends StatelessWidget {
 }
 
 class _ActionTile extends StatelessWidget {
-  const _ActionTile(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
   final IconData icon;
   final String label;
   final Color color;
@@ -797,12 +866,13 @@ class _ActionTile extends StatelessWidget {
       },
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.md,
+        ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(
-              color: color.withValues(alpha: 0.15), width: 0.5),
+          border: Border.all(color: color.withValues(alpha: 0.15), width: 0.5),
         ),
         child: Row(
           children: [
@@ -816,8 +886,7 @@ class _ActionTile extends StatelessWidget {
               child: Icon(icon, size: 16, color: color),
             ),
             const SizedBox(width: AppSpacing.md),
-            Text(label,
-                style: AppTypography.labelL.copyWith(color: color)),
+            Text(label, style: AppTypography.labelL.copyWith(color: color)),
           ],
         ),
       ),
@@ -884,8 +953,18 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
   }
 
   static const _months = [
-    'ene', 'feb', 'mar', 'abr', 'may', 'jun',
-    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
   ];
 
   String _formatDate(DateTime d) =>
@@ -893,22 +972,25 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
 
   void _submit() {
     final name = _nameCtrl.text.trim();
-    final amount =
-        double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
     }
-    ref.read(subscriptionsProvider.notifier).add(Subscription(
-          id: generateId(),
-          name: name,
-          amount: amount,
-          nextBillingDate: _billingDate,
-          category: _cat,
-          icon: _icon,
-          color: _color,
-          frequency: _freq,
-        ));
+    ref
+        .read(subscriptionsProvider.notifier)
+        .add(
+          Subscription(
+            id: generateId(),
+            name: name,
+            amount: amount,
+            nextBillingDate: _billingDate,
+            category: _cat,
+            icon: _icon,
+            color: _color,
+            frequency: _freq,
+          ),
+        );
     HapticFeedback.mediumImpact();
     Navigator.pop(context);
   }
@@ -918,11 +1000,16 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSpacing.cardRadiusL)),
+        AppSpacing.xxl,
+        AppSpacing.md,
+        AppSpacing.xxl,
+        AppSpacing.xxl + bottom,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -935,31 +1022,37 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: context.colors.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            Text('Nueva suscripción',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+            Text(
+              'Nueva suscripción',
+              style: AppTypography.headingS.copyWith(
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xxl),
             _SheetLabel('Nombre'),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
-                controller: _nameCtrl,
-                hint: 'ej. Netflix, Spotify…',
-                icon: Icons.label_outline_rounded,
-                autofocus: true),
+              controller: _nameCtrl,
+              hint: 'ej. Netflix, Spotify…',
+              icon: Icons.label_outline_rounded,
+              autofocus: true,
+            ),
             const SizedBox(height: AppSpacing.xl),
             _SheetLabel('Monto'),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
-                controller: _amountCtrl,
-                hint: 'ej. 9.99',
-                icon: Icons.attach_money_rounded,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true)),
+              controller: _amountCtrl,
+              hint: 'ej. 9.99',
+              icon: Icons.attach_money_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xl),
             _SheetLabel('Frecuencia'),
             const SizedBox(height: AppSpacing.sm),
@@ -975,28 +1068,31 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: active
                           ? AppColors.emeraldSurface
                           : Colors.white.withValues(alpha: 0.04),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.pillRadius,
+                      ),
                       border: Border.all(
                         color: active
                             ? AppColors.emerald.withValues(alpha: 0.4)
                             : Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
-                    child: Text(f.label,
-                        style: AppTypography.labelM.copyWith(
-                          color: active
-                              ? AppColors.emerald
-                              : AppColors.textTertiary,
-                          fontWeight: active
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                        )),
+                    child: Text(
+                      f.label,
+                      style: AppTypography.labelM.copyWith(
+                        color: active
+                            ? AppColors.emerald
+                            : context.colors.textTertiary,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -1020,8 +1116,8 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
                       colorScheme: ColorScheme.dark(
                         primary: AppColors.emerald,
                         onPrimary: Colors.white,
-                        surface: AppColors.card,
-                        onSurface: AppColors.textPrimary,
+                        surface: ctx.colors.card,
+                        onSurface: ctx.colors.textPrimary,
                       ),
                     ),
                     child: child!,
@@ -1031,27 +1127,38 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                    color: Colors.white.withValues(alpha: 0.08),
+                    width: 0.5,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 16,
+                      color: context.colors.textTertiary,
+                    ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
                         _formatDate(_billingDate),
-                        style: AppTypography.labelL
-                            .copyWith(color: AppColors.textPrimary),
+                        style: AppTypography.labelL.copyWith(
+                          color: context.colors.textPrimary,
+                        ),
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: context.colors.textTertiary,
+                    ),
                   ],
                 ),
               ),
@@ -1060,30 +1167,31 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
             _SheetLabel('Icono'),
             const SizedBox(height: AppSpacing.sm),
             _IconPicker(
-                icons: _iconOptions,
-                selected: _icon,
-                color: _color,
-                onChanged: (ic) => setState(() => _icon = ic)),
+              icons: _iconOptions,
+              selected: _icon,
+              color: _color,
+              onChanged: (ic) => setState(() => _icon = ic),
+            ),
             const SizedBox(height: AppSpacing.xl),
             _SheetLabel('Color'),
             const SizedBox(height: AppSpacing.sm),
             _ColorPicker(
-                colors: _colorOptions,
-                selected: _color,
-                onChanged: (c) => setState(() => _color = c)),
+              colors: _colorOptions,
+              selected: _color,
+              onChanged: (c) => setState(() => _color = c),
+            ),
             const SizedBox(height: AppSpacing.xxl),
             SizedBox(
               width: double.infinity,
               child: GestureDetector(
                 onTap: _submit,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                        colors: [AppColors.emerald, AppColors.emeraldDim]),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
+                      colors: [AppColors.emerald, AppColors.emeraldDim],
+                    ),
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.emerald.withValues(alpha: 0.3),
@@ -1092,12 +1200,14 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
                       ),
                     ],
                   ),
-                  child: Text('Agregar suscripción',
-                      style: AppTypography.labelL.copyWith(
-                        color: AppColors.textInverse,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      textAlign: TextAlign.center),
+                  child: Text(
+                    'Agregar suscripción',
+                    style: AppTypography.labelL.copyWith(
+                      color: AppColors.textInverse,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),
@@ -1115,8 +1225,10 @@ class _SheetLabel extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(text,
-      style: AppTypography.labelM.copyWith(color: AppColors.textTertiary));
+  Widget build(BuildContext context) => Text(
+    text,
+    style: AppTypography.labelM.copyWith(color: context.colors.textTertiary),
+  );
 }
 
 class _SheetTextField extends StatelessWidget {
@@ -1140,22 +1252,26 @@ class _SheetTextField extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.04),
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+          color: Colors.white.withValues(alpha: 0.08),
+          width: 0.5,
+        ),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         autofocus: autofocus,
-        style: AppTypography.bodyM.copyWith(color: AppColors.textPrimary),
+        style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              AppTypography.bodyM.copyWith(color: AppColors.textTertiary),
-          prefixIcon:
-              Icon(icon, size: 18, color: AppColors.textTertiary),
+          hintStyle: AppTypography.bodyM.copyWith(
+            color: context.colors.textTertiary,
+          ),
+          prefixIcon: Icon(icon, size: 18, color: context.colors.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md,
+          ),
         ),
       ),
     );
@@ -1163,11 +1279,12 @@ class _SheetTextField extends StatelessWidget {
 }
 
 class _IconPicker extends StatelessWidget {
-  const _IconPicker(
-      {required this.icons,
-      required this.selected,
-      required this.color,
-      required this.onChanged});
+  const _IconPicker({
+    required this.icons,
+    required this.selected,
+    required this.color,
+    required this.onChanged,
+  });
   final List<IconData> icons;
   final IconData selected;
   final Color color;
@@ -1201,8 +1318,11 @@ class _IconPicker extends StatelessWidget {
                 width: isSel ? 1.5 : 1,
               ),
             ),
-            child: Icon(ic,
-                size: 20, color: isSel ? color : AppColors.textTertiary),
+            child: Icon(
+              ic,
+              size: 20,
+              color: isSel ? color : context.colors.textTertiary,
+            ),
           ),
         );
       }).toList(),
@@ -1211,10 +1331,11 @@ class _IconPicker extends StatelessWidget {
 }
 
 class _ColorPicker extends StatelessWidget {
-  const _ColorPicker(
-      {required this.colors,
-      required this.selected,
-      required this.onChanged});
+  const _ColorPicker({
+    required this.colors,
+    required this.selected,
+    required this.onChanged,
+  });
   final List<Color> colors;
   final Color selected;
   final ValueChanged<Color> onChanged;
@@ -1239,13 +1360,16 @@ class _ColorPicker extends StatelessWidget {
               color: c,
               shape: BoxShape.circle,
               border: Border.all(
-                  color: isSel ? Colors.white : Colors.transparent, width: 2.5),
+                color: isSel ? Colors.white : Colors.transparent,
+                width: 2.5,
+              ),
               boxShadow: isSel
                   ? [
                       BoxShadow(
-                          color: c.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          spreadRadius: -2)
+                        color: c.withValues(alpha: 0.5),
+                        blurRadius: 10,
+                        spreadRadius: -2,
+                      ),
                     ]
                   : null,
             ),
@@ -1270,14 +1394,16 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        color: AppColors.glassLight,
+        color: context.colors.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: Center(
-        child: Text(message,
-            style: AppTypography.labelM.copyWith(color: AppColors.textTertiary),
-            textAlign: TextAlign.center),
+        child: Text(
+          message,
+          style: AppTypography.labelM.copyWith(color: context.colors.textTertiary),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }
@@ -1362,9 +1488,9 @@ class _EditSubscriptionSheetState
       lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
       builder: (ctx, child) => Theme(
         data: Theme.of(ctx).copyWith(
-          colorScheme: const ColorScheme.dark(
+          colorScheme: ColorScheme.dark(
             primary: AppColors.emerald,
-            surface: AppColors.card,
+            surface: ctx.colors.card,
           ),
         ),
         child: child!,
@@ -1380,15 +1506,17 @@ class _EditSubscriptionSheetState
       HapticFeedback.heavyImpact();
       return;
     }
-    widget.onSave(widget.subscription.copyWith(
-      name: name,
-      amount: amount,
-      frequency: _freq,
-      category: _cat,
-      color: _color,
-      icon: _icon,
-      nextBillingDate: _billingDate,
-    ));
+    widget.onSave(
+      widget.subscription.copyWith(
+        name: name,
+        amount: amount,
+        frequency: _freq,
+        category: _cat,
+        color: _color,
+        icon: _icon,
+        nextBillingDate: _billingDate,
+      ),
+    );
     HapticFeedback.mediumImpact();
     Navigator.pop(context);
   }
@@ -1398,11 +1526,16 @@ class _EditSubscriptionSheetState
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+        AppSpacing.xxl,
+        AppSpacing.md,
+        AppSpacing.xxl,
+        AppSpacing.xxl + bottom,
+      ),
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1415,33 +1548,39 @@ class _EditSubscriptionSheetState
                 height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: context.colors.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            Text('Editar suscripción',
-                style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+            Text(
+              'Editar suscripción',
+              style: AppTypography.headingS.copyWith(
+                color: context.colors.textPrimary,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xxl),
 
             _SheetLabel('Nombre'),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
-                controller: _nameCtrl,
-                hint: 'ej. Netflix, Spotify…',
-                icon: Icons.label_outline_rounded,
-                autofocus: true),
+              controller: _nameCtrl,
+              hint: 'ej. Netflix, Spotify…',
+              icon: Icons.label_outline_rounded,
+              autofocus: true,
+            ),
             const SizedBox(height: AppSpacing.xl),
 
             _SheetLabel('Monto'),
             const SizedBox(height: AppSpacing.sm),
             _SheetTextField(
-                controller: _amountCtrl,
-                hint: 'ej. 9.99',
-                icon: Icons.attach_money_rounded,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true)),
+              controller: _amountCtrl,
+              hint: 'ej. 9.99',
+              icon: Icons.attach_money_rounded,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+            ),
             const SizedBox(height: AppSpacing.xl),
 
             _SheetLabel('Próximo cobro'),
@@ -1450,26 +1589,37 @@ class _EditSubscriptionSheetState
               onTap: _pickDate,
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.04),
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                    color: Colors.white.withValues(alpha: 0.08),
+                    width: 0.5,
+                  ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today_rounded,
-                        size: 18, color: AppColors.textTertiary),
+                    Icon(
+                      Icons.calendar_today_rounded,
+                      size: 18,
+                      color: context.colors.textTertiary,
+                    ),
                     const SizedBox(width: AppSpacing.md),
                     Text(
                       DateFormat('d MMM yyyy', 'es').format(_billingDate),
-                      style: AppTypography.bodyM
-                          .copyWith(color: AppColors.textPrimary),
+                      style: AppTypography.bodyM.copyWith(
+                        color: context.colors.textPrimary,
+                      ),
                     ),
                     const Spacer(),
-                    const Icon(Icons.chevron_right_rounded,
-                        size: 16, color: AppColors.textTertiary),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 16,
+                      color: context.colors.textTertiary,
+                    ),
                   ],
                 ),
               ),
@@ -1490,27 +1640,31 @@ class _EditSubscriptionSheetState
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: active
                           ? AppColors.emeraldSurface
                           : Colors.white.withValues(alpha: 0.04),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.pillRadius,
+                      ),
                       border: Border.all(
                         color: active
                             ? AppColors.emerald.withValues(alpha: 0.4)
                             : Colors.white.withValues(alpha: 0.08),
                       ),
                     ),
-                    child: Text(f.label,
-                        style: AppTypography.labelM.copyWith(
-                          color: active
-                              ? AppColors.emerald
-                              : AppColors.textTertiary,
-                          fontWeight:
-                              active ? FontWeight.w600 : FontWeight.w400,
-                        )),
+                    child: Text(
+                      f.label,
+                      style: AppTypography.labelM.copyWith(
+                        color: active
+                            ? AppColors.emerald
+                            : context.colors.textTertiary,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
@@ -1520,18 +1674,20 @@ class _EditSubscriptionSheetState
             _SheetLabel('Icono'),
             const SizedBox(height: AppSpacing.sm),
             _IconPicker(
-                icons: _iconOptions,
-                selected: _icon,
-                color: _color,
-                onChanged: (ic) => setState(() => _icon = ic)),
+              icons: _iconOptions,
+              selected: _icon,
+              color: _color,
+              onChanged: (ic) => setState(() => _icon = ic),
+            ),
             const SizedBox(height: AppSpacing.xl),
 
             _SheetLabel('Color'),
             const SizedBox(height: AppSpacing.sm),
             _ColorPicker(
-                colors: _colorOptions,
-                selected: _color,
-                onChanged: (c) => setState(() => _color = c)),
+              colors: _colorOptions,
+              selected: _color,
+              onChanged: (c) => setState(() => _color = c),
+            ),
             const SizedBox(height: AppSpacing.xxl),
 
             SizedBox(
@@ -1539,13 +1695,12 @@ class _EditSubscriptionSheetState
               child: GestureDetector(
                 onTap: _submit,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                        colors: [AppColors.emerald, AppColors.emeraldDim]),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
+                      colors: [AppColors.emerald, AppColors.emeraldDim],
+                    ),
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.emerald.withValues(alpha: 0.3),
@@ -1554,12 +1709,14 @@ class _EditSubscriptionSheetState
                       ),
                     ],
                   ),
-                  child: Text('Guardar cambios',
-                      style: AppTypography.labelL.copyWith(
-                        color: AppColors.textInverse,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      textAlign: TextAlign.center),
+                  child: Text(
+                    'Guardar cambios',
+                    style: AppTypography.labelL.copyWith(
+                      color: AppColors.textInverse,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ),
             ),

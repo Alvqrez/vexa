@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
@@ -74,14 +75,15 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     // Double-Bezel outer tray
     return Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.03),
+        color: c.glass,
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
+          color: c.glassBorder,
           width: 0.5,
         ),
       ),
@@ -89,7 +91,7 @@ class _StatTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           boxShadow: [
             BoxShadow(
@@ -115,7 +117,7 @@ class _StatTile extends StatelessWidget {
             Text(
               value,
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 15,
               ),
             ),
@@ -123,7 +125,7 @@ class _StatTile extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelS.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ),
           ],

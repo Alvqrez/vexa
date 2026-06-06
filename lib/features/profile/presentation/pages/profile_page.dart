@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import 'package:intl/intl.dart';
@@ -72,8 +73,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
       children: [
         const _ProfileBg(),
@@ -128,10 +130,11 @@ class _ProfileBg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -120,
             left: -60,
@@ -179,6 +182,7 @@ class _ProfilePageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final canPop = Navigator.canPop(context);
     return Row(
       children: [
@@ -189,13 +193,13 @@ class _ProfilePageHeader extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.glassLight,
+                color: c.glass,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.glassBorder, width: 0.5),
+                border: Border.all(color: c.glassBorder, width: 0.5),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back_ios_rounded,
-                color: AppColors.textSecondary,
+                color: c.textSecondary,
                 size: 16,
               ),
             ),
@@ -206,7 +210,7 @@ class _ProfilePageHeader extends StatelessWidget {
           child: Text(
             'Perfil',
             style: AppTypography.headingM.copyWith(
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
             ),
           ),
         ),
@@ -222,6 +226,7 @@ class _ProfileHeroCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final profile = ref.watch(userProfileProvider);
     final displayName = profile.name.isEmpty ? 'Usuario' : profile.name;
     final displayEmail = profile.email.isEmpty ? 'Sin email' : profile.email;
@@ -230,39 +235,14 @@ class _ProfileHeroCard extends ConsumerWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.xl),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            stops: [0.0, 0.5, 1.0],
-            colors: [
-              Color(0xFF1C1C32),
-              Color(0xFF141428),
-              Color(0xFF0F0F1E),
-            ],
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.petroleum.withValues(alpha: 0.12),
-              blurRadius: 48,
-              spreadRadius: -6,
-              offset: const Offset(0, 20),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.22),
-              blurRadius: 32,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          color: c.cardElevated,
         ),
         child: Row(
           children: [
@@ -297,7 +277,7 @@ class _ProfileHeroCard extends ConsumerWidget {
                             child: Text(
                               profile.initial,
                               style: AppTypography.headingM.copyWith(
-                                color: AppColors.textPrimary,
+                                color: c.textPrimary,
                                 fontWeight: FontWeight.w800,
                                 fontSize: 26,
                               ),
@@ -315,7 +295,7 @@ class _ProfileHeroCard extends ConsumerWidget {
                       color: AppColors.emerald,
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF141428),
+                        color: c.cardElevated,
                         width: 2.5,
                       ),
                     ),
@@ -331,14 +311,14 @@ class _ProfileHeroCard extends ConsumerWidget {
                   Text(
                     displayName,
                     style: AppTypography.headingS.copyWith(
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     displayEmail,
                     style: AppTypography.bodyS.copyWith(
-                      color: AppColors.textTertiary,
+                      color: c.textTertiary,
                     ),
                   ),
                 ],
@@ -424,20 +404,18 @@ class _MiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-        color: Colors.white.withValues(alpha: 0.03),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-          width: 0.5,
-        ),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: c.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
         child: Column(
@@ -456,7 +434,7 @@ class _MiniStat extends StatelessWidget {
             Text(
               value,
               style: AppTypography.headingS.copyWith(
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 fontSize: 15,
               ),
             ),
@@ -464,7 +442,7 @@ class _MiniStat extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelS.copyWith(
-                color: AppColors.textTertiary,
+                color: c.textTertiary,
               ),
             ),
           ],
@@ -519,7 +497,7 @@ class _AccountSettings extends ConsumerWidget {
         _SettingsItem(
           icon: Icons.settings_outlined,
           label: 'Configuración',
-          color: AppColors.textSecondary,
+          color: context.colors.textSecondary,
           onTap: () => _push(context, const SettingsPage()),
         ),
       ],
@@ -563,7 +541,7 @@ class _SupportSettings extends StatelessWidget {
           icon: Icons.info_outline_rounded,
           label: 'Sobre Vexa',
           trailing: '1.0.0',
-          color: AppColors.textTertiary,
+          color: context.colors.textTertiary,
           onTap: () => _push(context, const AboutPage()),
         ),
       ],
@@ -578,6 +556,7 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -586,7 +565,7 @@ class _SettingsSection extends StatelessWidget {
           child: Text(
             title,
             style: AppTypography.headingS.copyWith(
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
               fontWeight: FontWeight.w700,
               letterSpacing: -0.4,
             ),
@@ -594,9 +573,9 @@ class _SettingsSection extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.12),
@@ -617,7 +596,7 @@ class _SettingsSection extends StatelessWidget {
                     child: Divider(
                       height: 1,
                       thickness: 0.5,
-                      color: AppColors.glassBorder,
+                      color: c.glassBorder,
                     ),
                   ),
               ],
@@ -645,6 +624,7 @@ class _SettingsItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
@@ -672,7 +652,7 @@ class _SettingsItem extends StatelessWidget {
               child: Text(
                 label,
                 style: AppTypography.labelL.copyWith(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                 ),
               ),
             ),
@@ -682,14 +662,14 @@ class _SettingsItem extends StatelessWidget {
                 child: Text(
                   trailing!,
                   style: AppTypography.labelM.copyWith(
-                    color: AppColors.textTertiary,
+                    color: c.textTertiary,
                   ),
                 ),
               ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: AppColors.textTertiary,
+              color: c.textTertiary,
             ),
           ],
         ),
@@ -706,28 +686,31 @@ class _UseSeedButton extends ConsumerWidget {
   Future<void> _load(BuildContext context, WidgetRef ref) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardElevated,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Cargar datos de ejemplo',
-            style: AppTypography.headingS.copyWith(color: AppColors.textPrimary)),
-        content: Text(
-          'Se cargarán cuentas y transacciones de muestra. Los datos actuales serán reemplazados.',
-          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar',
-                style: AppTypography.labelL.copyWith(color: AppColors.textSecondary)),
+      builder: (ctx) {
+        final cc = ctx.colors;
+        return AlertDialog(
+          backgroundColor: cc.cardElevated,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Cargar datos de ejemplo',
+              style: AppTypography.headingS.copyWith(color: cc.textPrimary)),
+          content: Text(
+            'Se cargarán cuentas y transacciones de muestra. Los datos actuales serán reemplazados.',
+            style: AppTypography.bodyM.copyWith(color: cc.textSecondary),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Cargar',
-                style: AppTypography.labelL.copyWith(color: AppColors.petroleum)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: AppTypography.labelL.copyWith(color: cc.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Cargar',
+                  style: AppTypography.labelL.copyWith(color: AppColors.petroleum)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true || !context.mounted) return;
@@ -735,10 +718,11 @@ class _UseSeedButton extends ConsumerWidget {
     await ref.read(accountsProvider.notifier).seed();
     await ref.read(transactionsProvider.notifier).seed();
     if (!context.mounted) return;
+    final sc = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text('Datos de ejemplo cargados.',
-          style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
-      backgroundColor: AppColors.card,
+          style: AppTypography.labelM.copyWith(color: sc.textPrimary)),
+      backgroundColor: sc.card,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
@@ -784,33 +768,36 @@ class _SignOutButton extends StatelessWidget {
   Future<void> _confirm(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardElevated,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: Text(
-          'Cerrar sesión',
-          style: AppTypography.headingS.copyWith(color: AppColors.textPrimary),
-        ),
-        content: Text(
-          '¿Estás seguro de que quieres cerrar sesión?',
-          style: AppTypography.bodyM.copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.textSecondary)),
+      builder: (ctx) {
+        final cc = ctx.colors;
+        return AlertDialog(
+          backgroundColor: cc.cardElevated,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Cerrar sesión',
-                style: AppTypography.labelL.copyWith(color: AppColors.negative)),
+          title: Text(
+            'Cerrar sesión',
+            style: AppTypography.headingS.copyWith(color: cc.textPrimary),
           ),
-        ],
-      ),
+          content: Text(
+            '¿Estás seguro de que quieres cerrar sesión?',
+            style: AppTypography.bodyM.copyWith(color: cc.textSecondary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: AppTypography.labelL
+                      .copyWith(color: cc.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Cerrar sesión',
+                  style: AppTypography.labelL.copyWith(color: AppColors.negative)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true || !context.mounted) return;

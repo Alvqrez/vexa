@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../providers/home_provider.dart';
@@ -47,6 +48,7 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final expenses = ref.watch(monthlyExpensesProvider);
     final income = ref.watch(monthlyIncomeProvider);
     final ratio = ref.watch(budgetSpendingRatioProvider);
@@ -116,6 +118,7 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                   child: CustomPaint(
                     painter: _ArcPainter(
                       progress: ratio * _arcAnimation.value,
+                      trackColor: c.card,
                     ),
                     child: Center(
                       child: Column(
@@ -124,14 +127,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                           Text(
                             '${(ratio * 100).toStringAsFixed(0)}%',
                             style: AppTypography.headingS.copyWith(
-                              color: AppColors.textPrimary,
+                              color: c.textPrimary,
                               fontSize: 19,
                             ),
                           ),
                           Text(
                             'usado',
                             style: AppTypography.eyebrow.copyWith(
-                              color: AppColors.textTertiary,
+                              color: c.textTertiary,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -172,13 +175,13 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                           TextSpan(
                             text: '$currency${expenses.toStringAsFixed(0)}',
                             style: AppTypography.headingL.copyWith(
-                              color: AppColors.textPrimary,
+                              color: c.textPrimary,
                             ),
                           ),
                           TextSpan(
                             text: ' / $currency${limit.toStringAsFixed(0)}',
                             style: AppTypography.bodyM.copyWith(
-                              color: AppColors.textTertiary,
+                              color: c.textTertiary,
                             ),
                           ),
                         ],
@@ -202,14 +205,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                     Text(
                       'Sin presupuesto',
                       style: AppTypography.headingS.copyWith(
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     Text(
                       'Toca para configurar\nlímites de gasto.',
                       style: AppTypography.labelM.copyWith(
-                        color: AppColors.textTertiary,
+                        color: c.textTertiary,
                         height: 1.5,
                       ),
                     ),
@@ -254,6 +257,7 @@ class _StatRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Container(
@@ -270,7 +274,7 @@ class _StatRow extends StatelessWidget {
           child: Text(
             label,
             style: AppTypography.labelM.copyWith(
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
             ),
           ),
         ),
@@ -286,8 +290,9 @@ class _StatRow extends StatelessWidget {
 }
 
 class _ArcPainter extends CustomPainter {
-  const _ArcPainter({required this.progress});
+  const _ArcPainter({required this.progress, required this.trackColor});
   final double progress;
+  final Color trackColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -304,7 +309,7 @@ class _ArcPainter extends CustomPainter {
       sweepAngle,
       false,
       Paint()
-        ..color = AppColors.card
+        ..color = trackColor
         ..strokeWidth = strokeWidth
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
@@ -348,5 +353,6 @@ class _ArcPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ArcPainter old) => old.progress != progress;
+  bool shouldRepaint(_ArcPainter old) =>
+      old.progress != progress || old.trackColor != trackColor;
 }

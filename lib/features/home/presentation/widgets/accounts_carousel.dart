@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/animated_number.dart';
 import '../../domain/models/account.dart';
@@ -14,6 +15,7 @@ class AccountsCarousel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final accounts = ref.watch(accountsProvider);
 
     return Column(
@@ -26,7 +28,7 @@ class AccountsCarousel extends ConsumerWidget {
             Text(
               'Mis cuentas',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.4,
                   ),
@@ -77,6 +79,7 @@ class _AccountCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final color = account.color;
 
     return GestureDetector(
@@ -92,9 +95,9 @@ class _AccountCard extends StatelessWidget {
         padding: const EdgeInsets.all(2.5),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-          color: Colors.white.withValues(alpha: 0.025),
+          color: c.glass,
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: c.glassBorder,
             width: 0.5,
           ),
           boxShadow: [
@@ -109,7 +112,7 @@ class _AccountCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           ),
           child: Column(
@@ -133,14 +136,14 @@ class _AccountCard extends StatelessWidget {
               Text(
                 account.name,
                 style: AppTypography.labelM.copyWith(
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                 ),
               ),
               const SizedBox(height: 4),
               AnimatedNumber(
                 value: account.balance,
                 style: AppTypography.headingS.copyWith(
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                   fontSize: 15,
                   letterSpacing: -0.5,
                 ),

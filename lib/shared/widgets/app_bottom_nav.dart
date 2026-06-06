@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/vexa_colors_ext.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../features/home/presentation/providers/home_provider.dart';
@@ -33,6 +34,7 @@ class AppBottomNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final selected = ref.watch(selectedNavIndexProvider);
     final animated = ref.watch(animationsEnabledProvider);
 
@@ -46,10 +48,10 @@ class AppBottomNav extends ConsumerWidget {
       child: Container(
         height: AppSpacing.bottomNavHeight,
         decoration: BoxDecoration(
-          color: const Color(0xFF13131F),
+          color: c.cardElevated,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.glassBorderStrong,
+            color: c.glassBorderStrong,
             width: 0.5,
           ),
           boxShadow: [
@@ -225,7 +227,7 @@ class _NavButtonState extends ConsumerState<_NavButton>
               style: AppTypography.labelS.copyWith(
                 color: widget.isActive
                     ? AppColors.emerald
-                    : AppColors.textTertiary,
+                    : context.colors.textTertiary,
                 fontWeight: widget.isActive
                     ? FontWeight.w600
                     : FontWeight.w400,
@@ -241,7 +243,7 @@ class _NavButtonState extends ConsumerState<_NavButton>
 
   Widget _buildIcon() {
     final color =
-        widget.isActive ? AppColors.emerald : AppColors.textTertiary;
+        widget.isActive ? AppColors.emerald : context.colors.textTertiary;
 
     return switch (widget.item.type) {
       _NavTabType.home => _HomeIcon(color: color, ctrl: _ctrl, animated: widget.animated),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../domain/models/transaction.dart';
 import '../providers/home_provider.dart';
@@ -58,6 +59,7 @@ class _CategoryChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final label = category?.label ?? 'Todos';
     final icon = category?.icon ?? Icons.grid_view_rounded;
     final color = category?.color ?? AppColors.emerald;
@@ -73,10 +75,10 @@ class _CategoryChip extends StatelessWidget {
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: isActive ? color : AppColors.card,
+          color: isActive ? color : c.card,
           borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
           border: Border.all(
-            color: isActive ? color : AppColors.glassBorder,
+            color: isActive ? color : c.glassBorder,
             width: 0.5,
           ),
         ),
@@ -94,7 +96,7 @@ class _CategoryChip extends StatelessWidget {
               style: AppTypography.labelM.copyWith(
                 color: isActive
                     ? AppColors.textInverse
-                    : AppColors.textSecondary,
+                    : c.textSecondary,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

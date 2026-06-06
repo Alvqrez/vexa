@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
@@ -98,35 +99,39 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   }
 
   Future<void> _showResetConfirm() async {
+    final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardElevated,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Reiniciar todos los datos',
-            style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary)),
-        content: Text(
-          'Se eliminarán todas tus transacciones y se restaurarán las cuentas a sus valores iniciales. Esta acción no se puede deshacer.',
-          style: AppTypography.bodyM
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.textSecondary)),
+      builder: (ctx) {
+        final cc = ctx.colors;
+        return AlertDialog(
+          backgroundColor: cc.cardElevated,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Reiniciar todos los datos',
+              style: AppTypography.headingS
+                  .copyWith(color: cc.textPrimary)),
+          content: Text(
+            'Se eliminarán todas tus transacciones y se restaurarán las cuentas a sus valores iniciales. Esta acción no se puede deshacer.',
+            style: AppTypography.bodyM
+                .copyWith(color: cc.textSecondary),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Reiniciar',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.negative)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: AppTypography.labelL
+                      .copyWith(color: cc.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Reiniciar',
+                  style: AppTypography.labelL
+                      .copyWith(color: AppColors.negative)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true || !mounted) return;
@@ -139,8 +144,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Datos reiniciados correctamente.',
-            style: AppTypography.labelM.copyWith(color: AppColors.textPrimary)),
-        backgroundColor: AppColors.card,
+            style: AppTypography.labelM.copyWith(color: c.textPrimary)),
+        backgroundColor: c.card,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
@@ -151,33 +156,36 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   Future<void> _showDeleteConfirm() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.cardElevated,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Eliminar cuenta',
-            style: AppTypography.headingS
-                .copyWith(color: AppColors.textPrimary)),
-        content: Text(
-          'Esta acción es irreversible. Se borrarán todos tus datos y volverás a la pantalla inicial.',
-          style: AppTypography.bodyM
-              .copyWith(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancelar',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.textSecondary)),
+      builder: (ctx) {
+        final cc = ctx.colors;
+        return AlertDialog(
+          backgroundColor: cc.cardElevated,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Eliminar cuenta',
+              style: AppTypography.headingS
+                  .copyWith(color: cc.textPrimary)),
+          content: Text(
+            'Esta acción es irreversible. Se borrarán todos tus datos y volverás a la pantalla inicial.',
+            style: AppTypography.bodyM
+                .copyWith(color: cc.textSecondary),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Eliminar',
-                style: AppTypography.labelL
-                    .copyWith(color: AppColors.negative)),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancelar',
+                  style: AppTypography.labelL
+                      .copyWith(color: cc.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Eliminar',
+                  style: AppTypography.labelL
+                      .copyWith(color: AppColors.negative)),
+            ),
+          ],
+        );
+      },
     );
 
     if (confirmed != true || !mounted) return;
@@ -187,7 +195,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       // Reset in-memory state
       await ref.read(transactionsProvider.notifier).reset();
       await ref.read(streakProvider.notifier).reset();
-      await ref.read(achievementsProvider.notifier).reset();
 
       // Clear ALL remaining Isar collections
       final isar = ref.read(isarProvider);
@@ -233,8 +240,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: Stack(
         children: [
           _SettingsBg(),
@@ -266,8 +274,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               value: ref.watch(themeModeProvider) == ThemeMode.dark,
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
-                                ref.read(themeModeProvider.notifier).state =
-                                    v ? ThemeMode.dark : ThemeMode.light;
+                                final mode = v ? ThemeMode.dark : ThemeMode.light;
+                                ref.read(themeModeProvider.notifier).state = mode;
+                                saveThemeMode(mode);
                               },
                             ),
                             _ActionItem(
@@ -310,9 +319,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               value: ref.watch(animationsEnabledProvider),
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
-                                ref
-                                    .read(animationsEnabledProvider.notifier)
-                                    .state = v;
+                                ref.read(animationsEnabledProvider.notifier).state = v;
+                                LocalPrefsService.setBool('settings_animations', v);
                               },
                             ),
                           ],
@@ -336,11 +344,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               onChanged: (v) {
                                 HapticFeedback.selectionClick();
                                 ref.read(hideAmountsProvider.notifier).state = v;
+                                LocalPrefsService.setBool('settings_hide_amounts', v);
                               },
                             ),
                             _ToggleItem(
                               icon: Icons.analytics_outlined,
-                              color: AppColors.textSecondary,
+                              color: c.textSecondary,
                               title: 'Enviar analíticas',
                               subtitle:
                                   'Ayuda a mejorar Vexa de forma anónima.',
@@ -357,16 +366,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               title: 'Exportar mis datos (CSV)',
                               onTap: () async {
                                 final txns = ref.read(transactionsProvider);
-                                final count = await ExportUtils.copyToClipboard(txns);
+                                final accs = ref.read(accountsProvider);
+                                final count = await ExportUtils.copyToClipboard(txns, accounts: accs);
                                 if (!context.mounted) return;
+                                final sc = context.colors;
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
                                       '$count transacciones copiadas al portapapeles.',
                                       style: AppTypography.labelM.copyWith(
-                                          color: AppColors.textPrimary),
+                                          color: sc.textPrimary),
                                     ),
-                                    backgroundColor: AppColors.card,
+                                    backgroundColor: sc.card,
                                     behavior: SnackBarBehavior.floating,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(
@@ -478,6 +489,7 @@ class _SettingsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -486,16 +498,16 @@ class _SettingsSection extends StatelessWidget {
           child: Text(
             title,
             style: AppTypography.labelL.copyWith(
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.card,
+            color: c.card,
             borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-            border: Border.all(color: AppColors.glassBorder, width: 0.5),
+            border: Border.all(color: c.glassBorder, width: 0.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.10),
@@ -515,7 +527,7 @@ class _SettingsSection extends StatelessWidget {
                     child: Divider(
                         height: 1,
                         thickness: 0.5,
-                        color: AppColors.glassBorder),
+                        color: c.glassBorder),
                   ),
               ],
             ],
@@ -546,6 +558,7 @@ class _ToggleItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
@@ -567,11 +580,11 @@ class _ToggleItem extends StatelessWidget {
               children: [
                 Text(title,
                     style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: c.textPrimary)),
                 const SizedBox(height: 2),
                 Text(subtitle,
                     style: AppTypography.labelS
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ],
             ),
           ),
@@ -580,8 +593,8 @@ class _ToggleItem extends StatelessWidget {
             onChanged: onChanged,
             activeThumbColor: AppColors.emerald,
             activeTrackColor: AppColors.emeraldSurface,
-            inactiveThumbColor: AppColors.textTertiary,
-            inactiveTrackColor: AppColors.glassLight,
+            inactiveThumbColor: c.textTertiary,
+            inactiveTrackColor: c.glass,
           ),
         ],
       ),
@@ -607,6 +620,7 @@ class _ActionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -628,17 +642,17 @@ class _ActionItem extends StatelessWidget {
             Expanded(
               child: Text(title,
                   style: AppTypography.labelL
-                      .copyWith(color: AppColors.textPrimary)),
+                      .copyWith(color: c.textPrimary)),
             ),
             if (trailing != null)
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.sm),
                 child: Text(trailing!,
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 18, color: AppColors.textTertiary),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: c.textTertiary),
           ],
         ),
       ),
@@ -660,13 +674,14 @@ class _LanguagePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       margin: const EdgeInsets.fromLTRB(
           AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 32),
       decoration: BoxDecoration(
-        color: AppColors.cardElevated,
+        color: c.cardElevated,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        border: Border.all(color: AppColors.glassBorderStrong, width: 0.5),
+        border: Border.all(color: c.glassBorderStrong, width: 0.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -676,7 +691,7 @@ class _LanguagePicker extends StatelessWidget {
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.glassMedium,
+              color: c.glassMedium,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -684,12 +699,12 @@ class _LanguagePicker extends StatelessWidget {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: Text('Idioma',
                 style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+                    .copyWith(color: c.textPrimary)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Divider(
-                height: 1, thickness: 0.5, color: AppColors.glassBorder),
+                height: 1, thickness: 0.5, color: c.glassBorder),
           ),
           for (final lang in languages)
             GestureDetector(
@@ -703,7 +718,7 @@ class _LanguagePicker extends StatelessWidget {
                     Expanded(
                       child: Text(lang,
                           style: AppTypography.labelL
-                              .copyWith(color: AppColors.textPrimary)),
+                              .copyWith(color: c.textPrimary)),
                     ),
                     if (lang == selected)
                       Container(
@@ -735,6 +750,7 @@ class _SubPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         GestureDetector(
@@ -743,19 +759,19 @@ class _SubPageHeader extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.glassLight,
+              color: c.glass,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.glassBorder, width: 0.5),
+              border: Border.all(color: c.glassBorder, width: 0.5),
             ),
-            child: const Icon(Icons.arrow_back_ios_rounded,
-                size: 16, color: AppColors.textSecondary),
+            child: Icon(Icons.arrow_back_ios_rounded,
+                size: 16, color: c.textSecondary),
           ),
         ),
         const SizedBox(width: AppSpacing.md),
         Text(
           title,
           style:
-              AppTypography.headingS.copyWith(color: AppColors.textPrimary),
+              AppTypography.headingS.copyWith(color: c.textPrimary),
         ),
       ],
     );
@@ -765,10 +781,11 @@ class _SubPageHeader extends StatelessWidget {
 class _SettingsBg extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Positioned.fill(
       child: Stack(
         children: [
-          Container(color: AppColors.background),
+          Container(color: c.background),
           Positioned(
             top: -100,
             left: -60,

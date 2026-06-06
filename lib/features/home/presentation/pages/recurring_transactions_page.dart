@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/utils/id_gen.dart';
@@ -53,12 +54,13 @@ class RecurringTransactionsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
     final items = ref.watch(recurringListProvider);
     final currency = ref.watch(currencySymbolProvider);
     final accounts = ref.watch(accountsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,20 +76,20 @@ class RecurringTransactionsPage extends ConsumerWidget {
                     child: Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
-                        color: AppColors.glassLight,
+                        color: c.glass,
                         borderRadius: BorderRadius.circular(11),
                         border: Border.all(
-                            color: AppColors.glassBorder, width: 0.5),
+                            color: c.glassBorder, width: 0.5),
                       ),
-                      child: const Icon(Icons.arrow_back_rounded,
-                          size: 18, color: AppColors.textSecondary),
+                      child: Icon(Icons.arrow_back_rounded,
+                          size: 18, color: c.textSecondary),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text('Transacciones recurrentes',
                         style: AppTypography.headingS
-                            .copyWith(color: AppColors.textPrimary)),
+                            .copyWith(color: c.textPrimary)),
                   ),
                   GestureDetector(
                     onTap: () => _showFormSheet(context, ref, accounts),
@@ -113,7 +115,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
               child: Text(
                 'Se registran automáticamente cuando abres la app.',
                 style: AppTypography.labelM
-                    .copyWith(color: AppColors.textTertiary),
+                    .copyWith(color: c.textTertiary),
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
@@ -124,15 +126,15 @@ class RecurringTransactionsPage extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.repeat_rounded,
-                              size: 40, color: AppColors.textTertiary),
+                              size: 40, color: c.textTertiary),
                           const SizedBox(height: AppSpacing.md),
                           Text('Sin transacciones recurrentes',
                               style: AppTypography.labelL
-                                  .copyWith(color: AppColors.textTertiary)),
+                                  .copyWith(color: c.textTertiary)),
                           const SizedBox(height: AppSpacing.sm),
                           Text('Toca + para agregar una.',
                               style: AppTypography.labelM
-                                  .copyWith(color: AppColors.textTertiary)),
+                                  .copyWith(color: c.textTertiary)),
                         ],
                       ),
                     )
@@ -222,13 +224,14 @@ class _RecurringItemRow extends StatelessWidget {
     );
     final isIncome = item.type == TransactionType.income.name;
 
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.lg, vertical: AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.card,
+        color: c.card,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: AppColors.glassBorder, width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: Row(
         children: [
@@ -247,19 +250,19 @@ class _RecurringItemRow extends StatelessWidget {
               children: [
                 Text(item.merchant,
                     style: AppTypography.labelL
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: c.textPrimary)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     Text(_freqLabel(),
                         style: AppTypography.labelS
-                            .copyWith(color: AppColors.textTertiary)),
+                            .copyWith(color: c.textTertiary)),
                     if (account != null) ...[
-                      const Text(' · ',
-                          style: TextStyle(color: AppColors.textTertiary)),
+                      Text(' · ',
+                          style: TextStyle(color: c.textTertiary)),
                       Text(account!.name,
                           style: AppTypography.labelS
-                              .copyWith(color: AppColors.textTertiary)),
+                              .copyWith(color: c.textTertiary)),
                     ],
                   ],
                 ),
@@ -269,7 +272,7 @@ class _RecurringItemRow extends StatelessWidget {
           Text(
             '${isIncome ? '+' : '-'}$currency${item.amount.toStringAsFixed(2)}',
             style: AppTypography.labelL.copyWith(
-              color: isIncome ? AppColors.positive : AppColors.textPrimary,
+              color: isIncome ? AppColors.positive : c.textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -292,11 +295,11 @@ class _RecurringItemRow extends StatelessWidget {
             child: Container(
               width: 30, height: 30,
               decoration: BoxDecoration(
-                color: AppColors.glassLight,
+                color: c.glass,
                 borderRadius: BorderRadius.circular(9),
               ),
-              child: const Icon(Icons.more_vert_rounded,
-                  size: 14, color: AppColors.textSecondary),
+              child: Icon(Icons.more_vert_rounded,
+                  size: 14, color: c.textSecondary),
             ),
           ),
         ],
@@ -328,12 +331,13 @@ class _RecurringActionSheet extends StatelessWidget {
     );
     final isIncome = item.type == TransactionType.income.name;
 
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: Column(
@@ -344,7 +348,7 @@ class _RecurringActionSheet extends StatelessWidget {
               width: 36, height: 4,
               margin: const EdgeInsets.only(bottom: AppSpacing.xl),
               decoration: BoxDecoration(
-                color: AppColors.textTertiary.withValues(alpha: 0.4),
+                color: c.textTertiary.withValues(alpha: 0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -365,11 +369,11 @@ class _RecurringActionSheet extends StatelessWidget {
                 children: [
                   Text(item.merchant,
                       style: AppTypography.headingS
-                          .copyWith(color: AppColors.textPrimary)),
+                          .copyWith(color: c.textPrimary)),
                   Text(
                     '${isIncome ? '+' : '-'}$currency${item.amount.toStringAsFixed(2)}',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary),
+                        .copyWith(color: c.textTertiary),
                   ),
                 ],
               ),
@@ -550,12 +554,13 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
         _freq == RecurrenceFrequency.weekly;
     final isEdit = widget.existing != null;
 
+    final c = context.colors;
     return Container(
       padding: EdgeInsets.fromLTRB(
           AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: const BorderRadius.vertical(
             top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
@@ -568,14 +573,14 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                 width: 36, height: 4,
                 margin: const EdgeInsets.only(bottom: AppSpacing.xl),
                 decoration: BoxDecoration(
-                  color: AppColors.textTertiary.withValues(alpha: 0.4),
+                  color: c.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Text(isEdit ? 'Editar recurrente' : 'Nueva recurrente',
                 style: AppTypography.headingS
-                    .copyWith(color: AppColors.textPrimary)),
+                    .copyWith(color: c.textPrimary)),
             const SizedBox(height: AppSpacing.xxl),
 
             _Label('Concepto'),
@@ -619,19 +624,19 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                       decoration: BoxDecoration(
                         color: sel
                             ? color.withValues(alpha: 0.12)
-                            : Colors.white.withValues(alpha: 0.04),
+                            : c.glass,
                         borderRadius:
                             BorderRadius.circular(AppSpacing.pillRadius),
                         border: Border.all(
                           color: sel
                               ? color.withValues(alpha: 0.4)
-                              : Colors.white.withValues(alpha: 0.08),
+                              : c.glassBorder,
                         ),
                       ),
                       child: Text(
                           t == TransactionType.income ? 'Ingreso' : 'Gasto',
                           style: AppTypography.labelM.copyWith(
-                            color: sel ? color : AppColors.textTertiary,
+                            color: sel ? color : c.textTertiary,
                             fontWeight:
                                 sel ? FontWeight.w600 : FontWeight.w400,
                           )),
@@ -661,13 +666,13 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                     decoration: BoxDecoration(
                       color: sel
                           ? c.color.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.04),
+                          : context.colors.glass,
                       borderRadius:
                           BorderRadius.circular(AppSpacing.pillRadius),
                       border: Border.all(
                         color: sel
                             ? c.color.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.08),
+                            : context.colors.glassBorder,
                       ),
                     ),
                     child: Row(
@@ -675,11 +680,11 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                       children: [
                         Icon(c.icon,
                             size: 12,
-                            color: sel ? c.color : AppColors.textTertiary),
+                            color: sel ? c.color : context.colors.textTertiary),
                         const SizedBox(width: 5),
                         Text(c.label,
                             style: AppTypography.labelS.copyWith(
-                              color: sel ? c.color : AppColors.textTertiary,
+                              color: sel ? c.color : context.colors.textTertiary,
                               fontWeight:
                                   sel ? FontWeight.w600 : FontWeight.w400,
                             )),
@@ -709,19 +714,19 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                     decoration: BoxDecoration(
                       color: sel
                           ? AppColors.emeraldSurface
-                          : Colors.white.withValues(alpha: 0.04),
+                          : c.glass,
                       borderRadius:
                           BorderRadius.circular(AppSpacing.pillRadius),
                       border: Border.all(
                         color: sel
                             ? AppColors.emerald.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.08),
+                            : c.glassBorder,
                       ),
                     ),
                     child: Text(f.label,
                         style: AppTypography.labelM.copyWith(
                           color:
-                              sel ? AppColors.emerald : AppColors.textTertiary,
+                              sel ? AppColors.emerald : c.textTertiary,
                           fontWeight:
                               sel ? FontWeight.w600 : FontWeight.w400,
                         )),
@@ -742,39 +747,37 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                   child: Container(
                     width: 38, height: 38,
                     decoration: BoxDecoration(
-                      color: AppColors.glassLight,
+                      color: c.glass,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.glassBorder, width: 0.5),
+                      border: Border.all(color: c.glassBorder, width: 0.5),
                     ),
-                    child: const Icon(Icons.remove_rounded,
-                        size: 18, color: AppColors.textSecondary),
+                    child: Icon(Icons.remove_rounded,
+                        size: 18, color: c.textSecondary),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.lg),
                 Text('$_times',
                     style: AppTypography.headingS
-                        .copyWith(color: AppColors.textPrimary)),
+                        .copyWith(color: c.textPrimary)),
                 const SizedBox(width: AppSpacing.lg),
                 GestureDetector(
                   onTap: () => setState(() => _times++),
                   child: Container(
                     width: 38, height: 38,
                     decoration: BoxDecoration(
-                      color: AppColors.glassLight,
+                      color: c.glass,
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: AppColors.glassBorder, width: 0.5),
+                      border: Border.all(color: c.glassBorder, width: 0.5),
                     ),
-                    child: const Icon(Icons.add_rounded,
-                        size: 18, color: AppColors.textSecondary),
+                    child: Icon(Icons.add_rounded,
+                        size: 18, color: c.textSecondary),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Text(
                     'por ${_freq == RecurrenceFrequency.daily ? 'día' : 'semana'}',
                     style: AppTypography.labelM
-                        .copyWith(color: AppColors.textTertiary)),
+                        .copyWith(color: c.textTertiary)),
               ],
             ),
 
@@ -805,12 +808,12 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                         decoration: BoxDecoration(
                           color: sel
                               ? AppColors.emeraldSurface
-                              : Colors.white.withValues(alpha: 0.04),
+                              : c.glass,
                           borderRadius: BorderRadius.circular(9),
                           border: Border.all(
                             color: sel
                                 ? AppColors.emerald.withValues(alpha: 0.4)
-                                : Colors.white.withValues(alpha: 0.08),
+                                : c.glassBorder,
                           ),
                         ),
                         child: Center(
@@ -819,7 +822,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                             style: AppTypography.labelM.copyWith(
                               color: sel
                                   ? AppColors.emerald
-                                  : AppColors.textTertiary,
+                                  : c.textTertiary,
                               fontWeight:
                                   sel ? FontWeight.w700 : FontWeight.w400,
                             ),
@@ -853,13 +856,13 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                       decoration: BoxDecoration(
                         color: sel
                             ? a.color.withValues(alpha: 0.12)
-                            : Colors.white.withValues(alpha: 0.04),
+                            : c.glass,
                         borderRadius:
                             BorderRadius.circular(AppSpacing.pillRadius),
                         border: Border.all(
                           color: sel
                               ? a.color.withValues(alpha: 0.4)
-                              : Colors.white.withValues(alpha: 0.08),
+                              : c.glassBorder,
                         ),
                       ),
                       child: Row(
@@ -867,12 +870,12 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                         children: [
                           Icon(a.icon.iconData,
                               size: 13,
-                              color: sel ? a.color : AppColors.textTertiary),
+                              color: sel ? a.color : c.textTertiary),
                           const SizedBox(width: 5),
                           Text(a.name,
                               style: AppTypography.labelM.copyWith(
                                 color:
-                                    sel ? a.color : AppColors.textTertiary,
+                                    sel ? a.color : c.textTertiary,
                                 fontWeight:
                                     sel ? FontWeight.w600 : FontWeight.w400,
                               )),
@@ -926,7 +929,7 @@ class _Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(text,
       style: AppTypography.labelM.copyWith(
-          color: AppColors.textSecondary, fontWeight: FontWeight.w600));
+          color: context.colors.textSecondary, fontWeight: FontWeight.w600));
 }
 
 class _Field extends StatelessWidget {
@@ -945,23 +948,22 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
+        color: c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+        border: Border.all(color: c.glassBorder, width: 0.5),
       ),
       child: TextField(
         controller: controller,
         autofocus: autofocus,
         keyboardType: keyboardType,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: c.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle:
-              const TextStyle(color: AppColors.textTertiary, fontSize: 14),
-          prefixIcon: Icon(icon, size: 18, color: AppColors.textTertiary),
+          hintStyle: TextStyle(color: c.textTertiary, fontSize: 14),
+          prefixIcon: Icon(icon, size: 18, color: c.textTertiary),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.lg, vertical: AppSpacing.md),

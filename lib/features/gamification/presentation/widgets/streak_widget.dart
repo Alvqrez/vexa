@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_typography.dart';
+import '../../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../../core/constants/app_spacing.dart';
 import '../providers/gamification_provider.dart';
 
@@ -51,10 +51,12 @@ class StreakWidget extends ConsumerWidget {
           vertical: AppSpacing.md,
         ),
         decoration: BoxDecoration(
-          color: AppColors.card,
+          color: context.colors.card,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
-        child: Row(
+        child: Builder(builder: (ctx) {
+          final c = ctx.colors;
+          return Row(
           children: [
             _FlameIcon(active: streak.isActiveToday),
             const SizedBox(width: AppSpacing.md),
@@ -65,8 +67,9 @@ class StreakWidget extends ConsumerWidget {
                 children: [
                   Text(
                     'RACHA ACTIVA',
-                    style: AppTypography.eyebrow
-                        .copyWith(color: AppColors.textTertiary),
+                    style: AppTypography.eyebrow.copyWith(
+                      color: c.textTertiary,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Row(
@@ -81,8 +84,9 @@ class StreakWidget extends ConsumerWidget {
                       const SizedBox(width: 4),
                       Text(
                         streak.currentStreak == 1 ? 'día' : 'días seguidos',
-                        style: AppTypography.bodyS
-                            .copyWith(color: AppColors.textSecondary),
+                        style: AppTypography.bodyS.copyWith(
+                          color: c.textSecondary,
+                        ),
                       ),
                     ],
                   ),
@@ -95,20 +99,21 @@ class StreakWidget extends ConsumerWidget {
               children: [
                 Text(
                   'Récord',
-                  style: AppTypography.labelS
-                      .copyWith(color: AppColors.textTertiary),
+                  style: AppTypography.labelS.copyWith(
+                    color: c.textTertiary,
+                  ),
                 ),
                 Text(
                   '${streak.longestStreak} días',
                   style: AppTypography.labelM.copyWith(
-                    color: AppColors.textSecondary,
+                    color: c.textSecondary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ],
-        ),
+        );}),
       ),
     );
   }
@@ -171,7 +176,7 @@ class _FlameIconState extends State<_FlameIcon>
         child: Icon(
           Icons.local_fire_department_rounded,
           size: 22,
-          color: widget.active ? color : AppColors.textTertiary,
+          color: widget.active ? color : context.colors.textTertiary,
         ),
       ),
     );
