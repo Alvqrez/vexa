@@ -67,47 +67,71 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
   }
 
   Future<void> _runSequence() async {
-    await Future.delayed(const Duration(milliseconds: 120));
-    await _logoCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 80));
-    await _textCtrl.forward();
-    await Future.delayed(const Duration(milliseconds: 860));
-    await _exitCtrl.forward();
-    if (!mounted) return;
-    final onboardingDone = await LocalPrefsService.getBool('onboarding_done');
-    final savedSymbol = await LocalPrefsService.getString('currency_symbol');
-    final savedCode = await LocalPrefsService.getString('currency_code');
-    final savedTheme = await loadThemeMode();
-    final savedAnimations = await LocalPrefsService.getBool('settings_animations', defaultValue: true);
-    final savedHideAmounts = await LocalPrefsService.getBool('settings_hide_amounts', defaultValue: false);
-    if (!mounted) return;
-    if (savedSymbol != null) {
-      ref.read(currencySymbolProvider.notifier).state = savedSymbol;
-    }
-    if (savedCode != null) {
-      ref.read(currencyCodeProvider.notifier).state = savedCode;
-    }
-    ref.read(themeModeProvider.notifier).state = savedTheme;
-    ref.read(animationsEnabledProvider.notifier).state = savedAnimations;
-    ref.read(hideAmountsProvider.notifier).state = savedHideAmounts;
-    Widget destination;
-    if (!onboardingDone) {
-      destination = const OnboardingPage();
-    } else if (await LocalAuthService.isAnyLockEnabled()) {
-      destination = const LockScreenPage();
-    } else {
-      destination = const MainShell();
-    }
+    try {
+      await Future.delayed(const Duration(milliseconds: 120));
+      await _logoCtrl.forward();
+      await Future.delayed(const Duration(milliseconds: 80));
+      await _textCtrl.forward();
+      await Future.delayed(const Duration(milliseconds: 860));
+      await _exitCtrl.forward();
+      if (!mounted) return;
 
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (ctx, a1, a2) => destination,
-        transitionsBuilder: (ctx, anim, a2, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 420),
-      ),
-    );
+      final onboardingDone = await LocalPrefsService.getBool('onboarding_done');
+      final savedSymbol = await LocalPrefsService.getString('currency_symbol');
+      final savedCode = await LocalPrefsService.getString('currency_code');
+      final savedTheme = await loadThemeMode();
+      final savedAnimations = await LocalPrefsService.getBool('settings_animations', defaultValue: true);
+      final savedHideAmounts = await LocalPrefsService.getBool('settings_hide_amounts', defaultValue: false);
+
+      if (!mounted) return;
+
+      if (savedSymbol != null) {
+        ref.read(currencySymbolProvider.notifier).state = savedSymbol;
+      }
+      if (savedCode != null) {
+        ref.read(currencyCodeProvider.notifier).state = savedCode;
+      }
+      ref.read(themeModeProvider.notifier).state = savedTheme;
+      ref.read(animationsEnabledProvider.notifier).state = savedAnimations;
+      ref.read(hideAmountsProvider.notifier).state = savedHideAmounts;
+
+      Widget destination;
+      if (!onboardingDone) {
+        destination = const OnboardingPage();
+      } else if (await LocalAuthService.isAnyLockEnabled()) {
+        destination = const LockScreenPage();
+      } else {
+        destination = const MainShell();
+      }
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (ctx, a1, a2) => destination,
+          transitionsBuilder: (ctx, anim, a2, child) =>
+              FadeTransition(opacity: anim, child: child),
+          transitionDuration: const Duration(milliseconds: 420),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('SplashPage._runSequence error: $e\n$stackTrace');
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Error'),
+            content: Text('$e'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -111,6 +111,33 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
     );
   }
 
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    DateTime? initial;
+    try {
+      final parts = _birthdateController.text.split('/');
+      if (parts.length == 3) {
+        initial = DateTime(
+          int.parse(parts[2]),
+          int.parse(parts[1]),
+          int.parse(parts[0]),
+        );
+      }
+    } catch (_) {}
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial ?? DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+      locale: const Locale('es'),
+    );
+    if (picked == null) return;
+    final day = picked.day.toString().padLeft(2, '0');
+    final month = picked.month.toString().padLeft(2, '0');
+    _birthdateController.text = '$day/$month/${picked.year}';
+  }
+
   void _toggleEdit() {
     if (_editing) {
       ref.read(userProfileProvider.notifier).update(
@@ -246,7 +273,8 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
                             label: 'Fecha de nacimiento',
                             controller: _birthdateController,
                             icon: Icons.cake_outlined,
-                            keyboardType: TextInputType.datetime,
+                            keyboardType: TextInputType.none,
+                            onTap: _pickDate,
                           ),
                         ],
                       )),
@@ -271,11 +299,13 @@ class _FieldData {
     required this.controller,
     required this.icon,
     required this.keyboardType,
+    this.onTap,
   });
   final String label;
   final TextEditingController controller;
   final IconData icon;
   final TextInputType keyboardType;
+  final VoidCallback? onTap;
 }
 
 class _FieldsCard extends StatelessWidget {
@@ -360,6 +390,8 @@ class _FormField extends StatelessWidget {
                     ? TextField(
                         controller: data.controller,
                         keyboardType: data.keyboardType,
+                        readOnly: data.onTap != null,
+                        onTap: data.onTap,
                         style: AppTypography.bodyM
                             .copyWith(color: c.textPrimary),
                         decoration: const InputDecoration(
@@ -599,3 +631,4 @@ class _SourceOption extends StatelessWidget {
     );
   }
 }
+
