@@ -102,8 +102,8 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _BudgetFormSheet(
-        onSave: (item) {
-          ref.read(budgetProvider.notifier).add(item);
+        onSave: (item) async {
+          await ref.read(budgetProvider.notifier).add(item);
         },
       ),
     );
@@ -116,11 +116,11 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _EditLimitSheet(
         item: item,
-        onSave: (limit) {
-          ref.read(budgetProvider.notifier).updateLimit(item.id, limit);
+        onSave: (limit) async {
+          await ref.read(budgetProvider.notifier).updateLimit(item.id, limit);
         },
-        onDelete: () {
-          ref.read(budgetProvider.notifier).delete(item.id);
+        onDelete: () async {
+          await ref.read(budgetProvider.notifier).delete(item.id);
         },
       ),
     );
@@ -792,8 +792,8 @@ class _EditLimitSheet extends StatefulWidget {
     required this.onDelete,
   });
   final BudgetItem item;
-  final ValueChanged<double> onSave;
-  final VoidCallback onDelete;
+  final Future<void> Function(double) onSave;
+  final Future<void> Function() onDelete;
 
   @override
   State<_EditLimitSheet> createState() => _EditLimitSheetState();
@@ -832,13 +832,15 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final limit = _expanded
         ? (double.tryParse(_limitCtrl.text.replaceAll(',', '.')) ?? 0.0)
         : 0.0;
-    widget.onSave(limit);
+    await widget.onSave(limit);
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -1142,7 +1144,7 @@ class _AddBudgetButton extends StatelessWidget {
 
 class _BudgetFormSheet extends StatefulWidget {
   const _BudgetFormSheet({required this.onSave});
-  final void Function(BudgetItem) onSave;
+  final Future<void> Function(BudgetItem) onSave;
 
   @override
   State<_BudgetFormSheet> createState() => _BudgetFormSheetState();
@@ -1186,7 +1188,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       HapticFeedback.heavyImpact();
@@ -1195,7 +1197,7 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
     final limit = _budgetExpanded
         ? (double.tryParse(_limitCtrl.text.replaceAll(',', '.')) ?? 0.0)
         : 0.0;
-    widget.onSave(BudgetItem(
+    await widget.onSave(BudgetItem(
       id: generateId(),
       name: name,
       icon: _icon,
@@ -1203,7 +1205,9 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
       limit: limit,
     ));
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override

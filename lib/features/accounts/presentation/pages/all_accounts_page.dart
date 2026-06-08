@@ -20,8 +20,8 @@ class AllAccountsPage extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddAccountSheet(
-        onSave: (account) =>
-            ref.read(accountsProvider.notifier).addAccount(account),
+        onSave: (account) async =>
+            await ref.read(accountsProvider.notifier).addAccount(account),
       ),
     );
   }
@@ -405,7 +405,7 @@ const _accountColors = [
 
 class _AddAccountSheet extends StatefulWidget {
   const _AddAccountSheet({required this.onSave});
-  final ValueChanged<Account> onSave;
+  final Future<void> Function(Account) onSave;
 
   @override
   State<_AddAccountSheet> createState() => _AddAccountSheetState();
@@ -435,7 +435,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
     super.dispose();
   }
 
-  void _save() {
+  void _save() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) return;
     final balance =
@@ -448,8 +448,10 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
       icon: _icon,
       isSavings: _isSavings,
     );
-    widget.onSave(account);
-    Navigator.of(context).pop();
+    await widget.onSave(account);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override

@@ -205,8 +205,8 @@ class GoalsPage extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _AddGoalSheet(
-        onAdd: (goal) {
-          ref.read(goalsProvider.notifier).add(goal);
+        onAdd: (goal) async {
+          await ref.read(goalsProvider.notifier).add(goal);
         },
       ),
     );
@@ -418,7 +418,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
 
 class _AddGoalSheet extends StatefulWidget {
   const _AddGoalSheet({required this.onAdd});
-  final void Function(FinancialGoal) onAdd;
+  final Future<void> Function(FinancialGoal) onAdd;
 
   @override
   State<_AddGoalSheet> createState() => _AddGoalSheetState();
@@ -459,7 +459,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
     final targetText = _targetCtrl.text.trim();
     if (title.isEmpty || targetText.isEmpty) return;
@@ -478,8 +478,10 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     );
 
     HapticFeedback.mediumImpact();
-    widget.onAdd(goal);
-    Navigator.of(context).pop();
+    await widget.onAdd(goal);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
