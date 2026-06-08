@@ -80,12 +80,12 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarBudgetItems.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarBudgetItems.where().findAll();
     if (records.isNotEmpty) {
       state = records.map(_isarToBudget).toList();
     }
-    _isLoaded = true;
   }
 
   Future<void> _persistAll() => _isar.writeTxn(() async {
@@ -95,33 +95,33 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
       });
 
 
-  void add(BudgetItem item) {
+  Future<void> add(BudgetItem item) async {
     _isLoaded = true;
     state = [...state, item];
-    _isar.writeTxn(() => _isar.isarBudgetItems.put(_budgetToIsar(item)));
+    await _isar.writeTxn(() => _isar.isarBudgetItems.put(_budgetToIsar(item)));
   }
 
-  void update(BudgetItem item) {
+  Future<void> update(BudgetItem item) async {
     _isLoaded = true;
     state = [
       for (final b in state) if (b.id == item.id) item else b,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void updateLimit(String id, double newLimit) {
+  Future<void> updateLimit(String id, double newLimit) async {
     _isLoaded = true;
     state = [
       for (final b in state)
         if (b.id == id) b.copyWith(limit: newLimit) else b,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void delete(String id) {
+  Future<void> delete(String id) async {
     _isLoaded = true;
     state = state.where((b) => b.id != id).toList();
-    _isar.writeTxn(() => _isar.isarBudgetItems.deleteByBudgetId(id));
+    await _isar.writeTxn(() => _isar.isarBudgetItems.deleteByBudgetId(id));
   }
 }
 

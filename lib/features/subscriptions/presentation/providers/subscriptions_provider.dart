@@ -68,37 +68,37 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
             .putAll(state.map(_subsToIsar).toList());
       });
 
-  void add(Subscription s) {
+  Future<void> add(Subscription s) async {
     _isLoaded = true;
     state = [...state, s];
-    _isar.writeTxn(() => _isar.isarSubscriptions.put(_subsToIsar(s)));
+    await _isar.writeTxn(() => _isar.isarSubscriptions.put(_subsToIsar(s)));
   }
 
-  void update(Subscription updated) {
+  Future<void> update(Subscription updated) async {
     _isLoaded = true;
     state = [
       for (final s in state) if (s.id == updated.id) updated else s,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void delete(String id) {
+  Future<void> delete(String id) async {
     _isLoaded = true;
     state = state.where((s) => s.id != id).toList();
-    _isar.writeTxn(
+    await _isar.writeTxn(
         () => _isar.isarSubscriptions.deleteBySubscriptionId(id));
   }
 
-  void toggleActive(String id) {
+  Future<void> toggleActive(String id) async {
     _isLoaded = true;
     state = [
       for (final s in state)
         if (s.id == id) s.copyWith(isActive: !s.isActive) else s,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void chargeSubscription(Subscription s) {
+  Future<void> chargeSubscription(Subscription s) async {
     final accounts = _ref.read(accountsProvider);
     final account = accounts.isEmpty
         ? null
@@ -115,7 +115,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
     _ref.read(transactionsProvider.notifier).add(transaction);
 
     final nextDate = s.nextAfterCurrent;
-    update(s.copyWith(nextBillingDate: nextDate));
+    await update(s.copyWith(nextBillingDate: nextDate));
   }
 }
 

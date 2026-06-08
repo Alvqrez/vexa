@@ -39,12 +39,12 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarFinancialGoals.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarFinancialGoals.where().findAll();
     if (records.isNotEmpty) {
       state = records.map(_isarToGoal).toList();
     }
-    _isLoaded = true;
   }
 
   Future<void> _persistAll() => _isar.writeTxn(() async {
@@ -54,13 +54,13 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
       });
 
 
-  void add(FinancialGoal goal) {
+  Future<void> add(FinancialGoal goal) async {
     _isLoaded = true;
     state = [...state, goal];
-    _isar.writeTxn(() => _isar.isarFinancialGoals.put(_goalToIsar(goal)));
+    await _isar.writeTxn(() => _isar.isarFinancialGoals.put(_goalToIsar(goal)));
   }
 
-  void addProgress(String id, double amount) {
+  Future<void> addProgress(String id, double amount) async {
     _isLoaded = true;
     state = state.map((g) {
       if (g.id != id) return g;
@@ -70,19 +70,19 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
         completed: newCurrent >= g.target,
       );
     }).toList();
-    _persistAll();
+    await _persistAll();
   }
 
-  void update(FinancialGoal updated) {
+  Future<void> update(FinancialGoal updated) async {
     _isLoaded = true;
     state = [for (final g in state) if (g.id == updated.id) updated else g];
-    _persistAll();
+    await _persistAll();
   }
 
-  void remove(String id) {
+  Future<void> remove(String id) async {
     _isLoaded = true;
     state = state.where((g) => g.id != id).toList();
-    _isar.writeTxn(() => _isar.isarFinancialGoals.deleteByGoalId(id));
+    await _isar.writeTxn(() => _isar.isarFinancialGoals.deleteByGoalId(id));
   }
 }
 

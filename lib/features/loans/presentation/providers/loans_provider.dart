@@ -88,10 +88,10 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
     return txId;
   }
 
-  void add(Loan l) {
+  Future<void> add(Loan l) async {
     _isLoaded = true;
     state = [l, ...state];
-    _isar.writeTxn(() => _isar.isarLoans.put(_loanToIsar(l)));
+    await _isar.writeTxn(() => _isar.isarLoans.put(_loanToIsar(l)));
 
     // Prestar dinero = gasto. Recibir prestado = ingreso.
     final txId = _addTransaction(
@@ -104,16 +104,16 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
     );
     // Persist the origin txId so delete() can reverse the balance.
     if (txId != null) {
-      LocalPrefsService.setString('loan_origin_tx_${l.id}', txId);
+      await LocalPrefsService.setString('loan_origin_tx_${l.id}', txId);
     }
   }
 
-  void update(Loan updated) {
+  Future<void> update(Loan updated) async {
     _isLoaded = true;
     state = [
       for (final l in state) if (l.id == updated.id) updated else l,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
   Future<void> delete(String id) async {
@@ -135,7 +135,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
     }
   }
 
-  void addPayment(String id, double paymentAmount, {String? accountId}) {
+  Future<void> addPayment(String id, double paymentAmount, {String? accountId}) async {
     final loan = state.firstWhere((l) => l.id == id);
     _isLoaded = true;
     state = [
@@ -147,7 +147,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
         else
           l,
     ];
-    _persistAll();
+    await _persistAll();
 
     // Cobrar lo prestado = ingreso. Pagar lo debido = gasto.
     final effectiveAccountId = accountId ?? loan.accountId;

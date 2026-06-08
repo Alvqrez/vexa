@@ -131,27 +131,27 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
             .putAll(state.map(_catToIsar).toList());
       });
 
-  void add(WalletCategory category) {
+  Future<void> add(WalletCategory category) async {
     _isLoaded = true;
     state = [...state, category];
-    _isar.writeTxn(() => _isar.isarWalletCategorys.put(_catToIsar(category)));
+    await _isar.writeTxn(() => _isar.isarWalletCategorys.put(_catToIsar(category)));
   }
 
-  void update(WalletCategory updated) {
+  Future<void> update(WalletCategory updated) async {
     _isLoaded = true;
     state = [
       for (final c in state) if (c.id == updated.id) updated else c,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void delete(String id) {
+  Future<void> delete(String id) async {
     _isLoaded = true;
     state = state.where((c) => c.id != id).toList();
-    _isar.writeTxn(() => _isar.isarWalletCategorys.deleteByCategoryId(id));
+    await _isar.writeTxn(() => _isar.isarWalletCategorys.deleteByCategoryId(id));
   }
 
-  void reorder(int oldIndex, int newIndex, WalletCategoryType type) {
+  Future<void> reorder(int oldIndex, int newIndex, WalletCategoryType type) async {
     _isLoaded = true;
     final filtered = state
         .where((c) => c.type == type)
@@ -169,7 +169,7 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
       ...state.where((c) => c.type != type),
       ...reordered,
     ];
-    _persistAll();
+    await _persistAll();
   }
 }
 

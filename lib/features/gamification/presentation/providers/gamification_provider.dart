@@ -34,7 +34,7 @@ class StreakNotifier extends StateNotifier<Streak> {
         'streak_last_tx', state.lastTransactionDate.toIso8601String());
   }
 
-  void recordActivity() {
+  Future<void> recordActivity() async {
     final now = DateTime.now();
     if (state.isActiveToday) return;
 
@@ -50,13 +50,13 @@ class StreakNotifier extends StateNotifier<Streak> {
           newStreak > state.longestStreak ? newStreak : state.longestStreak,
       lastActiveDate: now,
     );
-    _save();
+    await _save();
   }
 
-  void recordTransaction() {
-    recordActivity();
+  Future<void> recordTransaction() async {
+    await recordActivity();
     state = state.copyWith(lastTransactionDate: DateTime.now());
-    _save();
+    await _save();
   }
 
   Future<void> reset() async {

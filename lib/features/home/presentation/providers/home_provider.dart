@@ -177,7 +177,6 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
       return isSavings ? a.copyWith(isSavings: true) : a;
     }));
     state = withFlags;
-    _isLoaded = true;
   }
 
   Future<void> seed() async {
@@ -197,16 +196,16 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
             .putAll(state.map(_accountToIsar).toList());
       });
 
-  void correctBalance(String accountId, double newBalance) {
+  Future<void> correctBalance(String accountId, double newBalance) async {
     _isLoaded = true;
     state = [
       for (final a in state)
         if (a.id == accountId) a.copyWith(balance: newBalance) else a,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void adjustBalance(String accountId, double delta) {
+  Future<void> adjustBalance(String accountId, double delta) async {
     _isLoaded = true;
     state = [
       for (final a in state)
@@ -215,16 +214,16 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
         else
           a,
     ];
-    _persistAll();
+    await _persistAll();
   }
 
-  void reorder(int oldIndex, int newIndex) {
+  Future<void> reorder(int oldIndex, int newIndex) async {
     _isLoaded = true;
     final list = [...state];
     final item = list.removeAt(oldIndex);
     list.insert(newIndex, item);
     state = list;
-    _persistAll();
+    await _persistAll();
   }
 
   Future<void> addAccount(Account account) async {
@@ -397,18 +396,18 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
     ),
   ];
 
-  void add(Transaction t) {
+  Future<void> add(Transaction t) async {
     _isLoaded = true;
     state = [t, ...state];
     if (t.accountId != null) {
       final delta = t.isIncome ? t.amount : -t.amount;
-      _ref.read(accountsProvider.notifier).adjustBalance(t.accountId!, delta);
+      await _ref.read(accountsProvider.notifier).adjustBalance(t.accountId!, delta);
     }
     // Single-record insert — no existing record with this txId, no conflict.
-    _isar.writeTxn(() => _isar.isarTransactions.put(_txToIsar(t)));
+    await _isar.writeTxn(() => _isar.isarTransactions.put(_txToIsar(t)));
   }
 
-  void update(Transaction updated, Transaction original) {
+  Future<void> update(Transaction updated, Transaction original) async {
     _isLoaded = true;
     state = [
       for (final t in state)
@@ -416,29 +415,29 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
     ];
     if (original.accountId != null) {
       final reverse = original.isIncome ? -original.amount : original.amount;
-      _ref
+      await _ref
           .read(accountsProvider.notifier)
           .adjustBalance(original.accountId!, reverse);
     }
     if (updated.accountId != null) {
       final delta = updated.isIncome ? updated.amount : -updated.amount;
-      _ref
+      await _ref
           .read(accountsProvider.notifier)
           .adjustBalance(updated.accountId!, delta);
     }
-    _persistAll();
+    await _persistAll();
   }
 
-  void delete(Transaction t) {
+  Future<void> delete(Transaction t) async {
     _isLoaded = true;
     state = state.where((tx) => tx.id != t.id).toList();
     if (t.accountId != null) {
       final reverse = t.isIncome ? -t.amount : t.amount;
-      _ref
+      await _ref
           .read(accountsProvider.notifier)
           .adjustBalance(t.accountId!, reverse);
     }
-    _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
+    await _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
   }
 
   Future<void> reset() async {

@@ -1025,7 +1025,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     ));
   }
 
-  void _confirm() {
+  Future<void> _confirm() async {
     final amount =
         double.tryParse(_amountCtrl.text.trim().replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
@@ -1050,10 +1050,10 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final accounts = ref.read(accountsProvider);
     final toAccount = accounts.firstWhere((a) => a.id == _toId);
     final notifier = ref.read(accountsProvider.notifier);
-    notifier.adjustBalance(_fromId!, -amount);
-    notifier.adjustBalance(_toId!, amount);
+    await notifier.adjustBalance(_fromId!, -amount);
+    await notifier.adjustBalance(_toId!, amount);
     if (toAccount.isSavings) {
-      ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
+      await ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
     }
     // Save audit record
     final record = TransferRecord(
@@ -1063,8 +1063,10 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
       amount: amount,
       date: DateTime.now(),
     );
-    ref.read(transferHistoryProvider.notifier).add(record);
-    Navigator.of(context).pop();
+    await ref.read(transferHistoryProvider.notifier).add(record);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _pickAccount({required bool isFrom}) {
