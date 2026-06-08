@@ -4,7 +4,9 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../shared/widgets/animated_balance_display.dart';
 import '../../../../shared/widgets/animated_number.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
 import '../../domain/models/transaction.dart';
 import '../pages/all_transactions_page.dart';
@@ -18,6 +20,7 @@ class SummaryBalanceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final balance = ref.watch(totalBalanceProvider);
+    final currency = ref.watch(currencySymbolProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,9 +46,10 @@ class SummaryBalanceCard extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 10),
-        AnimatedNumber(
-          value: balance,
-          style: AppTypography.displayL.copyWith(
+        AnimatedBalanceDisplay(
+          balance: balance,
+          currency: currency,
+          textStyle: AppTypography.displayL.copyWith(
             color: c.textPrimary,
           ),
         ),

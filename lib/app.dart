@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/theme/app_theme.dart';
 import 'features/splash/presentation/pages/splash_page.dart';
+import 'features/subscriptions/presentation/providers/subscription_processor_provider.dart';
 
 class VexaApp extends ConsumerWidget {
   const VexaApp({super.key});
@@ -11,6 +12,9 @@ class VexaApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
+    // Inicializar procesamiento automático de suscripciones
+    ref.watch(subscriptionAutoProcessProvider);
+
     return MaterialApp(
       title: 'Vexa Finance',
       debugShowCheckedModeBanner: false,

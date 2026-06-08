@@ -11,8 +11,10 @@ import '../widgets/home_header.dart';
 import '../widgets/smart_insights_widget.dart';
 import '../widgets/summary_cards.dart';
 import '../widgets/transactions_section.dart';
+import '../widgets/financial_projection_widget.dart';
 import '../../../health/presentation/widgets/health_score_widget.dart';
 import '../../../education/presentation/widgets/daily_tip_card.dart';
+import '../../../budget/presentation/widgets/budget_notification_banner.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -92,6 +94,7 @@ class _HomePageState extends State<HomePage>
                     ),
                     sliver: SliverList(
                       delegate: SliverChildListDelegate([
+                        const BudgetNotificationBanner(),
                         const SizedBox(height: AppSpacing.lg),
                         _section(0, const HomeHeader()),
                         const SizedBox(height: AppSpacing.xxl),
@@ -99,15 +102,17 @@ class _HomePageState extends State<HomePage>
                         const SizedBox(height: AppSpacing.md),
                         _section(1, const SummaryCardsRow()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(2, const SmartInsightsWidget()),
+                        _section(2, const FinancialProjectionWidget()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(3, const DailyTipCard()),
+                        _section(3, const SmartInsightsWidget()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(4, const HealthScoreWidget()),
+                        _section(4, const DailyTipCard()),
                         const SizedBox(height: AppSpacing.xl),
-                        _section(5, const AccountsCarousel()),
+                        _section(5, const HealthScoreWidget()),
+                        const SizedBox(height: AppSpacing.xl),
+                        _section(6, const AccountsCarousel()),
                         const SizedBox(height: AppSpacing.xxl),
-                        _section(6, _SectionLabel(label: 'Categorías')),
+                        _section(7, _SectionLabel(label: 'Categorías')),
                         const SizedBox(height: AppSpacing.md),
                         _section(7, const CategoriesRow()),
                         const SizedBox(height: AppSpacing.xxl),

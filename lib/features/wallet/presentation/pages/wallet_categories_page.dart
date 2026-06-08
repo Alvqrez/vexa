@@ -6,6 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../shared/widgets/success_creation_overlay.dart';
 import '../../domain/models/wallet_category.dart';
 import '../providers/wallet_provider.dart';
 import '../../../../core/utils/id_gen.dart';
@@ -107,7 +108,18 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _CategoryFormSheet(
         type: type,
-        onSave: (cat) async => await ref.read(walletCategoriesProvider.notifier).add(cat),
+        onSave: (cat) async {
+          await ref.read(walletCategoriesProvider.notifier).add(cat);
+          if (mounted) {
+            SuccessCreationOverlay.show(
+              context,
+              title: 'Categoría creada',
+              subtitle: cat.name,
+              icon: Icons.check_circle_rounded,
+            );
+            Navigator.pop(context);
+          }
+        },
       ),
     );
   }
