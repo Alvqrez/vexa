@@ -27,7 +27,7 @@ class NumericKeypad extends StatelessWidget {
 
   final String value;
   final ValueChanged<String> onValueChanged;
-  final VoidCallback onConfirm;
+  final Future<void> Function() onConfirm;
   final Color confirmColor;
   final String currencySymbol;
   final double keyHeight;
@@ -118,9 +118,9 @@ class NumericKeypad extends StatelessWidget {
           child: _ConfirmButton(
             color: confirmColor,
             height: confirmHeight,
-            onTap: () {
+            onTap: () async {
               HapticFeedback.mediumImpact();
-              onConfirm();
+              await onConfirm();
             },
           ),
         ),

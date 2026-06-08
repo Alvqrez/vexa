@@ -138,9 +138,9 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
     _birthdateController.text = '$day/$month/${picked.year}';
   }
 
-  void _toggleEdit() {
+  Future<void> _toggleEdit() async {
     if (_editing) {
-      ref.read(userProfileProvider.notifier).update(
+      await ref.read(userProfileProvider.notifier).update(
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),

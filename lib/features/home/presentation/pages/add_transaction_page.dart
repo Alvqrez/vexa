@@ -186,7 +186,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     }
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final amount = _parsedAmount;
     if (amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
@@ -214,7 +214,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         note: note,
         tags: const [],
       );
-      ref.read(transactionsProvider.notifier).update(updated, widget.existing!);
+      await ref.read(transactionsProvider.notifier).update(updated, widget.existing!);
     } else {
       final transaction = Transaction(
         id: generateId(),
@@ -226,15 +226,15 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         accountId: _selectedAccountId,
         note: note,
       );
-      ref.read(transactionsProvider.notifier).add(transaction);
-      ref.read(streakProvider.notifier).recordTransaction();
+      await ref.read(transactionsProvider.notifier).add(transaction);
+      await ref.read(streakProvider.notifier).recordTransaction();
     }
 
     if (_selectedAccountId != null) {
-      LocalPrefsService.setString('last_account_id', _selectedAccountId!);
+      await LocalPrefsService.setString('last_account_id', _selectedAccountId!);
     }
     if (!_isEditing && _isRecurring) {
-      _saveRecurring();
+      await _saveRecurring();
     }
 
     final currency = ref.read(currencySymbolProvider);
@@ -244,50 +244,53 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final amountStr = amount >= 1000
         ? '$currency${(amount / 1000).toStringAsFixed(1)}k'
         : '$currency${amount.toStringAsFixed(2)}';
-    final messenger = ScaffoldMessenger.of(context);
+    final contextColors = context.colors;
 
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
-
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+    if (mounted) {
+      final navigator = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+      navigator.pop();
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.check_rounded, size: 15, color: color),
                 ),
-                child: Icon(Icons.check_rounded, size: 15, color: color),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                '$label de $amountStr ${_isEditing ? 'actualizado' : 'registrado'}',
-                style: AppTypography.labelM
-                    .copyWith(color: context.colors.textPrimary),
-              ),
-            ],
+                const SizedBox(width: AppSpacing.md),
+                Text(
+                  '$label de $amountStr ${_isEditing ? 'actualizado' : 'registrado'}',
+                  style: AppTypography.labelM
+                      .copyWith(color: contextColors.textPrimary),
+                ),
+              ],
+            ),
+            backgroundColor: contextColors.card,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+            margin: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding,
+              0,
+              AppSpacing.screenPadding,
+              AppSpacing.bottomNavHeight +
+                  AppSpacing.bottomNavBottomPadding +
+                  AppSpacing.md,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+            ),
           ),
-          backgroundColor: context.colors.card,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          margin: const EdgeInsets.fromLTRB(
-            AppSpacing.screenPadding,
-            0,
-            AppSpacing.screenPadding,
-            AppSpacing.bottomNavHeight +
-                AppSpacing.bottomNavBottomPadding +
-                AppSpacing.md,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          ),
-        ),
-      );
+        );
+    }
   }
 
   void _showError(String msg) {
@@ -725,7 +728,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             child: NumericKeypad(
               value: _amountStr,
               onValueChanged: (v) => setState(() => _amountStr = v),
-              onConfirm: _submit,
+              onConfirm: () async => await _submit(),
               confirmColor: _typeColor,
               currencySymbol: currency,
               keyHeight: 42,
