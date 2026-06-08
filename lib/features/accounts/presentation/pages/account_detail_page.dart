@@ -1084,7 +1084,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final newBalance = double.tryParse(_ctrl.text.replaceAll(',', '.'));
     if (newBalance == null) return;
 
@@ -1105,13 +1105,15 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
       note: 'Ajuste manual de saldo',
     );
 
-    ref.read(transactionsProvider.notifier).add(tx);
-    ref
+    await ref.read(transactionsProvider.notifier).add(tx);
+    await ref
         .read(accountsProvider.notifier)
         .correctBalance(widget.account.id, newBalance);
 
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override

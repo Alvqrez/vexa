@@ -71,10 +71,10 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     );
   }
 
-  void _delete() {
+  Future<void> _delete() async {
     HapticFeedback.heavyImpact();
     final t = widget.transaction;
-    ref.read(transactionsProvider.notifier).delete(t);
+    await ref.read(transactionsProvider.notifier).delete(t);
 
     final c = context.colors;
     ScaffoldMessenger.of(context)
@@ -102,8 +102,8 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
           action: SnackBarAction(
             label: 'Deshacer',
             textColor: AppColors.emerald,
-            onPressed: () {
-              ref.read(transactionsProvider.notifier).add(t);
+            onPressed: () async {
+              await ref.read(transactionsProvider.notifier).add(t);
             },
           ),
         ),
