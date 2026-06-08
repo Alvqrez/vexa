@@ -50,8 +50,8 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _AddProgressSheet(
         goal: goal,
-        onAdd: (amount) {
-          ref.read(goalsProvider.notifier).addProgress(goal.id, amount);
+        onAdd: (amount) async {
+          await ref.read(goalsProvider.notifier).addProgress(goal.id, amount);
           final newProgress = (goal.current + amount) / goal.target;
           if (newProgress >= 1.0 && !goal.completed) {
             HapticFeedback.heavyImpact();
@@ -506,7 +506,7 @@ class _AddProgressSheet extends StatefulWidget {
   const _AddProgressSheet({required this.goal, required this.onAdd});
 
   final FinancialGoal goal;
-  final void Function(double) onAdd;
+  final Future<void> Function(double) onAdd;
 
   @override
   State<_AddProgressSheet> createState() => _AddProgressSheetState();
@@ -521,12 +521,14 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final amount = double.tryParse(_ctrl.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) return;
     HapticFeedback.mediumImpact();
-    widget.onAdd(amount);
-    Navigator.of(context).pop();
+    await widget.onAdd(amount);
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
