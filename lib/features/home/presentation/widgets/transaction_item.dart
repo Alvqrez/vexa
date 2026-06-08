@@ -74,10 +74,12 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   Future<void> _delete() async {
     HapticFeedback.heavyImpact();
     final t = widget.transaction;
+    final c = context.colors;
+    final messenger = ScaffoldMessenger.of(context);
+
     await ref.read(transactionsProvider.notifier).delete(t);
 
-    final c = context.colors;
-    ScaffoldMessenger.of(context)
+    messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(

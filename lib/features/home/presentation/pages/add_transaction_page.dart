@@ -203,6 +203,18 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final merchantText = _merchantCtrl.text.trim();
     final merchant = merchantText.isEmpty ? _category.name : merchantText;
 
+    // Capturar valores de contexto antes del async gap
+    final currency = ref.read(currencySymbolProvider);
+    final isIncome = _type == TransactionType.income;
+    final label = isIncome ? 'Ingreso' : 'Gasto';
+    final color = isIncome ? AppColors.positive : AppColors.negative;
+    final amountStr = amount >= 1000
+        ? '$currency${(amount / 1000).toStringAsFixed(1)}k'
+        : '$currency${amount.toStringAsFixed(2)}';
+    final contextColors = context.colors;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
         merchant: merchant,
@@ -237,19 +249,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       await _saveRecurring();
     }
 
-    final currency = ref.read(currencySymbolProvider);
-    final isIncome = _type == TransactionType.income;
-    final label = isIncome ? 'Ingreso' : 'Gasto';
-    final color = isIncome ? AppColors.positive : AppColors.negative;
-    final amountStr = amount >= 1000
-        ? '$currency${(amount / 1000).toStringAsFixed(1)}k'
-        : '$currency${amount.toStringAsFixed(2)}';
-    final contextColors = context.colors;
-
     HapticFeedback.mediumImpact();
     if (mounted) {
-      final navigator = Navigator.of(context);
-      final messenger = ScaffoldMessenger.of(context);
       navigator.pop();
       messenger
         ..hideCurrentSnackBar()
