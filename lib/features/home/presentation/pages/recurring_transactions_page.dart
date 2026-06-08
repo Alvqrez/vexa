@@ -505,7 +505,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
@@ -538,12 +538,14 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     );
 
     if (widget.existing != null) {
-      ref.read(recurringListProvider.notifier).update(r);
+      await ref.read(recurringListProvider.notifier).update(r);
     } else {
-      ref.read(recurringListProvider.notifier).add(r);
+      await ref.read(recurringListProvider.notifier).add(r);
     }
     HapticFeedback.mediumImpact();
-    Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
