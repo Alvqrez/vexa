@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
-import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
@@ -14,7 +13,7 @@ IsarBudgetItem _budgetToIsar(BudgetItem b) => IsarBudgetItem()
   ..iconCodePoint = b.icon.codePoint
   ..colorValue = b.color.toARGB32()
   ..limit = b.limit
-  ..categoryStr = b.category?.name;
+  ..categoryStr = b.category;
 
 BudgetItem _isarToBudget(IsarBudgetItem ib) => BudgetItem(
       id: ib.budgetId,
@@ -22,12 +21,7 @@ BudgetItem _isarToBudget(IsarBudgetItem ib) => BudgetItem(
       icon: IconData(ib.iconCodePoint, fontFamily: 'MaterialIcons'),
       color: Color(ib.colorValue),
       limit: ib.limit,
-      category: ib.categoryStr != null
-          ? TransactionCategory.values.firstWhere(
-              (c) => c.name == ib.categoryStr,
-              orElse: () => TransactionCategory.other,
-            )
-          : null,
+      category: ib.categoryStr,
     );
 
 // ── Budget item model ─────────────────────────────────────────────────────────
@@ -46,8 +40,8 @@ class BudgetItem {
   final String name;
   final IconData icon;
   final Color color;
-  /// If non-null, spent amount is drawn from matching transactions.
-  final TransactionCategory? category;
+  /// If non-null, spent amount is drawn from matching transactions (WalletCategory ID).
+  final String? category;
   final double limit;
 
   BudgetItem copyWith({double? limit}) => BudgetItem(

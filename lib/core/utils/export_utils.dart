@@ -2,11 +2,13 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../features/home/domain/models/transaction.dart';
 import '../../features/home/domain/models/account.dart';
+import '../../features/wallet/domain/models/wallet_category.dart';
 
 abstract final class ExportUtils {
   static String buildCsv(
     List<Transaction> transactions, {
     List<Account> accounts = const [],
+    List<WalletCategory> categories = const [],
   }) {
     final accountMap = {for (final a in accounts) a.id: a.name};
     final buf = StringBuffer();
@@ -25,7 +27,7 @@ abstract final class ExportUtils {
         timeFmt.format(t.date),
         _escape(t.merchant),
         t.isIncome ? 'Ingreso' : 'Gasto',
-        t.category.label,
+        resolveCategory(t.category, categories).name,
         (t.isIncome ? t.amount : -t.amount).toStringAsFixed(2),
         _escape(accountName),
         t.tags.join(' | '),
@@ -48,8 +50,9 @@ abstract final class ExportUtils {
   static Future<int> copyToClipboard(
     List<Transaction> transactions, {
     List<Account> accounts = const [],
+    List<WalletCategory> categories = const [],
   }) async {
-    final csv = buildCsv(transactions, accounts: accounts);
+    final csv = buildCsv(transactions, accounts: accounts, categories: categories);
     await Clipboard.setData(ClipboardData(text: csv));
     return transactions.length;
   }

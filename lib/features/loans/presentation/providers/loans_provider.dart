@@ -81,7 +81,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
           merchant: merchant,
           amount: amount,
           type: type,
-          category: TransactionCategory.other,
+          category: 'wc6',
           date: DateTime.now(),
           accountId: accountId,
         ));

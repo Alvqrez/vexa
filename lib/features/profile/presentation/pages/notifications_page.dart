@@ -9,6 +9,7 @@ import '../../../../core/constants/app_curves.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/services/notification_service.dart';
 
 class NotificationsPage extends ConsumerStatefulWidget {
   const NotificationsPage({super.key});
@@ -60,6 +61,13 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
     await LocalPrefsService.setBool(key, value);
     if (key == 'notif_prediction') {
       ref.read(notifPrefsProvider.notifier).reload();
+    }
+    if (key == 'notif_daily_tip') {
+      if (value) {
+        await NotificationService.scheduleDailyTip();
+      } else {
+        await NotificationService.cancelDailyTip();
+      }
     }
   }
 

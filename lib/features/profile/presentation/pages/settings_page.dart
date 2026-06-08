@@ -13,6 +13,7 @@ import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/utils/export_utils.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../splash/presentation/pages/splash_page.dart';
@@ -367,7 +368,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               onTap: () async {
                                 final txns = ref.read(transactionsProvider);
                                 final accs = ref.read(accountsProvider);
-                                final count = await ExportUtils.copyToClipboard(txns, accounts: accs);
+                                final cats = ref.read(walletCategoriesProvider);
+                                final count = await ExportUtils.copyToClipboard(txns, accounts: accs, categories: cats);
                                 if (!context.mounted) return;
                                 final sc = context.colors;
                                 ScaffoldMessenger.of(context).showSnackBar(

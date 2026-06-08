@@ -10,6 +10,8 @@ import '../../domain/models/transaction.dart';
 import '../pages/transaction_detail_page.dart';
 import '../pages/add_transaction_page.dart';
 import '../providers/home_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class TransactionItem extends ConsumerStatefulWidget {
   const TransactionItem({
@@ -122,7 +124,8 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   Widget build(BuildContext context) {
     final c = context.colors;
     final t = widget.transaction;
-    final cat = t.category;
+    final cats = ref.watch(walletCategoriesProvider);
+    final cat = resolveCategory(t.category, cats);
     final isIncome = t.isIncome;
     final currency = ref.watch(currencySymbolProvider);
 

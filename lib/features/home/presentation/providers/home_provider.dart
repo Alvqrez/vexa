@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
@@ -7,6 +8,19 @@ import '../../domain/models/transfer_record.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
+
+// Maps legacy TransactionCategory enum names to WalletCategory IDs.
+const _kLegacyToWcId = {
+  'food': 'wc1',
+  'transport': 'wc2',
+  'shopping': 'wc3',
+  'entertainment': 'wc4',
+  'health': 'wc5',
+  'other': 'wc6',
+  'salary': 'wc7',
+};
 
 // ── Account stats ─────────────────────────────────────────────────────────────
 
@@ -78,7 +92,7 @@ IsarTransaction _txToIsar(Transaction t) => IsarTransaction()
   ..merchant = t.merchant
   ..amount = t.amount
   ..typeStr = t.type.name
-  ..categoryStr = t.category.name
+  ..categoryStr = t.category
   ..date = t.date
   ..accountId = t.accountId
   ..note = t.note
@@ -92,10 +106,7 @@ Transaction _isarToTx(IsarTransaction it) => Transaction(
         (t) => t.name == it.typeStr,
         orElse: () => TransactionType.expense,
       ),
-      category: TransactionCategory.values.firstWhere(
-        (c) => c.name == it.categoryStr,
-        orElse: () => TransactionCategory.other,
-      ),
+      category: _kLegacyToWcId[it.categoryStr] ?? it.categoryStr,
       date: it.date,
       accountId: it.accountId,
       note: it.note,
@@ -113,8 +124,9 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarAccounts.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarAccounts.where().findAll();
     List<Account> accounts;
     if (records.isNotEmpty) {
       accounts = records.map(_isarToAccount).toList();
@@ -169,6 +181,7 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
   }
 
   Future<void> seed() async {
+    if (kReleaseMode) return;
     _isLoaded = true;
     state = _mockAccounts;
     await _isar.writeTxn(() async {
@@ -290,8 +303,9 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarTransactions.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarTransactions.where().findAll();
     if (records.isNotEmpty) {
       state = records.map(_isarToTx).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
@@ -300,6 +314,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
   }
 
   Future<void> seed() async {
+    if (kReleaseMode) return;
     _isLoaded = true;
     state = _initial;
     await _isar.writeTxn(() async {
@@ -322,7 +337,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Spotify Premium',
       amount: 9.99,
       type: TransactionType.expense,
-      category: TransactionCategory.entertainment,
+      category: 'wc4', // Entretenimiento
       date: DateTime.now().subtract(const Duration(hours: 2)),
       accountId: '1',
     ),
@@ -331,7 +346,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Nómina Mayo',
       amount: 1800.00,
       type: TransactionType.income,
-      category: TransactionCategory.salary,
+      category: 'wc7', // Salario
       date: DateTime.now().subtract(const Duration(days: 1)),
       accountId: '1',
     ),
@@ -340,7 +355,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Mercadona',
       amount: 67.40,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'wc1', // Comida
       date: DateTime.now().subtract(const Duration(days: 1, hours: 5)),
       accountId: '3',
     ),
@@ -349,7 +364,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Glovo',
       amount: 24.80,
       type: TransactionType.expense,
-      category: TransactionCategory.food,
+      category: 'wc1', // Comida
       date: DateTime.now().subtract(const Duration(days: 2)),
       accountId: '3',
     ),
@@ -358,7 +373,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Metro Madrid',
       amount: 12.50,
       type: TransactionType.expense,
-      category: TransactionCategory.transport,
+      category: 'wc2', // Transporte
       date: DateTime.now().subtract(const Duration(days: 2, hours: 3)),
       accountId: '2',
     ),
@@ -367,7 +382,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Zara',
       amount: 89.95,
       type: TransactionType.expense,
-      category: TransactionCategory.shopping,
+      category: 'wc3', // Compras
       date: DateTime.now().subtract(const Duration(days: 3)),
       accountId: '2',
     ),
@@ -376,7 +391,7 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
       merchant: 'Clínica Sanitas',
       amount: 45.00,
       type: TransactionType.expense,
-      category: TransactionCategory.health,
+      category: 'wc5', // Salud
       date: DateTime.now().subtract(const Duration(days: 4)),
       accountId: '1',
     ),
@@ -441,8 +456,7 @@ final transactionsProvider =
 
 // ── Providers ─────────────────────────────────────────────────────────────────
 
-final selectedCategoryProvider =
-    StateProvider<TransactionCategory?>((ref) => null);
+final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
 final filteredTransactionsProvider = Provider<List<Transaction>>((ref) {
   final all = ref.watch(transactionsProvider);
@@ -542,27 +556,71 @@ final spendingRatioProvider = Provider<double>((ref) => 0.0);
 
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
 
-// ── Category breakdown ────────────────────────────────────────────────────────
+// ── Analysis month selector ───────────────────────────────────────────────────
 
-final categoryBreakdownProvider =
-    Provider<Map<TransactionCategory, double>>((ref) {
+final selectedAnalysisMonthProvider = StateProvider<DateTime>((ref) {
   final now = DateTime.now();
+  return DateTime(now.year, now.month);
+});
+
+final analysisIncomeProvider = Provider<double>((ref) {
+  final m = ref.watch(selectedAnalysisMonthProvider);
+  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
+    if (t.isIncome && t.date.month == m.month && t.date.year == m.year) return sum + t.amount;
+    return sum;
+  });
+});
+
+final analysisExpensesProvider = Provider<double>((ref) {
+  final m = ref.watch(selectedAnalysisMonthProvider);
+  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
+    if (!t.isIncome && t.date.month == m.month && t.date.year == m.year) return sum + t.amount;
+    return sum;
+  });
+});
+
+final analysisCategoryBreakdownProvider = Provider<Map<String, double>>((ref) {
+  final m = ref.watch(selectedAnalysisMonthProvider);
   final transactions = ref
       .watch(transactionsProvider)
-      .where((t) => !t.isIncome && t.date.month == now.month && t.date.year == now.year)
-      .toList();
-
-  final map = <TransactionCategory, double>{};
+      .where((t) => !t.isIncome && t.date.month == m.month && t.date.year == m.year);
+  final map = <String, double>{};
   for (final t in transactions) {
     map[t.category] = (map[t.category] ?? 0) + t.amount;
   }
   return map;
 });
 
-final topCategoryProvider = Provider<TransactionCategory?>((ref) {
+final analysisTopCategoryProvider = Provider<WalletCategory?>((ref) {
+  final breakdown = ref.watch(analysisCategoryBreakdownProvider);
+  if (breakdown.isEmpty) return null;
+  final topId = breakdown.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  final cats = ref.watch(walletCategoriesProvider);
+  return resolveCategory(topId, cats);
+});
+
+// ── Category breakdown ────────────────────────────────────────────────────────
+
+final categoryBreakdownProvider = Provider<Map<String, double>>((ref) {
+  final now = DateTime.now();
+  final transactions = ref
+      .watch(transactionsProvider)
+      .where((t) => !t.isIncome && t.date.month == now.month && t.date.year == now.year)
+      .toList();
+
+  final map = <String, double>{};
+  for (final t in transactions) {
+    map[t.category] = (map[t.category] ?? 0) + t.amount;
+  }
+  return map;
+});
+
+final topCategoryProvider = Provider<WalletCategory?>((ref) {
   final breakdown = ref.watch(categoryBreakdownProvider);
   if (breakdown.isEmpty) return null;
-  return breakdown.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  final topId = breakdown.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  final cats = ref.watch(walletCategoriesProvider);
+  return resolveCategory(topId, cats);
 });
 
 // ── Monthly spending trend (last 6 months) ────────────────────────────────────

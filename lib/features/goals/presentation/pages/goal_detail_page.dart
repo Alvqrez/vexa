@@ -56,7 +56,24 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
           if (newProgress >= 1.0 && !goal.completed) {
             HapticFeedback.heavyImpact();
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) ConfettiOverlay.show(context);
+              if (!mounted) return;
+              ConfettiOverlay.show(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '¡Meta cumplida! 🎉',
+                    style: AppTypography.labelM
+                        .copyWith(color: context.colors.textPrimary),
+                  ),
+                  backgroundColor: context.colors.card,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 4),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                  ),
+                ),
+              );
             });
           }
         },

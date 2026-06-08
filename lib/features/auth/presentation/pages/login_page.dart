@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/services/local_auth_service.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import '../../../shell/presentation/pages/main_shell.dart';
 
 class LoginPage extends StatefulWidget {
@@ -96,6 +97,54 @@ class _LoginPageState extends State<LoginPage> {
       ),
       (route) => false,
     );
+  }
+
+  Future<void> _showForgotPassword() async {
+    final c = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        ),
+        title: Text('¿Olvidaste tu contraseña?',
+            style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+        content: Text(
+          'Esta app guarda tus datos solo en tu dispositivo. '
+          'No hay forma de recuperar tu contraseña sin borrar los datos.\n\n'
+          '⚠️ Si continúas, se eliminarán todas tus cuentas, transacciones y configuración.',
+          style: AppTypography.bodyM.copyWith(color: c.textSecondary, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelM.copyWith(color: c.textTertiary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Borrar todo y empezar',
+                style: AppTypography.labelM.copyWith(
+                    color: AppColors.negative, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await LocalAuthService.wipeAll();
+      await LocalPrefsService.clear();
+      if (mounted) {
+        setState(() {
+          _isRegistration = true;
+          _emailCtrl.clear();
+          _passCtrl.clear();
+          _confirmCtrl.clear();
+          _errorMsg = null;
+        });
+      }
+    }
   }
 
   @override
@@ -236,6 +285,23 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+              if (!_isRegistration) ...[
+                const SizedBox(height: AppSpacing.md),
+                Center(
+                  child: GestureDetector(
+                    onTap: _showForgotPassword,
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
+                      style: AppTypography.labelM.copyWith(
+                        color: context.colors.textTertiary,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.colors.textTertiary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: AppSpacing.xxxl),
             ],
           ),

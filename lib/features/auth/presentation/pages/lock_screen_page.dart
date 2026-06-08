@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -16,16 +17,26 @@ class LockScreenPage extends StatefulWidget {
 
 class _LockScreenPageState extends State<LockScreenPage>
     with SingleTickerProviderStateMixin {
+  static const _maxAttempts = 5;
+  static const _lockDuration = Duration(seconds: 30);
+
   final List<String> _digits = [];
   bool _usePassword = false;
   bool _hasPinEnabled = false;
   bool _hasPasswordEnabled = false;
   bool _error = false;
   bool _loading = true;
+  int _failedAttempts = 0;
+  DateTime? _lockUntil;
+  Timer? _lockTimer;
+  int _lockSecondsLeft = 0;
   late AnimationController _shakeCtrl;
   late Animation<double> _shakeAnim;
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+
+  bool get _isLockedOut =>
+      _lockUntil != null && DateTime.now().isBefore(_lockUntil!);
 
   @override
   void initState() {
@@ -51,13 +62,42 @@ class _LockScreenPageState extends State<LockScreenPage>
 
   @override
   void dispose() {
+    _lockTimer?.cancel();
     _shakeCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
 
+  void _startLockTimer() {
+    _lockTimer?.cancel();
+    _lockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final left = _lockUntil!.difference(DateTime.now()).inSeconds;
+      if (left <= 0) {
+        _lockTimer?.cancel();
+        setState(() {
+          _lockUntil = null;
+          _lockSecondsLeft = 0;
+          _error = false;
+        });
+      } else {
+        setState(() => _lockSecondsLeft = left);
+      }
+    });
+  }
+
+  void _registerFailure() {
+    _failedAttempts++;
+    if (_failedAttempts >= _maxAttempts) {
+      _lockUntil = DateTime.now().add(_lockDuration);
+      _lockSecondsLeft = _lockDuration.inSeconds;
+      _failedAttempts = 0;
+      _startLockTimer();
+    }
+  }
+
   void _addDigit(String d) {
-    if (_digits.length >= 4) return;
+    if (_digits.length >= 4 || _isLockedOut) return;
     HapticFeedback.selectionClick();
     setState(() {
       _digits.add(d);
@@ -67,7 +107,7 @@ class _LockScreenPageState extends State<LockScreenPage>
   }
 
   void _removeDigit() {
-    if (_digits.isEmpty) return;
+    if (_digits.isEmpty || _isLockedOut) return;
     HapticFeedback.lightImpact();
     setState(() => _digits.removeLast());
   }
@@ -84,10 +124,12 @@ class _LockScreenPageState extends State<LockScreenPage>
         _error = true;
         _digits.clear();
       });
+      _registerFailure();
     }
   }
 
   Future<void> _verifyPassword() async {
+    if (_isLockedOut) return;
     final ok = await LocalAuthService.verifyPassword(_passCtrl.text);
     if (ok) {
       _unlock();
@@ -96,6 +138,7 @@ class _LockScreenPageState extends State<LockScreenPage>
       _shakeCtrl.forward(from: 0);
       setState(() => _error = true);
       _passCtrl.clear();
+      _registerFailure();
     }
   }
 
@@ -149,14 +192,19 @@ class _LockScreenPageState extends State<LockScreenPage>
               ),
               const SizedBox(height: AppSpacing.sm),
               Text(
-                _error
-                    ? (_usePassword
-                        ? 'Contraseña incorrecta'
-                        : 'PIN incorrecto')
-                    : 'Vexa está protegida',
+                _isLockedOut
+                    ? 'Demasiados intentos. Espera $_lockSecondsLeft s'
+                    : _error
+                        ? (_usePassword
+                            ? 'Contraseña incorrecta'
+                            : 'PIN incorrecto. ${_maxAttempts - _failedAttempts} intento${(_maxAttempts - _failedAttempts) == 1 ? '' : 's'} restante${(_maxAttempts - _failedAttempts) == 1 ? '' : 's'}')
+                        : 'Vexa está protegida',
                 style: AppTypography.labelM.copyWith(
-                  color: _error ? AppColors.negative : c.textTertiary,
+                  color: _isLockedOut || _error
+                      ? AppColors.negative
+                      : c.textTertiary,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: AppSpacing.xxl),
 
@@ -217,21 +265,25 @@ class _LockScreenPageState extends State<LockScreenPage>
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 GestureDetector(
-                  onTap: _verifyPassword,
+                  onTap: _isLockedOut ? null : _verifyPassword,
                   child: Container(
                     width: double.infinity,
                     padding:
                         const EdgeInsets.symmetric(vertical: AppSpacing.md),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                          colors: [AppColors.emerald, AppColors.emeraldDim]),
+                      gradient: LinearGradient(
+                          colors: _isLockedOut
+                              ? [c.glass, c.glass]
+                              : [AppColors.emerald, AppColors.emeraldDim]),
                       borderRadius:
                           BorderRadius.circular(AppSpacing.cardRadius),
                     ),
                     child: Text('Entrar',
                         textAlign: TextAlign.center,
                         style: AppTypography.labelL.copyWith(
-                          color: AppColors.textInverse,
+                          color: _isLockedOut
+                              ? c.textTertiary
+                              : AppColors.textInverse,
                           fontWeight: FontWeight.w700,
                         )),
                   ),

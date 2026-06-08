@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:isar/isar.dart';
 import 'core/data/isar_service.dart';
 import 'core/providers/isar_provider.dart';
+import 'core/services/notification_service.dart';
 import 'app.dart';
 
 void main() async {
@@ -39,6 +40,7 @@ void main() async {
   // del bloqueo para no colgar si no hay internet o el font no está cacheado.
   await initializeDateFormatting('es', null);
   GoogleFonts.pendingFonts([GoogleFonts.plusJakartaSans()]).ignore();
+  await NotificationService.init();
 
   runApp(
     ProviderScope(

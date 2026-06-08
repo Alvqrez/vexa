@@ -11,6 +11,8 @@ import '../../domain/models/recurring_transaction.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -188,7 +190,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
 
 // ── Row widget ────────────────────────────────────────────────────────────────
 
-class _RecurringItemRow extends StatelessWidget {
+class _RecurringItemRow extends ConsumerWidget {
   const _RecurringItemRow({
     required this.item,
     required this.account,
@@ -217,11 +219,9 @@ class _RecurringItemRow extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final cat = TransactionCategory.values.firstWhere(
-      (c) => c.name == item.category,
-      orElse: () => TransactionCategory.other,
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cats = ref.watch(walletCategoriesProvider);
+    final cat = resolveCategory(item.category, cats);
     final isIncome = item.type == TransactionType.income.name;
 
     final c = context.colors;
@@ -310,7 +310,7 @@ class _RecurringItemRow extends StatelessWidget {
 
 // ── Recurring action sheet ────────────────────────────────────────────────────
 
-class _RecurringActionSheet extends StatelessWidget {
+class _RecurringActionSheet extends ConsumerWidget {
   const _RecurringActionSheet({
     required this.item,
     required this.currency,
@@ -324,11 +324,9 @@ class _RecurringActionSheet extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    final cat = TransactionCategory.values.firstWhere(
-      (c) => c.name == item.category,
-      orElse: () => TransactionCategory.other,
-    );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cats = ref.watch(walletCategoriesProvider);
+    final cat = resolveCategory(item.category, cats);
     final isIncome = item.type == TransactionType.income.name;
 
     final c = context.colors;
@@ -467,7 +465,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _amountCtrl;
   late TransactionType _type;
-  late TransactionCategory _cat;
+  late WalletCategory _cat;
   late RecurrenceFrequency _freq;
   late int _times;
   late final Set<int> _weekDays;
@@ -486,10 +484,11 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
         ? TransactionType.values.firstWhere((t) => t.name == e.type,
             orElse: () => TransactionType.expense)
         : TransactionType.expense;
+    final cats = ref.read(walletCategoriesProvider);
     _cat = e != null
-        ? TransactionCategory.values.firstWhere((c) => c.name == e.category,
-            orElse: () => TransactionCategory.transport)
-        : TransactionCategory.transport;
+        ? resolveCategory(e.category, cats)
+        : cats.firstWhere((c) => c.type == WalletCategoryType.expense,
+            orElse: () => cats.first);
     _freq = e?.frequency ?? RecurrenceFrequency.daily;
     _times = e?.timesPerOccurrence ?? 1;
     _weekDays = e?.weekDays != null
@@ -530,7 +529,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
       merchant: name,
       amount: amount,
       type: _type.name,
-      category: _cat.name,
+      category: _cat.id,
       accountId: _accountId,
       frequency: _freq,
       nextDate: widget.existing?.nextDate ?? today,
@@ -652,8 +651,8 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
             Wrap(
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
-              children: TransactionCategory.values.map((c) {
-                final sel = c == _cat;
+              children: ref.watch(walletCategoriesProvider).map((c) {
+                final sel = c.id == _cat.id;
                 return GestureDetector(
                   onTap: () {
                     HapticFeedback.selectionClick();
@@ -682,7 +681,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                             size: 12,
                             color: sel ? c.color : context.colors.textTertiary),
                         const SizedBox(width: 5),
-                        Text(c.label,
+                        Text(c.name,
                             style: AppTypography.labelS.copyWith(
                               color: sel ? c.color : context.colors.textTertiary,
                               fontWeight:

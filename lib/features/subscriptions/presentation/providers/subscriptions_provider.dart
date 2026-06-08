@@ -8,6 +8,11 @@ import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 
+const _kLegacySubsToWcId = {
+  'food': 'wc1', 'transport': 'wc2', 'shopping': 'wc3',
+  'entertainment': 'wc4', 'health': 'wc5', 'other': 'wc6', 'salary': 'wc7',
+};
+
 // ── Isar converters ───────────────────────────────────────────────────────────
 
 IsarSubscription _subsToIsar(Subscription s) => IsarSubscription()
@@ -15,7 +20,7 @@ IsarSubscription _subsToIsar(Subscription s) => IsarSubscription()
   ..name = s.name
   ..amount = s.amount
   ..nextBillingDate = s.nextBillingDate
-  ..categoryStr = s.category.name
+  ..categoryStr = s.category
   ..iconCodePoint = s.icon.codePoint
   ..colorValue = s.color.toARGB32()
   ..frequencyStr = s.frequency.name
@@ -27,10 +32,7 @@ Subscription _isarToSubs(IsarSubscription is_) => Subscription(
       name: is_.name,
       amount: is_.amount,
       nextBillingDate: is_.nextBillingDate,
-      category: TransactionCategory.values.firstWhere(
-        (c) => c.name == is_.categoryStr,
-        orElse: () => TransactionCategory.other,
-      ),
+      category: _kLegacySubsToWcId[is_.categoryStr] ?? is_.categoryStr,
       icon: IconData(is_.iconCodePoint, fontFamily: 'MaterialIcons'),
       color: Color(is_.colorValue),
       frequency: SubscriptionFrequency.values.firstWhere(

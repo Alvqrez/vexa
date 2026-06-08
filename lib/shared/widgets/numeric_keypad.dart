@@ -22,6 +22,7 @@ class NumericKeypad extends StatelessWidget {
     this.currencySymbol = '\$',
     this.keyHeight = 58,
     this.confirmHeight = 58,
+    this.maxAmount = 9999999.99,
   });
 
   final String value;
@@ -31,6 +32,7 @@ class NumericKeypad extends StatelessWidget {
   final String currencySymbol;
   final double keyHeight;
   final double confirmHeight;
+  final double maxAmount;
 
   static const _rows = [
     ['1', '2', '3'],
@@ -58,9 +60,12 @@ class NumericKeypad extends StatelessWidget {
       // Replace leading zero only if followed by a digit
       if (next == '0') {
         next = key;
-      } else if (next.replaceAll('.', '').replaceAll('-', '').length < 10) {
+      } else {
         next = '$next$key';
       }
+      // Enforce max amount
+      final parsed = double.tryParse(next) ?? 0;
+      if (parsed > maxAmount) return;
     }
 
     onValueChanged(next);

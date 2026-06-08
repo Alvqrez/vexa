@@ -6,9 +6,14 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
 import '../../domain/models/transaction.dart';
+import '../../domain/models/transfer_record.dart';
+import '../../domain/models/account.dart';
 import '../widgets/transaction_item.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 // ── Sort options ──────────────────────────────────────────────────────────────
 
@@ -46,7 +51,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
   final _searchCtrl = TextEditingController();
   final _focusNode = FocusNode();
 
-  TransactionCategory? _catFilter;
+  String? _catFilter;
   _SortBy _sort = _SortBy.dateDesc;
   bool _showSearch = false;
   String _query = '';
@@ -64,7 +69,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     super.dispose();
   }
 
-  List<Transaction> _applyFilters(List<Transaction> all) {
+  List<Transaction> _applyFilters(List<Transaction> all, List<WalletCategory> walletCats) {
     var list = all;
 
     // Type filter from parent
@@ -81,8 +86,9 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     if (_query.trim().isNotEmpty) {
       final q = _query.toLowerCase();
       list = list.where((t) {
+        final catName = resolveCategory(t.category, walletCats).name.toLowerCase();
         return t.merchant.toLowerCase().contains(q) ||
-            t.category.label.toLowerCase().contains(q) ||
+            catName.contains(q) ||
             t.tags.any((tag) => tag.toLowerCase().contains(q)) ||
             (t.note?.toLowerCase().contains(q) ?? false);
       }).toList();
@@ -104,29 +110,60 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     return list;
   }
 
-  // Groups transactions by date heading
-  Map<String, List<Transaction>> _groupByDate(List<Transaction> txns) {
+  List<TransferRecord> _filterTransfers(
+      List<TransferRecord> transfers, List<Account> accounts) {
+    if (_query.trim().isEmpty) return transfers;
+    final q = _query.toLowerCase();
+    return transfers.where((tr) {
+      final from = accounts
+          .where((a) => a.id == tr.fromAccountId)
+          .map((a) => a.name)
+          .firstOrNull ?? '';
+      final to = accounts
+          .where((a) => a.id == tr.toAccountId)
+          .map((a) => a.name)
+          .firstOrNull ?? '';
+      return from.toLowerCase().contains(q) ||
+          to.toLowerCase().contains(q) ||
+          (tr.note?.toLowerCase().contains(q) ?? false);
+    }).toList();
+  }
+
+  List<Object> _combineAndSort(
+      List<Transaction> txns, List<TransferRecord> transfers) {
+    final items = <Object>[...txns, ...transfers];
+    items.sort((a, b) {
+      final da = a is Transaction ? a.date : (a as TransferRecord).date;
+      final db = b is Transaction ? b.date : (b as TransferRecord).date;
+      return _sort == _SortBy.dateAsc
+          ? da.compareTo(db)
+          : db.compareTo(da);
+    });
+    return items;
+  }
+
+  // Groups items (Transaction | TransferRecord) by date heading
+  Map<String, List<Object>> _groupByDate(List<Object> items) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final groups = <String, List<Transaction>>{};
-    for (final t in txns) {
-      final day = DateTime(t.date.year, t.date.month, t.date.day);
-      final String key;
+    final groups = <String, List<Object>>{};
+    for (final item in items) {
+      final date =
+          item is Transaction ? item.date : (item as TransferRecord).date;
+      final day = DateTime(date.year, date.month, date.day);
+      String key;
       if (day == today) {
         key = 'Hoy';
       } else if (day == today.subtract(const Duration(days: 1))) {
         key = 'Ayer';
       } else if (today.difference(day).inDays < 7) {
-        key = DateFormat('EEEE', 'es').format(t.date);
-        // Capitalize first letter
-        final k = key[0].toUpperCase() + key.substring(1);
-        groups.putIfAbsent(k, () => []).add(t);
-        continue;
+        final raw = DateFormat('EEEE', 'es').format(date);
+        key = raw[0].toUpperCase() + raw.substring(1);
       } else {
-        key = DateFormat('d MMM yyyy', 'es').format(t.date);
+        key = DateFormat('d MMM yyyy', 'es').format(date);
       }
-      groups.putIfAbsent(key, () => []).add(t);
+      groups.putIfAbsent(key, () => []).add(item);
     }
     return groups;
   }
@@ -147,8 +184,16 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
   Widget build(BuildContext context) {
     final c = context.colors;
     final all = ref.watch(transactionsProvider);
-    final filtered = _applyFilters(all);
-    final grouped = _groupByDate(filtered);
+    final walletCats = ref.watch(walletCategoriesProvider);
+    final accounts = ref.watch(accountsProvider);
+    final allTransfers = ref.watch(transferHistoryProvider);
+    final filtered = _applyFilters(all, walletCats);
+    final showTransfers = widget.typeFilter == null && _catFilter == null;
+    final filteredTransfers = showTransfers
+        ? _filterTransfers(allTransfers, accounts)
+        : <TransferRecord>[];
+    final combined = _combineAndSort(filtered, filteredTransfers);
+    final grouped = _groupByDate(combined);
 
     final income = filtered
         .where((t) => t.isIncome)
@@ -267,15 +312,15 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                                   setState(() => _catFilter = null),
                             ),
                             const SizedBox(width: AppSpacing.sm),
-                            ...TransactionCategory.values.map((cat) => Padding(
+                            ...walletCats.map((cat) => Padding(
                                   padding: const EdgeInsets.only(
                                       right: AppSpacing.sm),
                                   child: _FilterChip(
-                                    label: cat.label,
-                                    selected: _catFilter == cat,
+                                    label: cat.name,
+                                    selected: _catFilter == cat.id,
                                     color: cat.color,
                                     onTap: () =>
-                                        setState(() => _catFilter = cat),
+                                        setState(() => _catFilter = cat.id),
                                   ),
                                 )),
                           ],
@@ -292,7 +337,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
 
                 // ── Scrollable transaction list ───────────────────────────
                 Expanded(
-                  child: filtered.isEmpty
+                  child: combined.isEmpty
                       ? _EmptyState(
                           hasQuery: _query.isNotEmpty || _catFilter != null)
                       : ListView.builder(
@@ -304,7 +349,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                           ),
                           itemCount: grouped.length,
                           itemBuilder: (context, index) =>
-                              _buildGroup(context, index, grouped),
+                              _buildGroup(context, index, grouped, accounts),
                         ),
                 ),
               ],
@@ -318,11 +363,12 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
   Widget _buildGroup(
     BuildContext context,
     int index,
-    Map<String, List<Transaction>> groups,
+    Map<String, List<Object>> groups,
+    List<Account> accounts,
   ) {
     final c = context.colors;
     final entry = groups.entries.elementAt(index);
-    final txns = entry.value;
+    final items = entry.value;
     return Column(
       key: ValueKey('group_${entry.key}'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,13 +386,21 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
           ),
           child: Column(
             children: [
-              for (int i = 0; i < txns.length; i++) ...[
-                TransactionItem(
-                  key: ValueKey(txns[i].id),
-                  transaction: txns[i],
-                  isLast: i == txns.length - 1,
-                ),
-                if (i < txns.length - 1)
+              for (int i = 0; i < items.length; i++) ...[
+                if (items[i] is Transaction)
+                  TransactionItem(
+                    key: ValueKey((items[i] as Transaction).id),
+                    transaction: items[i] as Transaction,
+                    isLast: i == items.length - 1,
+                  )
+                else
+                  _TransferRow(
+                    key: ValueKey((items[i] as TransferRecord).id),
+                    transfer: items[i] as TransferRecord,
+                    accounts: accounts,
+                    isLast: i == items.length - 1,
+                  ),
+                if (i < items.length - 1)
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppSpacing.md),
@@ -765,6 +819,85 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+// ── Transfer row ──────────────────────────────────────────────────────────────
+
+class _TransferRow extends ConsumerWidget {
+  const _TransferRow({
+    super.key,
+    required this.transfer,
+    required this.accounts,
+    this.isLast = false,
+  });
+
+  final TransferRecord transfer;
+  final List<Account> accounts;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final currency = ref.watch(currencySymbolProvider);
+    final from = accounts
+        .where((a) => a.id == transfer.fromAccountId)
+        .map((a) => a.name)
+        .firstOrNull ?? transfer.fromAccountId;
+    final to = accounts
+        .where((a) => a.id == transfer.toAccountId)
+        .map((a) => a.name)
+        .firstOrNull ?? transfer.toAccountId;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md, vertical: AppSpacing.md),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.petroleumSurface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.swap_horiz_rounded,
+                color: AppColors.petroleumLight, size: 20),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Transferencia',
+                  style: AppTypography.bodyM.copyWith(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$from → $to',
+                  style: AppTypography.labelS.copyWith(color: c.textTertiary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '$currency${transfer.amount.toStringAsFixed(2)}',
+            style: AppTypography.labelL.copyWith(
+              color: AppColors.petroleum,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }

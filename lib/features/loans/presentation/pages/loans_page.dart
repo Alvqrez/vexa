@@ -799,7 +799,25 @@ class _LoanMenu extends ConsumerWidget {
                 );
               }
             },
-            onDelete: () => ref.read(loansProvider.notifier).delete(loan.id), // async — fire-and-forget is fine here
+            onDelete: () {
+              final messenger = ScaffoldMessenger.of(context);
+              final c = context.colors;
+              ref.read(loansProvider.notifier).delete(loan.id);
+              messenger.showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '"${loan.name}" eliminado',
+                    style: AppTypography.labelM.copyWith(color: c.textPrimary),
+                  ),
+                  backgroundColor: c.card,
+                  behavior: SnackBarBehavior.floating,
+                  duration: const Duration(seconds: 3),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  ),
+                ),
+              );
+            },
           ),
         );
       },

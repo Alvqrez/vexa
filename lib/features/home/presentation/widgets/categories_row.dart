@@ -4,41 +4,38 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
-import '../../domain/models/transaction.dart';
 import '../providers/home_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class CategoriesRow extends ConsumerWidget {
   const CategoriesRow({super.key});
 
-  static const _categories = [
-    null, // "Todos"
-    TransactionCategory.food,
-    TransactionCategory.transport,
-    TransactionCategory.shopping,
-    TransactionCategory.entertainment,
-    TransactionCategory.health,
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(selectedCategoryProvider);
+    final expenseCats = ref.watch(expenseCategoriesProvider).take(5).toList();
 
     return SizedBox(
       height: 40,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: EdgeInsets.zero,
-        itemCount: _categories.length,
+        itemCount: expenseCats.length + 1, // +1 for "Todos"
         separatorBuilder: (context, _) => const SizedBox(width: AppSpacing.sm),
         itemBuilder: (context, i) {
-          final cat = _categories[i];
-          final isActive = cat == selected;
+          if (i == 0) {
+            return _CategoryChip(
+              category: null,
+              isActive: selected == null,
+              onTap: () => ref.read(selectedCategoryProvider.notifier).state = null,
+            );
+          }
+          final cat = expenseCats[i - 1];
           return _CategoryChip(
             category: cat,
-            isActive: isActive,
-            onTap: () {
-              ref.read(selectedCategoryProvider.notifier).state = cat;
-            },
+            isActive: selected == cat.id,
+            onTap: () => ref.read(selectedCategoryProvider.notifier).state = cat.id,
           );
         },
       ),
@@ -53,14 +50,14 @@ class _CategoryChip extends StatelessWidget {
     required this.onTap,
   });
 
-  final TransactionCategory? category;
+  final WalletCategory? category;
   final bool isActive;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
-    final label = category?.label ?? 'Todos';
+    final label = category?.name ?? 'Todos';
     final icon = category?.icon ?? Icons.grid_view_rounded;
     final color = category?.color ?? AppColors.emerald;
     final surface = category?.surface ?? AppColors.emeraldSurface;
@@ -94,9 +91,7 @@ class _CategoryChip extends StatelessWidget {
             Text(
               label,
               style: AppTypography.labelM.copyWith(
-                color: isActive
-                    ? AppColors.textInverse
-                    : c.textSecondary,
+                color: isActive ? AppColors.textInverse : c.textSecondary,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

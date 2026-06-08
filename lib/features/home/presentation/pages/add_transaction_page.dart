@@ -13,6 +13,8 @@ import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../../shared/widgets/numeric_keypad.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
@@ -35,7 +37,7 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
 
 class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late TransactionType _type;
-  late TransactionCategory _category;
+  late WalletCategory _category;
   String? _selectedAccountId;
   late DateTime _selectedDate;
 
@@ -72,10 +74,13 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     super.initState();
     final e = widget.existing;
     _type = e?.type ?? widget.defaultType;
-    _category = e?.category ??
-        (_type == TransactionType.income
-            ? TransactionCategory.salary
-            : TransactionCategory.other);
+    final cats = ref.read(walletCategoriesProvider);
+    final catType = _type == TransactionType.income
+        ? WalletCategoryType.income
+        : WalletCategoryType.expense;
+    _category = e != null
+        ? resolveCategory(e.category, cats)
+        : cats.firstWhere((c) => c.type == catType, orElse: () => cats.first);
 
     _selectedDate = e?.date ?? DateTime.now();
 
@@ -84,10 +89,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _selectedAccountId = e.accountId;
       _noteCtrl.text = e.note ?? '';
       if (e.note != null && e.note!.isNotEmpty) _noteExpanded = true;
-      // Pre-populate merchant only when it differs from the category label
-      // (avoids showing "Comida" as the editable text for old transactions)
       _merchantCtrl.text =
-          e.merchant != e.category.label ? e.merchant : '';
+          e.merchant != _category.name ? e.merchant : '';
     } else if (widget.defaultAccountId != null) {
       // Explicit account from caller — respect it, don't override with last-used.
       _selectedAccountId = widget.defaultAccountId;
@@ -198,14 +201,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
     final merchantText = _merchantCtrl.text.trim();
-    final merchant = merchantText.isEmpty ? _category.label : merchantText;
+    final merchant = merchantText.isEmpty ? _category.name : merchantText;
 
     if (_isEditing) {
       final updated = widget.existing!.copyWith(
         merchant: merchant,
         amount: amount,
         type: _type,
-        category: _category,
+        category: _category.id,
         date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
@@ -218,7 +221,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         merchant: merchant,
         amount: amount,
         type: _type,
-        category: _category,
+        category: _category.id,
         date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
@@ -309,8 +312,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       builder: (_) => _CategorySheet(
         selected: _category,
         type: _type,
-        onChanged: (c) {
-          setState(() => _category = c);
+        onChanged: (wc) {
+          setState(() => _category = wc);
           Navigator.of(context).pop();
         },
       ),
@@ -344,10 +347,10 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final merchantText = _merchantCtrl.text.trim();
     existing.add(RecurringTransaction(
       id: generateId(),
-      merchant: merchantText.isEmpty ? _category.label : merchantText,
+      merchant: merchantText.isEmpty ? _category.name : merchantText,
       amount: _parsedAmount!,
       type: _type.name,
-      category: _category.name,
+      category: _category.id,
       accountId: _selectedAccountId,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
       frequency: _recurrenceFreq,
@@ -483,7 +486,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   children: [
                     _CompactChip(
                       icon: _category.icon,
-                      label: _category.label,
+                      label: _category.name,
                       color: _category.color,
                       surface: _category.surface,
                       onTap: _openCategorySheet,
@@ -984,27 +987,29 @@ class _SheetItem extends StatelessWidget {
 
 // ── Category bottom sheet ─────────────────────────────────────────────────────
 
-class _CategorySheet extends StatelessWidget {
+class _CategorySheet extends ConsumerWidget {
   const _CategorySheet({
     required this.selected,
     required this.type,
     required this.onChanged,
   });
 
-  final TransactionCategory selected;
+  final WalletCategory selected;
   final TransactionType type;
-  final ValueChanged<TransactionCategory> onChanged;
-
-  List<TransactionCategory> get _categories =>
-      type == TransactionType.income
-          ? [TransactionCategory.salary, TransactionCategory.other]
-          : TransactionCategory.values
-              .where((c) => c != TransactionCategory.salary)
-              .toList();
+  final ValueChanged<WalletCategory> onChanged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
+    final catType = type == TransactionType.income
+        ? WalletCategoryType.income
+        : WalletCategoryType.expense;
+    final categories = ref
+        .watch(walletCategoriesProvider)
+        .where((wc) => wc.type == catType)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+
     return Container(
       decoration: BoxDecoration(
         color: c.surface,
@@ -1036,15 +1041,15 @@ class _CategorySheet extends StatelessWidget {
               ),
             ),
           ),
-          ..._categories.map((c) => _SheetItem(
-                icon: c.icon,
-                label: c.label,
-                color: c.color,
-                surface: c.surface,
-                isSelected: c == selected,
+          ...categories.map((wc) => _SheetItem(
+                icon: wc.icon,
+                label: wc.name,
+                color: wc.color,
+                surface: wc.surface,
+                isSelected: wc.id == selected.id,
                 onTap: () {
                   HapticFeedback.selectionClick();
-                  onChanged(c);
+                  onChanged(wc);
                 },
               )),
           const SizedBox(height: AppSpacing.sm),

@@ -18,7 +18,10 @@ import '../../../goals/presentation/pages/goals_page.dart';
 import '../../../goals/domain/models/financial_goal.dart';
 import '../../../goals/presentation/providers/goals_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
+import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/services/notification_service.dart';
 import '../../../home/domain/models/account.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/recurring_transaction.dart';
@@ -119,6 +122,8 @@ class _MainShellState extends ConsumerState<MainShell>
       }
       if (!mounted) return;
       await _processRecurring();
+      if (!mounted) return;
+      await _scheduleNotifications();
     });
   }
 
@@ -149,30 +154,41 @@ class _MainShellState extends ConsumerState<MainShell>
       if (all.isEmpty) return;
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
+
+      // Build a set of existing transaction IDs to prevent duplicates on restart.
+      final existingIds =
+          ref.read(transactionsProvider).map((t) => t.id).toSet();
+
       bool changed = false;
       final updated = <RecurringTransaction>[];
+      int failCount = 0;
+
       for (var r in all) {
-        if (!r.isActive) { updated.add(r); continue; }
+        if (!r.isActive) {
+          updated.add(r);
+          continue;
+        }
         var current = r;
         try {
           while (!current.nextDate.isAfter(today)) {
-            // Skip days not in weekDays (if set)
             final dayAllowed = current.weekDays == null ||
                 current.weekDays!.contains(current.nextDate.weekday);
             if (dayAllowed) {
               final baseType = TransactionType.values.firstWhere(
                   (v) => v.name == current.type,
                   orElse: () => TransactionType.expense);
-              final baseCat = TransactionCategory.values.firstWhere(
-                  (v) => v.name == current.category,
-                  orElse: () => TransactionCategory.other);
               for (var i = 0; i < current.timesPerOccurrence; i++) {
+                final txId =
+                    '${current.id}_${current.nextDate.millisecondsSinceEpoch}_$i';
+                // Skip if already processed (e.g. app crashed before saveAll).
+                if (existingIds.contains(txId)) continue;
+                existingIds.add(txId);
                 final t = Transaction(
-                  id: '${current.id}_${current.nextDate.millisecondsSinceEpoch}_$i',
+                  id: txId,
                   merchant: current.merchant,
                   amount: current.amount,
                   type: baseType,
-                  category: baseCat,
+                  category: current.category,
                   date: current.nextDate,
                   accountId: current.accountId,
                   note: current.note,
@@ -186,12 +202,58 @@ class _MainShellState extends ConsumerState<MainShell>
             changed = true;
           }
         } catch (_) {
-          // Skip this recurring entry if processing fails; keep its current state.
+          failCount++;
         }
         updated.add(current);
       }
+
       if (changed) await RecurringTransaction.saveAll(updated);
+
+      if (failCount > 0 && mounted) {
+        final c = context.colors;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+            'No se pudieron procesar $failCount transacción(es) recurrente(s).',
+            style: AppTypography.labelM.copyWith(color: c.textPrimary),
+          ),
+          backgroundColor: c.card,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+        ));
+      }
     } catch (_) {}
+  }
+
+  Future<void> _scheduleNotifications() async {
+    final prefs = ref.read(notifPrefsProvider);
+    if (prefs.dailyTip) {
+      await NotificationService.scheduleDailyTip();
+    } else {
+      await NotificationService.cancelDailyTip();
+    }
+    // Subscription expiry alerts
+    final subs = ref.read(subscriptionsProvider)
+        .where((s) => s.isActive && s.daysUntilBilling <= 3)
+        .toList();
+    for (var i = 0; i < subs.length; i++) {
+      await NotificationService.showSubscriptionAlert(
+        name: subs[i].name,
+        daysLeft: subs[i].daysUntilBilling,
+        index: i,
+      );
+    }
+    // Budget alerts (≥ 80%)
+    final budgets = ref.read(budgetWithSpentProvider);
+    for (var i = 0; i < budgets.length; i++) {
+      if (budgets[i].isWarning || budgets[i].isOver) {
+        await NotificationService.showBudgetAlert(
+          categoryName: budgets[i].item.name,
+          percent: (budgets[i].ratio * 100).round(),
+          index: i,
+        );
+      }
+    }
   }
 
   Future<void> _endTutorial() async {
@@ -339,9 +401,11 @@ class _MainShellState extends ConsumerState<MainShell>
           icon: Icons.subscriptions_rounded,
           label: 'Suscripción',
           color: AppColors.warning,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SubscriptionsPage()),
+          onTap: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const AddSubscriptionSheet(),
           ),
         ),
       ];

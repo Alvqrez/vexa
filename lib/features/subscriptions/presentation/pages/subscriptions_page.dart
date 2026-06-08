@@ -11,7 +11,8 @@ import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/subscription.dart';
 import '../providers/subscriptions_provider.dart';
 import '../../../../core/utils/id_gen.dart';
-import '../../../home/domain/models/transaction.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class SubscriptionsPage extends StatefulWidget {
   const SubscriptionsPage({super.key});
@@ -66,7 +67,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _AddSubscriptionSheet(),
+      builder: (_) => const AddSubscriptionSheet(),
     );
   }
 
@@ -896,19 +897,19 @@ class _ActionTile extends StatelessWidget {
 
 // ── Add subscription sheet ─────────────────────────────────────────────────────
 
-class _AddSubscriptionSheet extends ConsumerStatefulWidget {
-  const _AddSubscriptionSheet();
+class AddSubscriptionSheet extends ConsumerStatefulWidget {
+  const AddSubscriptionSheet({super.key});
 
   @override
-  ConsumerState<_AddSubscriptionSheet> createState() =>
+  ConsumerState<AddSubscriptionSheet> createState() =>
       _AddSubscriptionSheetState();
 }
 
-class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
+class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   final _nameCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   SubscriptionFrequency _freq = SubscriptionFrequency.monthly;
-  final TransactionCategory _cat = TransactionCategory.entertainment;
+  late WalletCategory _cat;
   Color _color = const Color(0xFF6366F1);
   IconData _icon = Icons.subscriptions_rounded;
   late DateTime _billingDate;
@@ -917,6 +918,8 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
   void initState() {
     super.initState();
     _billingDate = DateTime.now().add(const Duration(days: 30));
+    final cats = ref.read(expenseCategoriesProvider);
+    _cat = cats.firstWhere((c) => c.id == 'wc4', orElse: () => cats.first);
   }
 
   static const _iconOptions = [
@@ -985,7 +988,7 @@ class _AddSubscriptionSheetState extends ConsumerState<_AddSubscriptionSheet> {
             name: name,
             amount: amount,
             nextBillingDate: _billingDate,
-            category: _cat,
+            category: _cat.id,
             icon: _icon,
             color: _color,
             frequency: _freq,
@@ -1429,7 +1432,7 @@ class _EditSubscriptionSheetState
   late final TextEditingController _nameCtrl;
   late final TextEditingController _amountCtrl;
   late SubscriptionFrequency _freq;
-  late TransactionCategory _cat;
+  late WalletCategory _cat;
   late Color _color;
   late IconData _icon;
   late DateTime _billingDate;
@@ -1467,7 +1470,8 @@ class _EditSubscriptionSheetState
     _nameCtrl = TextEditingController(text: s.name);
     _amountCtrl = TextEditingController(text: s.amount.toStringAsFixed(2));
     _freq = s.frequency;
-    _cat = s.category;
+    final cats = ref.read(walletCategoriesProvider);
+    _cat = resolveCategory(s.category, cats);
     _color = s.color;
     _icon = s.icon;
     _billingDate = s.nextBillingDate;
@@ -1511,7 +1515,7 @@ class _EditSubscriptionSheetState
         name: name,
         amount: amount,
         frequency: _freq,
-        category: _cat,
+        category: _cat.id,
         color: _color,
         icon: _icon,
         nextBillingDate: _billingDate,

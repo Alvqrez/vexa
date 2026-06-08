@@ -7,7 +7,6 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_provider.dart';
-import '../../domain/models/transaction.dart';
 
 // ── Public widget ─────────────────────────────────────────────────────────────
 
@@ -111,12 +110,12 @@ class SmartInsightsWidget extends ConsumerWidget {
 
     // 2. Top category
     if (topCat != null && breakdown.isNotEmpty) {
-      final topAmount = breakdown[topCat] ?? 0;
+      final topAmount = breakdown[topCat.id] ?? 0;
       insights.add(_InsightData(
         icon: topCat.icon,
         color: topCat.color,
-        title: topCat.label,
-        body: 'Mayor gasto: $currency${topAmount.toStringAsFixed(0)} en ${topCat.label.toLowerCase()}.',
+        title: topCat.name,
+        body: 'Mayor gasto: $currency${topAmount.toStringAsFixed(0)} en ${topCat.name.toLowerCase()}.',
       ));
     }
 

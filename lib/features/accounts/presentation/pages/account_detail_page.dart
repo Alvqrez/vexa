@@ -7,6 +7,8 @@ import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../home/domain/models/transaction.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../home/domain/models/account.dart';
 import '../../../home/presentation/widgets/transaction_item.dart';
 import '../../../home/presentation/pages/add_transaction_page.dart';
@@ -457,7 +459,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _CategoryBreakdown extends StatelessWidget {
+class _CategoryBreakdown extends ConsumerWidget {
   const _CategoryBreakdown({
     required this.transactions,
     required this.currency,
@@ -466,8 +468,9 @@ class _CategoryBreakdown extends StatelessWidget {
   final String currency;
 
   @override
-  Widget build(BuildContext context) {
-    final map = <TransactionCategory, double>{};
+  Widget build(BuildContext context, WidgetRef ref) {
+    final walletCats = ref.watch(walletCategoriesProvider);
+    final map = <String, double>{};
     for (final t in transactions.where((t) => !t.isIncome)) {
       map[t.category] = (map[t.category] ?? 0) + t.amount;
     }
@@ -479,8 +482,9 @@ class _CategoryBreakdown extends StatelessWidget {
 
     return Column(
       children: sorted.map((e) {
+        final cat = resolveCategory(e.key, walletCats);
         final ratio = e.value / total;
-        final color = e.key.color;
+        final color = cat.color;
         return Padding(
           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
           child: Row(
@@ -492,7 +496,7 @@ class _CategoryBreakdown extends StatelessWidget {
                   color: color.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(e.key.icon, size: 13, color: color),
+                child: Icon(cat.icon, size: 13, color: color),
               ),
               const SizedBox(width: AppSpacing.md),
               Expanded(
@@ -503,7 +507,7 @@ class _CategoryBreakdown extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          e.key.label,
+                          cat.name,
                           style: AppTypography.labelM.copyWith(
                             color: context.colors.textSecondary,
                           ),
@@ -1095,7 +1099,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
       merchant: 'Corrección de saldo',
       amount: diff.abs(),
       type: diff > 0 ? TransactionType.income : TransactionType.expense,
-      category: TransactionCategory.other,
+      category: 'wc6',
       date: DateTime.now(),
       accountId: widget.account.id,
       note: 'Ajuste manual de saldo',

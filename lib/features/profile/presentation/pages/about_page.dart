@@ -1,20 +1,25 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../home/presentation/providers/home_provider.dart';
 
-class AboutPage extends StatefulWidget {
+class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
 
   @override
-  State<AboutPage> createState() => _AboutPageState();
+  ConsumerState<AboutPage> createState() => _AboutPageState();
 }
 
-class _AboutPageState extends State<AboutPage>
+class _AboutPageState extends ConsumerState<AboutPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
+  int _logoTapCount = 0;
 
   @override
   void initState() {
@@ -52,6 +57,85 @@ class _AboutPageState extends State<AboutPage>
     );
   }
 
+  void _onLogoTap() {
+    if (kReleaseMode) return;
+    _logoTapCount++;
+    final remaining = 10 - _logoTapCount;
+    if (remaining > 0 && remaining <= 3) {
+      HapticFeedback.selectionClick();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          '$remaining tap${remaining == 1 ? '' : 's'} para activar modo demo',
+          style: AppTypography.labelM
+              .copyWith(color: context.colors.textPrimary),
+        ),
+        backgroundColor: context.colors.card,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+      ));
+    }
+    if (_logoTapCount >= 10) {
+      _logoTapCount = 0;
+      _confirmDemoMode();
+    }
+  }
+
+  Future<void> _confirmDemoMode() async {
+    HapticFeedback.mediumImpact();
+    final c = context.colors;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: c.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+        ),
+        title: Text('Modo demo',
+            style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+        content: Text(
+          'Se cargarán datos de ejemplo y se reemplazarán los datos actuales. '
+          'Esta acción no se puede deshacer.\n\n'
+          '⚠️ Solo disponible en modo debug.',
+          style: AppTypography.bodyM.copyWith(color: c.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancelar',
+                style: AppTypography.labelM
+                    .copyWith(color: c.textTertiary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Cargar demo',
+                style: AppTypography.labelM
+                    .copyWith(color: AppColors.warning)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(accountsProvider.notifier).seed();
+      await ref.read(transactionsProvider.notifier).seed();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Datos de demo cargados',
+              style: AppTypography.labelM
+                  .copyWith(color: context.colors.textPrimary)),
+          backgroundColor: context.colors.card,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          ),
+        ));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
@@ -74,44 +158,47 @@ class _AboutPageState extends State<AboutPage>
                       _reveal(0, 4, const _SubPageHeader(title: 'Sobre Vexa')),
                       const SizedBox(height: AppSpacing.xxl),
 
-                      // Logo hero
+                      // Logo hero — 10 taps activan modo demo (solo debug)
                       _reveal(
                         1,
                         4,
                         Center(
                           child: Column(
                             children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(24),
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      AppColors.petroleum,
-                                      AppColors.emeraldDim,
+                              GestureDetector(
+                                onTap: _onLogoTap,
+                                child: Container(
+                                  width: 80,
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(24),
+                                    gradient: const LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        AppColors.petroleum,
+                                        AppColors.emeraldDim,
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.petroleum.withValues(
+                                          alpha: 0.30,
+                                        ),
+                                        blurRadius: 32,
+                                        spreadRadius: -4,
+                                        offset: const Offset(0, 12),
+                                      ),
                                     ],
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.petroleum.withValues(
-                                        alpha: 0.30,
+                                  child: Center(
+                                    child: Text(
+                                      'V',
+                                      style: AppTypography.headingM.copyWith(
+                                        color: c.textPrimary,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 36,
                                       ),
-                                      blurRadius: 32,
-                                      spreadRadius: -4,
-                                      offset: const Offset(0, 12),
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'V',
-                                    style: AppTypography.headingM.copyWith(
-                                      color: c.textPrimary,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 36,
                                     ),
                                   ),
                                 ),

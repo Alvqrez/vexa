@@ -11,6 +11,7 @@ import '../../../subscriptions/domain/models/subscription.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../subscriptions/presentation/pages/subscriptions_page.dart';
 import '../providers/wallet_provider.dart';
+import '../../domain/models/wallet_category.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/recurring_transaction.dart';
 import '../../../home/presentation/pages/recurring_transactions_page.dart';
@@ -697,10 +698,8 @@ class _RecurringTransactionsCard extends ConsumerWidget {
           : Column(
               children: preview.map((r) {
                 final cc = context.colors;
-                final cat = TransactionCategory.values.firstWhere(
-                  (c) => c.name == r.category,
-                  orElse: () => TransactionCategory.other,
-                );
+                final walletCats = ref.watch(walletCategoriesProvider);
+                final cat = resolveCategory(r.category, walletCats);
                 final account =
                     accounts.where((a) => a.id == r.accountId).firstOrNull;
                 final isIncome = r.type == TransactionType.income.name;

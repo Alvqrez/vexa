@@ -11,6 +11,8 @@ import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 import 'add_transaction_page.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class TransactionDetailPage extends ConsumerWidget {
   const TransactionDetailPage({super.key, required this.transaction});
@@ -25,7 +27,8 @@ class TransactionDetailPage extends ConsumerWidget {
     final account = transaction.accountId != null
         ? accounts.where((a) => a.id == transaction.accountId).firstOrNull
         : null;
-    final cat = transaction.category;
+    final cats = ref.watch(walletCategoriesProvider);
+    final cat = resolveCategory(transaction.category, cats);
     final isIncome = transaction.isIncome;
     final amountColor = isIncome ? AppColors.positive : AppColors.negative;
 
@@ -150,7 +153,7 @@ class TransactionDetailPage extends ConsumerWidget {
                   _DetailRow(
                     icon: Icons.category_rounded,
                     label: 'Categoría',
-                    value: cat.label,
+                    value: cat.name,
                     valueColor: cat.color,
                   ),
                   _Divider(),
@@ -206,7 +209,7 @@ class TransactionDetailPage extends ConsumerWidget {
                     label: 'Eliminar',
                     icon: Icons.delete_outline_rounded,
                     color: AppColors.negative,
-                    onTap: () => _confirmDelete(context, ref),
+                    onTap: () => _deleteWithUndo(context, ref),
                   ),
                 ),
               ],
@@ -228,46 +231,33 @@ class TransactionDetailPage extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ctx.colors.card,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        ),
-        title: Text(
-          'Eliminar transacción',
-          style: AppTypography.headingS.copyWith(color: ctx.colors.textPrimary),
-        ),
+  void _deleteWithUndo(BuildContext context, WidgetRef ref) {
+    HapticFeedback.mediumImpact();
+    final messenger = ScaffoldMessenger.of(context);
+    final notifier = ref.read(transactionsProvider.notifier);
+    final c = context.colors;
+    final deleted = transaction;
+
+    notifier.delete(deleted);
+    Navigator.of(context).pop();
+
+    messenger.showSnackBar(
+      SnackBar(
         content: Text(
-          '¿Estás seguro de que quieres eliminar "${transaction.merchant}"? Esta acción no se puede deshacer.',
-          style: AppTypography.bodyM.copyWith(color: ctx.colors.textSecondary),
+          '"${deleted.merchant}" eliminada',
+          style: AppTypography.labelM.copyWith(color: c.textPrimary),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancelar',
-              style: TextStyle(color: ctx.colors.textSecondary),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              HapticFeedback.mediumImpact();
-              ref.read(transactionsProvider.notifier).delete(transaction);
-              Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
-            },
-            child: Text(
-              'Eliminar',
-              style: TextStyle(
-                color: AppColors.negative,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
+        action: SnackBarAction(
+          label: 'Deshacer',
+          textColor: AppColors.emerald,
+          onPressed: () => notifier.add(deleted),
+        ),
+        backgroundColor: c.card,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
       ),
     );
   }
@@ -320,44 +310,32 @@ class _MoreMenuButton extends ConsumerWidget {
             builder: (_) => AddTransactionSheet(existing: transaction),
           );
         } else if (v == 'delete') {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              backgroundColor: ctx.colors.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-              ),
-              title: Text(
-                'Eliminar transacción',
-                style: AppTypography.headingS
-                    .copyWith(color: ctx.colors.textPrimary),
-              ),
+          HapticFeedback.mediumImpact();
+          final messenger = ScaffoldMessenger.of(context);
+          final notifier = ref.read(transactionsProvider.notifier);
+          final c = context.colors;
+          final deleted = transaction;
+
+          notifier.delete(deleted);
+          Navigator.of(context).pop();
+
+          messenger.showSnackBar(
+            SnackBar(
               content: Text(
-                '¿Eliminar "${transaction.merchant}"?',
-                style: AppTypography.bodyM
-                    .copyWith(color: ctx.colors.textSecondary),
+                '"${deleted.merchant}" eliminada',
+                style: AppTypography.labelM.copyWith(color: c.textPrimary),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: Text('Cancelar',
-                      style: TextStyle(color: ctx.colors.textSecondary)),
-                ),
-                TextButton(
-                  onPressed: () {
-                    HapticFeedback.mediumImpact();
-                    ref
-                        .read(transactionsProvider.notifier)
-                        .delete(transaction);
-                    Navigator.of(ctx).pop();
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Eliminar',
-                      style: TextStyle(
-                          color: AppColors.negative,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ],
+              action: SnackBarAction(
+                label: 'Deshacer',
+                textColor: AppColors.emerald,
+                onPressed: () => notifier.add(deleted),
+              ),
+              backgroundColor: c.card,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+              ),
             ),
           );
         }

@@ -12,6 +12,8 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../../core/providers/settings_provider.dart';
 
 class AnalysisPage extends StatefulWidget {
@@ -160,13 +162,16 @@ class _AnalysisBg extends StatelessWidget {
 
 // ── Header ────────────────────────────────────────────────────────────────────
 
-class _AnalysisHeader extends StatelessWidget {
+class _AnalysisHeader extends ConsumerWidget {
   const _AnalysisHeader();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(selectedAnalysisMonthProvider);
     final now = DateTime.now();
-    final label = DateFormat('MMMM yyyy', 'es').format(now);
+    final isCurrentMonth =
+        selected.year == now.year && selected.month == now.month;
+    final label = DateFormat('MMMM yyyy', 'es').format(selected);
     final capitalized = label[0].toUpperCase() + label.substring(1);
 
     final c = context.colors;
@@ -179,10 +184,47 @@ class _AnalysisHeader extends StatelessWidget {
               Text('Análisis',
                   style: AppTypography.headingM
                       .copyWith(color: c.textPrimary)),
-              const SizedBox(height: 2),
-              Text(capitalized,
-                  style: AppTypography.labelM
-                      .copyWith(color: c.textTertiary)),
+              const SizedBox(height: 6),
+              // Month selector
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      final prev = DateTime(selected.year,
+                          selected.month - 1);
+                      ref
+                          .read(selectedAnalysisMonthProvider.notifier)
+                          .state = prev;
+                    },
+                    child: Icon(Icons.chevron_left_rounded,
+                        size: 20, color: c.textSecondary),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(capitalized,
+                      style: AppTypography.labelM
+                          .copyWith(color: c.textTertiary)),
+                  const SizedBox(width: 4),
+                  GestureDetector(
+                    onTap: isCurrentMonth
+                        ? null
+                        : () {
+                            HapticFeedback.selectionClick();
+                            final next = DateTime(selected.year,
+                                selected.month + 1);
+                            ref
+                                .read(selectedAnalysisMonthProvider
+                                    .notifier)
+                                .state = next;
+                          },
+                    child: Icon(Icons.chevron_right_rounded,
+                        size: 20,
+                        color: isCurrentMonth
+                            ? c.textTertiary.withValues(alpha: 0.3)
+                            : c.textSecondary),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -222,8 +264,8 @@ class _OverviewRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final income = ref.watch(monthlyIncomeProvider);
-    final expenses = ref.watch(monthlyExpensesProvider);
+    final income = ref.watch(analysisIncomeProvider);
+    final expenses = ref.watch(analysisExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
     final currency = ref.watch(currencySymbolProvider);
 
@@ -714,12 +756,17 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
 
   @override
   Widget build(BuildContext context) {
-    final breakdown = ref.watch(categoryBreakdownProvider);
+    final breakdown = ref.watch(analysisCategoryBreakdownProvider);
     if (breakdown.isEmpty) return const SizedBox.shrink();
 
+    final walletCats = ref.watch(walletCategoriesProvider);
     final total = breakdown.values.fold(0.0, (a, b) => a + b);
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
+    final resolved = entries.map((e) => (
+          cat: resolveCategory(e.key, walletCats),
+          value: e.value,
+        )).toList();
 
     return _SectionCard(
       title: 'Distribución por categoría',
@@ -746,9 +793,9 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
                       });
                     },
                   ),
-                  sections: entries.asMap().entries.map((entry) {
+                  sections: resolved.asMap().entries.map((entry) {
                     final i = entry.key;
-                    final cat = entry.value.key;
+                    final cat = entry.value.cat;
                     final value = entry.value.value;
                     final pct = value / total;
                     final isTouched = i == _touchedIndex;
@@ -775,8 +822,8 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: entries.take(5).map((entry) {
-                final pct = entry.value / total;
+              children: resolved.take(5).map((item) {
+                final pct = item.value / total;
                 final c = context.colors;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -786,13 +833,13 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: entry.key.color,
+                          color: item.cat.color,
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
-                        child: Text(entry.key.label,
+                        child: Text(item.cat.name,
                             style: AppTypography.labelS.copyWith(
                                 color: c.textSecondary)),
                       ),
@@ -822,11 +869,11 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prediction = ref.watch(predictionProvider);
-    final breakdown = ref.watch(categoryBreakdownProvider);
-    final income = ref.watch(monthlyIncomeProvider);
-    final expenses = ref.watch(monthlyExpensesProvider);
+    final breakdown = ref.watch(analysisCategoryBreakdownProvider);
+    final income = ref.watch(analysisIncomeProvider);
+    final expenses = ref.watch(analysisExpensesProvider);
     final savedToAccount = ref.watch(monthlySavingsProvider);
-    final topCat = ref.watch(topCategoryProvider);
+    final topCat = ref.watch(analysisTopCategoryProvider);
     final currency = ref.watch(currencySymbolProvider);
 
     final insights = _buildInsights(
@@ -875,11 +922,11 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
 
   List<_Insight> _buildInsights({
     required MonthlyPrediction prediction,
-    required Map<TransactionCategory, double> breakdown,
+    required Map<String, double> breakdown,
     required double income,
     required double expenses,
     required double savedToAccount,
-    required TransactionCategory? topCategory,
+    required WalletCategory? topCategory,
     required String currency,
   }) {
     final insights = <_Insight>[];
@@ -924,11 +971,7 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
       final target20 = income * 0.20;
 
       // Classify spending: needs = food+transport+health, wants = rest
-      final needsCats = {
-        TransactionCategory.food,
-        TransactionCategory.transport,
-        TransactionCategory.health,
-      };
+      const needsCats = {'wc1', 'wc2', 'wc5'}; // Comida, Transporte, Salud
       final actualNeeds = breakdown.entries
           .where((e) => needsCats.contains(e.key))
           .fold(0.0, (s, e) => s + e.value);
@@ -1011,14 +1054,14 @@ class _FinancialIntelligenceSection extends ConsumerWidget {
 
     // ── 4. Acción sobre la categoría más cara ─────────────────────────────────
     if (topCategory != null && breakdown.isNotEmpty && income > 0) {
-      final topAmount = breakdown[topCategory] ?? 0;
+      final topAmount = breakdown[topCategory.id] ?? 0;
       final reduction10 = topAmount * 0.10;
       final pctOfIncome = (topAmount / income * 100).toStringAsFixed(0);
       insights.add(_Insight(
         icon: topCategory.icon,
         color: topCategory.color,
-        title: '${topCategory.label}: $pctOfIncome% de tus ingresos',
-        body: 'Gastaste $currency${topAmount.toStringAsFixed(0)} en ${topCategory.label.toLowerCase()} este mes. '
+        title: '${topCategory.name}: $pctOfIncome% de tus ingresos',
+        body: 'Gastaste $currency${topAmount.toStringAsFixed(0)} en ${topCategory.name.toLowerCase()} este mes. '
             'Reducir solo un 10% ($currency${reduction10.toStringAsFixed(0)}) '
             'te daría $currency${(reduction10 * 12).toStringAsFixed(0)} extra al año.',
         type: _InsightType.neutral,
@@ -1130,13 +1173,14 @@ class _CategoryBreakdown extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final breakdown = ref.watch(categoryBreakdownProvider);
+    final breakdown = ref.watch(analysisCategoryBreakdownProvider);
     if (breakdown.isEmpty) return const SizedBox.shrink();
 
     final total = breakdown.values.fold(0.0, (a, b) => a + b);
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final currency = ref.watch(currencySymbolProvider);
+    final walletCats = ref.watch(walletCategoriesProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1154,7 +1198,7 @@ class _CategoryBreakdown extends ConsumerWidget {
             children: [
               for (int i = 0; i < entries.length; i++) ...[
                 _CatBar(
-                  category: entries[i].key,
+                  category: resolveCategory(entries[i].key, walletCats),
                   spent: entries[i].value,
                   total: total,
                   currency: currency,
@@ -1184,7 +1228,7 @@ class _CatBar extends StatefulWidget {
       required this.spent,
       required this.total,
       required this.currency});
-  final TransactionCategory category;
+  final WalletCategory category;
   final double spent;
   final double total;
   final String currency;
@@ -1239,7 +1283,7 @@ class _CatBarState extends State<_CatBar>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.category.label,
+                  Text(widget.category.name,
                       style: AppTypography.labelM
                           .copyWith(color: c.textSecondary)),
                   Text('${widget.currency}${widget.spent.toStringAsFixed(2)}',
@@ -1286,7 +1330,11 @@ class _TopSpendsList extends ConsumerWidget {
     final c = context.colors;
     final transactions = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
-    final expenses = transactions.where((t) => !t.isIncome).toList()
+    final walletCats = ref.watch(walletCategoriesProvider);
+    final m = ref.watch(selectedAnalysisMonthProvider);
+    final expenses = transactions
+        .where((t) => !t.isIncome && t.date.month == m.month && t.date.year == m.year)
+        .toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
     final top = expenses.take(4).toList();
 
@@ -1310,16 +1358,18 @@ class _TopSpendsList extends ConsumerWidget {
                       horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   child: Row(
                     children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: top[i].category.surface,
-                          borderRadius: BorderRadius.circular(11),
-                        ),
-                        child: Icon(top[i].category.icon,
-                            size: 16, color: top[i].category.color),
-                      ),
+                      Builder(builder: (_) {
+                        final cat = resolveCategory(top[i].category, walletCats);
+                        return Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: cat.surface,
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                          child: Icon(cat.icon, size: 16, color: cat.color),
+                        );
+                      }),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(
@@ -1328,7 +1378,7 @@ class _TopSpendsList extends ConsumerWidget {
                             Text(top[i].merchant,
                                 style: AppTypography.labelL.copyWith(
                                     color: c.textPrimary)),
-                            Text(top[i].category.label,
+                            Text(resolveCategory(top[i].category, walletCats).name,
                                 style: AppTypography.labelS.copyWith(
                                     color: c.textTertiary)),
                           ],
@@ -1430,8 +1480,8 @@ class _InterpretCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    final income = ref.watch(monthlyIncomeProvider);
-    final expenses = ref.watch(monthlyExpensesProvider);
+    final income = ref.watch(analysisIncomeProvider);
+    final expenses = ref.watch(analysisExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
     final currency = ref.watch(currencySymbolProvider);
 
@@ -1508,29 +1558,17 @@ class _InterpretSheet extends ConsumerWidget {
   String _fmt(double v, String sym) =>
       '$sym${v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0)}';
 
-  String _categoryName(TransactionCategory c) {
-    const names = {
-      TransactionCategory.food: 'Alimentación',
-      TransactionCategory.transport: 'Transporte',
-      TransactionCategory.entertainment: 'Entretenimiento',
-      TransactionCategory.shopping: 'Compras',
-      TransactionCategory.health: 'Salud',
-      TransactionCategory.salary: 'Ingresos',
-      TransactionCategory.other: 'Otros',
-    };
-    return names[c] ?? c.name;
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final income = ref.watch(monthlyIncomeProvider);
-    final expenses = ref.watch(monthlyExpensesProvider);
+    final income = ref.watch(analysisIncomeProvider);
+    final expenses = ref.watch(analysisExpensesProvider);
     final txns = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final walletCats = ref.watch(walletCategoriesProvider);
 
-    final now = DateTime.now();
-    final prevMonth = now.month == 1 ? 12 : now.month - 1;
-    final prevYear = now.month == 1 ? now.year - 1 : now.year;
+    final sel = ref.watch(selectedAnalysisMonthProvider);
+    final prevMonth = sel.month == 1 ? 12 : sel.month - 1;
+    final prevYear = sel.month == 1 ? sel.year - 1 : sel.year;
 
     final prevTxns = txns.where(
         (t) => t.date.month == prevMonth && t.date.year == prevYear);
@@ -1540,14 +1578,17 @@ class _InterpretSheet extends ConsumerWidget {
         prevTxns.where((t) => t.isIncome).fold(0.0, (s, t) => s + t.amount);
 
     final curTxns = txns.where(
-        (t) => t.date.month == now.month && t.date.year == now.year);
-    final catTotals = <TransactionCategory, double>{};
+        (t) => t.date.month == sel.month && t.date.year == sel.year);
+    final catTotals = <String, double>{};
     for (final t in curTxns.where((t) => !t.isIncome)) {
       catTotals[t.category] = (catTotals[t.category] ?? 0) + t.amount;
     }
-    final topCat = catTotals.isEmpty
+    final topCatEntry = catTotals.isEmpty
         ? null
         : catTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
+    final topCat = topCatEntry == null
+        ? null
+        : (cat: resolveCategory(topCatEntry.key, walletCats), value: topCatEntry.value);
 
     // net = income − expenses (real available cash); savings = transfers to savings accounts
     final net = income - expenses;
@@ -1597,8 +1638,8 @@ class _InterpretSheet extends ConsumerWidget {
         _InterpretInsight(
           icon: Icons.category_outlined,
           color: AppColors.catEntertainment,
-          title: 'Mayor gasto: ${_categoryName(topCat.key)}',
-          body: '${_categoryName(topCat.key)} representa ${_fmt(topCat.value, currency)} — el ${expenses > 0 ? ((topCat.value / expenses) * 100).round() : 0}% de tus gastos totales este mes.',
+          title: 'Mayor gasto: ${topCat.cat.name}',
+          body: '${topCat.cat.name} representa ${_fmt(topCat.value, currency)} — el ${expenses > 0 ? ((topCat.value / expenses) * 100).round() : 0}% de tus gastos totales este mes.',
         ),
       _InterpretInsight(
         icon: Icons.savings_outlined,
@@ -1617,7 +1658,7 @@ class _InterpretSheet extends ConsumerWidget {
         color: AppColors.warning,
         title: 'Recomendación',
         body: topCat != null && expenses > 0
-            ? 'Pon atención a ${_categoryName(topCat.key)}, que consume el ${((topCat.value / expenses) * 100).round()}% de tus gastos. Pequeñas reducciones ahí tendrán el mayor impacto.'
+            ? 'Pon atención a ${topCat.cat.name}, que consume el ${((topCat.value / expenses) * 100).round()}% de tus gastos. Pequeñas reducciones ahí tendrán el mayor impacto.'
             : 'Registra tus transacciones regularmente para obtener recomendaciones personalizadas.',
       ),
     ];

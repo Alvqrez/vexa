@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../home/domain/models/transaction.dart';
 
 enum SubscriptionFrequency { weekly, monthly, quarterly, annual }
 
@@ -51,7 +50,8 @@ class Subscription {
   final String name;
   final double amount;
   final DateTime nextBillingDate;
-  final TransactionCategory category;
+  /// WalletCategory.id (e.g. 'wc4').
+  final String category;
   final IconData icon;
   final Color color;
   final SubscriptionFrequency frequency;
@@ -92,7 +92,7 @@ class Subscription {
     String? name,
     double? amount,
     DateTime? nextBillingDate,
-    TransactionCategory? category,
+    String? category,
     IconData? icon,
     Color? color,
     SubscriptionFrequency? frequency,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 
 enum WalletCategoryType { income, expense }
 
@@ -30,6 +31,15 @@ class WalletCategory {
 
   Color get surface => color.withValues(alpha: 0.18);
 
+  static WalletCategory unknown(String id) => WalletCategory(
+        id: id,
+        name: id,
+        color: AppColors.catOther,
+        icon: Icons.category_rounded,
+        type: WalletCategoryType.expense,
+        sortOrder: 99,
+      );
+
   WalletCategory copyWith({
     String? name,
     Color? color,
@@ -47,4 +57,9 @@ class WalletCategory {
       isDefault: isDefault,
     );
   }
+}
+
+/// Resolves a WalletCategory by ID. Falls back to [WalletCategory.unknown] if not found.
+WalletCategory resolveCategory(String id, List<WalletCategory> cats) {
+  return cats.firstWhere((c) => c.id == id, orElse: () => WalletCategory.unknown(id));
 }

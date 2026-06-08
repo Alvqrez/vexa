@@ -11,6 +11,8 @@ import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 class FinancialCalendarPage extends ConsumerStatefulWidget {
   const FinancialCalendarPage({super.key});
@@ -753,17 +755,19 @@ class _CalTxnRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currency = ref.watch(currencySymbolProvider);
+    final cats = ref.watch(walletCategoriesProvider);
     final t = transaction;
+    final cat = resolveCategory(t.category, cats);
     return Row(
       children: [
         Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: t.category.surface,
+            color: cat.surface,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(t.category.icon, size: 16, color: t.category.color),
+          child: Icon(cat.icon, size: 16, color: cat.color),
         ),
         const SizedBox(width: AppSpacing.md),
         Expanded(
@@ -777,7 +781,7 @@ class _CalTxnRow extends ConsumerWidget {
                 ),
               ),
               Text(
-                t.category.label,
+                cat.name,
                 style: AppTypography.labelS.copyWith(
                   color: context.colors.textTertiary,
                 ),
