@@ -68,15 +68,15 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
       });
 
   // Returns the generated transaction ID so callers can persist it.
-  String? _addTransaction({
+  Future<String?> _addTransaction({
     required String merchant,
     required double amount,
     required TransactionType type,
     required String? accountId,
-  }) {
+  }) async {
     if (accountId == null) return null;
     final txId = generateId();
-    _ref.read(transactionsProvider.notifier).add(Transaction(
+    await _ref.read(transactionsProvider.notifier).add(Transaction(
           id: txId,
           merchant: merchant,
           amount: amount,
@@ -94,7 +94,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
     await _isar.writeTxn(() => _isar.isarLoans.put(_loanToIsar(l)));
 
     // Prestar dinero = gasto. Recibir prestado = ingreso.
-    final txId = _addTransaction(
+    final txId = await _addTransaction(
       merchant: 'Préstamo: ${l.name}',
       amount: l.amount,
       type: l.type == LoanType.lentByMe
@@ -119,7 +119,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
   Future<void> delete(String id) async {
     _isLoaded = true;
     state = state.where((l) => l.id != id).toList();
-    _isar.writeTxn(() => _isar.isarLoans.deleteByLoanId(id));
+    await _isar.writeTxn(() => _isar.isarLoans.deleteByLoanId(id));
 
     // Reverse the originating transaction to restore the account balance.
     final txId = await LocalPrefsService.getString('loan_origin_tx_$id');
@@ -129,7 +129,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
           .where((t) => t.id == txId)
           .firstOrNull;
       if (tx != null) {
-        _ref.read(transactionsProvider.notifier).delete(tx);
+        await _ref.read(transactionsProvider.notifier).delete(tx);
       }
       await LocalPrefsService.remove('loan_origin_tx_$id');
     }

@@ -107,7 +107,7 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
       backgroundColor: Colors.transparent,
       builder: (_) => _CategoryFormSheet(
         type: type,
-        onSave: (cat) => ref.read(walletCategoriesProvider.notifier).add(cat),
+        onSave: (cat) async => await ref.read(walletCategoriesProvider.notifier).add(cat),
       ),
     );
   }
@@ -120,8 +120,8 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
       builder: (_) => _CategoryFormSheet(
         type: category.type,
         existing: category,
-        onSave: (cat) =>
-            ref.read(walletCategoriesProvider.notifier).update(cat),
+        onSave: (cat) async =>
+            await ref.read(walletCategoriesProvider.notifier).update(cat),
       ),
     );
   }
@@ -153,9 +153,11 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
             ),
           ),
           TextButton(
-            onPressed: () {
-              ref.read(walletCategoriesProvider.notifier).delete(cat.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              await ref.read(walletCategoriesProvider.notifier).delete(cat.id);
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
             child: Text(
               'Eliminar',

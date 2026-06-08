@@ -799,10 +799,10 @@ class _LoanMenu extends ConsumerWidget {
                 );
               }
             },
-            onDelete: () {
+            onDelete: () async {
               final messenger = ScaffoldMessenger.of(context);
               final c = context.colors;
-              ref.read(loansProvider.notifier).delete(loan.id);
+              await ref.read(loansProvider.notifier).delete(loan.id);
               messenger.showSnackBar(
                 SnackBar(
                   content: Text(
@@ -1006,18 +1006,20 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
     }
     final clamped = amount.clamp(0.0, widget.loan.remainingAmount);
-    ref
+    await ref
         .read(loansProvider.notifier)
         .addPayment(widget.loan.id, clamped, accountId: _accountId);
     HapticFeedback.mediumImpact();
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -1231,7 +1233,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
   String _formatDate(DateTime d) =>
       '${d.day} ${_months[d.month - 1]} ${d.year}';
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
@@ -1240,7 +1242,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
     }
 
     if (widget.existing != null) {
-      ref.read(loansProvider.notifier).update(
+      await ref.read(loansProvider.notifier).update(
             widget.existing!.copyWith(
               name: name,
               amount: amount,
@@ -1253,7 +1255,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
             ),
           );
     } else {
-      ref.read(loansProvider.notifier).add(Loan(
+      await ref.read(loansProvider.notifier).add(Loan(
             id: generateId(),
             name: name,
             amount: amount,
@@ -1268,7 +1270,9 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
     }
 
     HapticFeedback.mediumImpact();
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
