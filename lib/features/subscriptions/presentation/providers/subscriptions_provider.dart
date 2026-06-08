@@ -112,7 +112,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
       date: DateTime.now(),
       accountId: account?.id,
     );
-    _ref.read(transactionsProvider.notifier).add(transaction);
+    await _ref.read(transactionsProvider.notifier).add(transaction);
 
     final nextDate = s.nextAfterCurrent;
     await update(s.copyWith(nextBillingDate: nextDate));

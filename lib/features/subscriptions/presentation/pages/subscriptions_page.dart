@@ -685,18 +685,18 @@ class _SubscriptionMenu extends ConsumerWidget {
                 backgroundColor: Colors.transparent,
                 builder: (_) => _EditSubscriptionSheet(
                   subscription: subscription,
-                  onSave: (updated) =>
-                      ref.read(subscriptionsProvider.notifier).update(updated),
+                  onSave: (updated) async =>
+                      await ref.read(subscriptionsProvider.notifier).update(updated),
                 ),
               );
             },
-            onToggle: () => ref
+            onToggle: () async => await ref
                 .read(subscriptionsProvider.notifier)
                 .toggleActive(subscription.id),
-            onDelete: () => ref
+            onDelete: () async => await ref
                 .read(subscriptionsProvider.notifier)
                 .delete(subscription.id),
-            onCharge: () => ref
+            onCharge: () async => await ref
                 .read(subscriptionsProvider.notifier)
                 .chargeSubscription(subscription),
           ),
@@ -973,14 +973,14 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   String _formatDate(DateTime d) =>
       '${d.day} ${_months[d.month - 1]} ${d.year}';
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
     }
-    ref
+    await ref
         .read(subscriptionsProvider.notifier)
         .add(
           Subscription(
@@ -995,7 +995,9 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
           ),
         );
     HapticFeedback.mediumImpact();
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
