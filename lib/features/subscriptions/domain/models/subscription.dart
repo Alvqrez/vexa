@@ -25,9 +25,12 @@ extension SubscriptionFrequencyX on SubscriptionFrequency {
       };
 
   double get monthlyFactor => switch (this) {
-        SubscriptionFrequency.weekly => 365.0 / 12.0 / 7.0,
+        // 52.14 weeks per year ÷ 12 months = 4.345 weeks per month
+        SubscriptionFrequency.weekly => 52.14 / 12.0,
         SubscriptionFrequency.monthly => 1.0,
+        // Quarterly = every 3 months = 1/3 of monthly
         SubscriptionFrequency.quarterly => 1.0 / 3.0,
+        // Annual = 1 payment per 12 months = 1/12 per month
         SubscriptionFrequency.annual => 1.0 / 12.0,
       };
 }
@@ -74,17 +77,20 @@ class Subscription {
       case SubscriptionFrequency.monthly:
         final nm = d.month == 12 ? 1 : d.month + 1;
         final ny = d.month == 12 ? d.year + 1 : d.year;
-        final last = DateTime(ny, nm + 1, 0).day;
-        return DateTime(ny, nm, d.day.clamp(1, last));
+        final lastDay = DateTime(ny, nm + 1, 0).day;
+        return DateTime(ny, nm, d.day.clamp(1, lastDay), d.hour, d.minute);
       case SubscriptionFrequency.quarterly:
-        final nm = d.month + 3;
-        final ny = d.year + (nm - 1) ~/ 12;
-        final m = ((nm - 1) % 12) + 1;
-        final last = DateTime(ny, m + 1, 0).day;
-        return DateTime(ny, m, d.day.clamp(1, last));
+        var qm = d.month + 3;
+        var qy = d.year;
+        while (qm > 12) {
+          qm -= 12;
+          qy += 1;
+        }
+        final lastDay = DateTime(qy, qm + 1, 0).day;
+        return DateTime(qy, qm, d.day.clamp(1, lastDay), d.hour, d.minute);
       case SubscriptionFrequency.annual:
-        final last = DateTime(d.year + 1, d.month + 1, 0).day;
-        return DateTime(d.year + 1, d.month, d.day.clamp(1, last));
+        final lastDay = DateTime(d.year + 1, d.month + 1, 0).day;
+        return DateTime(d.year + 1, d.month, d.day.clamp(1, lastDay), d.hour, d.minute);
     }
   }
 

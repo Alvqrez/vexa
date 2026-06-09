@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_provider.dart';
 
@@ -37,10 +38,13 @@ class TransactionReportExporter {
   String _getAccountName(String? accountId, List<dynamic> accounts) {
     if (accountId == null) return 'Desconocida';
     try {
-      return accounts
-          .firstWhere((a) => a.id == accountId, orElse: () => throw Exception())
-          .name;
-    } catch (_) {
+      final account = accounts.firstWhere(
+        (a) => a.id == accountId,
+        orElse: () => null,
+      );
+      return account?.name ?? 'Desconocida';
+    } catch (e) {
+      debugPrint('TransactionReportExporter._getAccountName: $e');
       return 'Desconocida';
     }
   }
@@ -48,7 +52,6 @@ class TransactionReportExporter {
   /// Genera un reporte CSV con resumen mensual
   String generateMonthlySummaryCSV() {
     final transactions = _ref.read(transactionsProvider);
-    final accounts = _ref.read(accountsProvider);
 
     // Agrupar transacciones por mes
     final monthlyData = <String, (double income, double expense)>{};

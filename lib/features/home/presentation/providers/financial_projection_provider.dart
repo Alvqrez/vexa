@@ -45,7 +45,7 @@ final financialProjectionProvider = Provider<FinancialProjection>((ref) {
   final recentTransactions =
       transactions.where((t) => t.date.isAfter(thirtyDaysAgo)).toList();
 
-  // Calcular ingresos y gastos promedio
+  // Calcular ingresos y gastos de últimos 30 días
   double totalIncome = 0;
   double totalExpense = 0;
   for (final tx in recentTransactions) {
@@ -56,10 +56,9 @@ final financialProjectionProvider = Provider<FinancialProjection>((ref) {
     }
   }
 
-  final averageMonthlyIncome =
-      ((totalIncome / 30 * 30).clamp(0, double.infinity) as double);
-  final averageMonthlyExpense =
-      ((totalExpense / 30 * 30).clamp(0, double.infinity) as double);
+  // Average monthly = total of last 30 days (since we fetched exactly 30 days)
+  final averageMonthlyIncome = totalIncome;
+  final averageMonthlyExpense = totalExpense;
 
   // Contar suscripciones activas en próximos 30 días
   final now = DateTime.now();
@@ -80,9 +79,11 @@ final financialProjectionProvider = Provider<FinancialProjection>((ref) {
       thirtyDaysFromNow.day,
     );
 
-    if ((nextDate.isAfter(today) || nextDate.isAtSameMomentAs(today)) &&
-        nextDate.isBefore(inThirtyDays) ||
-        nextDate.isAtSameMomentAs(inThirtyDays)) {
+    // Count subscriptions due between today and 30 days from now (inclusive)
+    final isTodayOrAfter = nextDate.isAfter(today) || nextDate.isAtSameMomentAs(today);
+    final isWithin30Days = nextDate.isBefore(inThirtyDays) || nextDate.isAtSameMomentAs(inThirtyDays);
+
+    if (isTodayOrAfter && isWithin30Days) {
       upcomingSubscriptions++;
     }
   }
@@ -91,7 +92,7 @@ final financialProjectionProvider = Provider<FinancialProjection>((ref) {
   final projections = <ProjectionPoint>[];
   var projectedBalance = currentBalance;
   final monthlyNet = averageMonthlyIncome - averageMonthlyExpense;
-  final dailyNet = monthlyNet / 30;
+  final dailyNet = monthlyNet / 30.0;
 
   projections.add(ProjectionPoint(
     date: now,
@@ -99,13 +100,16 @@ final financialProjectionProvider = Provider<FinancialProjection>((ref) {
     label: 'Hoy',
   ));
 
-  for (int i = 1; i <= 90; i += 30) {
-    final projectedDate = now.add(Duration(days: i));
-    projectedBalance += (dailyNet * i);
+  // Add projection points at 30, 60, 90 days
+  // Each period adds exactly 30 days worth of net flow
+  for (int days = 30; days <= 90; days += 30) {
+    final projectedDate = now.add(Duration(days: days));
+    // Add exactly 30 days of net flow (not days * dailyNet)
+    projectedBalance += (dailyNet * 30.0);
     projections.add(ProjectionPoint(
       date: projectedDate,
       balance: projectedBalance,
-      label: '${i}d',
+      label: '+${days}d',
     ));
   }
 

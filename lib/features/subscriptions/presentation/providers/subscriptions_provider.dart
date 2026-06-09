@@ -99,23 +99,28 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   }
 
   Future<void> chargeSubscription(Subscription s) async {
-    final accounts = _ref.read(accountsProvider);
-    final account = accounts.isEmpty
-        ? null
-        : accounts.firstWhere((a) => !a.isSavings, orElse: () => accounts.first);
-    final transaction = Transaction(
-      id: generateId(),
-      merchant: s.name,
-      amount: s.amount,
-      type: TransactionType.expense,
-      category: s.category,
-      date: DateTime.now(),
-      accountId: account?.id,
-    );
-    await _ref.read(transactionsProvider.notifier).add(transaction);
+    try {
+      final accounts = _ref.read(accountsProvider);
+      final account = accounts.isEmpty
+          ? null
+          : accounts.firstWhere((a) => !a.isSavings, orElse: () => accounts.first);
+      final transaction = Transaction(
+        id: generateId(),
+        merchant: s.name,
+        amount: s.amount,
+        type: TransactionType.expense,
+        category: s.category,
+        date: DateTime.now(),
+        accountId: account?.id,
+      );
+      await _ref.read(transactionsProvider.notifier).add(transaction);
 
-    final nextDate = s.nextAfterCurrent;
-    await update(s.copyWith(nextBillingDate: nextDate));
+      final nextDate = s.nextAfterCurrent;
+      await update(s.copyWith(nextBillingDate: nextDate));
+    } catch (e) {
+      debugPrint('SubscriptionsNotifier.chargeSubscription failed: $e');
+      rethrow;
+    }
   }
 }
 

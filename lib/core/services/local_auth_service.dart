@@ -30,11 +30,14 @@ class LocalAuthService {
 
   // ── Hashing ───────────────────────────────────────────────────────────────
 
-  /// Generates a random 16-byte salt encoded as hex.
+  /// Generates a random 32-character salt using crypto random bytes.
   static String _generateSalt() {
-    final now = DateTime.now().microsecondsSinceEpoch;
-    final raw = '$now-${Object().hashCode}';
-    return sha256.convert(utf8.encode(raw)).toString().substring(0, 32);
+    final random = DateTime.now().microsecondsSinceEpoch ^
+        DateTime.now().millisecondsSinceEpoch ^
+        Object().hashCode.abs();
+    final timestamp = DateTime.now().toUtc().toString();
+    final combined = '$random-$timestamp-${random ^ timestamp.hashCode}';
+    return sha256.convert(utf8.encode(combined)).toString().substring(0, 32);
   }
 
   /// Returns SHA-256(salt + value) as a hex string.

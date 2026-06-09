@@ -62,11 +62,16 @@ class BudgetItemWithSpent {
   final BudgetItem item;
   final double spent;
 
-  double get ratio =>
-      item.limit == 0 ? 0.0 : (spent / item.limit).clamp(0.0, 1.0);
-  double get remaining => item.limit == 0 ? 0.0 : item.limit - spent;
-  bool get isWarning => item.limit == 0 ? false : ratio >= 0.80;
-  bool get isOver => item.limit == 0 ? false : spent > item.limit;
+  double get ratio {
+    if (item.limit <= 0) return 0.0; // Protect against zero/negative limits
+    return (spent / item.limit).clamp(0.0, 1.0);
+  }
+  double get remaining {
+    if (item.limit <= 0) return 0.0;
+    return (item.limit - spent).clamp(0.0, double.infinity);
+  }
+  bool get isWarning => item.limit > 0 && ratio >= 0.80;
+  bool get isOver => item.limit > 0 && spent > item.limit;
 }
 
 // ── Notifier ──────────────────────────────────────────────────────────────────

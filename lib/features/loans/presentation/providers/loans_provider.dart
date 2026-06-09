@@ -136,6 +136,12 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
   }
 
   Future<void> addPayment(String id, double paymentAmount, {String? accountId}) async {
+    // Validate payment amount
+    if (paymentAmount <= 0) {
+      debugPrint('LoansNotifier.addPayment: invalid amount: $paymentAmount');
+      return;
+    }
+
     final loan = state.firstWhere((l) => l.id == id);
     _isLoaded = true;
     state = [

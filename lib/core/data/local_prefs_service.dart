@@ -72,7 +72,9 @@ class LocalPrefsService {
     final data = await _read();
     final v = data[key];
     if (v == null) return defaultValue;
-    return (v as num).toDouble();
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? defaultValue;
+    return defaultValue;
   }
 
   static Future<void> setDouble(String key, double value) async {

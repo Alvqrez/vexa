@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../../../../core/data/local_prefs_service.dart';
 
 class TransferRecord {
@@ -27,14 +28,35 @@ class TransferRecord {
         if (note != null) 'note': note,
       };
 
-  factory TransferRecord.fromJson(Map<String, dynamic> j) => TransferRecord(
-        id: j['id'] as String,
-        fromAccountId: j['fromAccountId'] as String,
-        toAccountId: j['toAccountId'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        date: DateTime.parse(j['date'] as String),
-        note: j['note'] as String?,
-      );
+  factory TransferRecord.fromJson(Map<String, dynamic> j) {
+    final amountValue = j['amount'];
+    final dateValue = j['date'];
+
+    double amount = 0.0;
+    if (amountValue is num) {
+      amount = amountValue.toDouble();
+    } else if (amountValue is String) {
+      amount = double.tryParse(amountValue) ?? 0.0;
+    }
+
+    DateTime date = DateTime.now();
+    if (dateValue is String) {
+      try {
+        date = DateTime.parse(dateValue);
+      } catch (e) {
+        debugPrint('TransferRecord: invalid date format: $dateValue');
+      }
+    }
+
+    return TransferRecord(
+      id: j['id'] as String? ?? '',
+      fromAccountId: j['fromAccountId'] as String? ?? '',
+      toAccountId: j['toAccountId'] as String? ?? '',
+      amount: amount,
+      date: date,
+      note: j['note'] as String?,
+    );
+  }
 
   static const _key = 'transfer_history';
 
@@ -42,11 +64,16 @@ class TransferRecord {
     final raw = await LocalPrefsService.getString(_key);
     if (raw == null || raw.isEmpty) return [];
     try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => TransferRecord.fromJson(e as Map<String, dynamic>))
+      final decoded = jsonDecode(raw);
+      if (decoded is! List<dynamic>) {
+        debugPrint('TransferRecord.loadAll: expected List, got ${decoded.runtimeType}');
+        return [];
+      }
+      return decoded
+          .map((e) => TransferRecord.fromJson(e is Map<String, dynamic> ? e : {}))
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('TransferRecord.loadAll error: $e\n$st');
       return [];
     }
   }

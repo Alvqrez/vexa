@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../../../../core/data/local_prefs_service.dart';
 
 enum RecurrenceFrequency {
@@ -25,13 +26,11 @@ enum RecurrenceFrequency {
       case monthly:
         final nm = from.month == 12 ? 1 : from.month + 1;
         final ny = from.month == 12 ? from.year + 1 : from.year;
-        final last = DateTime(ny, nm + 1, 0).day;
-        return DateTime(ny, nm, from.day.clamp(1, last),
-            from.hour, from.minute);
+        final lastDay = DateTime(ny, nm + 1, 0).day;
+        return DateTime(ny, nm, from.day.clamp(1, lastDay), from.hour, from.minute);
       case yearly:
-        final last = DateTime(from.year + 1, from.month + 1, 0).day;
-        return DateTime(from.year + 1, from.month,
-            from.day.clamp(1, last), from.hour, from.minute);
+        final lastDay = DateTime(from.year + 1, from.month + 1, 0).day;
+        return DateTime(from.year + 1, from.month, from.day.clamp(1, lastDay), from.hour, from.minute);
     }
   }
 
@@ -108,25 +107,50 @@ class RecurringTransaction {
         if (weekDays != null) 'weekDays': weekDays,
       };
 
-  factory RecurringTransaction.fromJson(Map<String, dynamic> j) =>
-      RecurringTransaction(
-        id: j['id'] as String,
-        merchant: j['merchant'] as String,
-        amount: (j['amount'] as num).toDouble(),
-        type: j['type'] as String,
-        category: j['category'] as String,
-        accountId: j['accountId'] as String?,
-        note: j['note'] as String?,
-        frequency: RecurrenceFrequency.values.firstWhere(
-            (f) => f.name == j['frequency'],
-            orElse: () => RecurrenceFrequency.monthly),
-        nextDate: DateTime.parse(j['nextDate'] as String),
-        isActive: j['isActive'] as bool? ?? true,
-        timesPerOccurrence: (j['timesPerOccurrence'] as int?) ?? 1,
-        weekDays: (j['weekDays'] as List<dynamic>?)
-            ?.map((e) => e as int)
-            .toList(),
-      );
+  factory RecurringTransaction.fromJson(Map<String, dynamic> j) {
+    final amountValue = j['amount'];
+    double amount = 0.0;
+    if (amountValue is num) {
+      amount = amountValue.toDouble();
+    } else if (amountValue is String) {
+      amount = double.tryParse(amountValue) ?? 0.0;
+    }
+
+    DateTime nextDate = DateTime.now();
+    final dateValue = j['nextDate'];
+    if (dateValue is String) {
+      try {
+        nextDate = DateTime.parse(dateValue);
+      } catch (e) {
+        debugPrint('RecurringTransaction: invalid nextDate format: $dateValue');
+      }
+    }
+
+    List<int>? weekDays;
+    final weekDaysValue = j['weekDays'] as List<dynamic>?;
+    if (weekDaysValue != null) {
+      weekDays = weekDaysValue
+          .map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0)
+          .toList();
+    }
+
+    return RecurringTransaction(
+      id: j['id'] as String? ?? '',
+      merchant: j['merchant'] as String? ?? '',
+      amount: amount,
+      type: j['type'] as String? ?? 'expense',
+      category: j['category'] as String? ?? '',
+      accountId: j['accountId'] as String?,
+      note: j['note'] as String?,
+      frequency: RecurrenceFrequency.values.firstWhere(
+          (f) => f.name == j['frequency'],
+          orElse: () => RecurrenceFrequency.monthly),
+      nextDate: nextDate,
+      isActive: j['isActive'] as bool? ?? true,
+      timesPerOccurrence: (j['timesPerOccurrence'] as int?) ?? 1,
+      weekDays: weekDays,
+    );
+  }
 
   static const _key = 'recurring_transactions';
 
@@ -134,11 +158,16 @@ class RecurringTransaction {
     final raw = await LocalPrefsService.getString(_key);
     if (raw == null || raw.isEmpty) return [];
     try {
-      final list = jsonDecode(raw) as List<dynamic>;
-      return list
-          .map((e) => RecurringTransaction.fromJson(e as Map<String, dynamic>))
+      final decoded = jsonDecode(raw);
+      if (decoded is! List<dynamic>) {
+        debugPrint('RecurringTransaction.loadAll: expected List, got ${decoded.runtimeType}');
+        return [];
+      }
+      return decoded
+          .map((e) => RecurringTransaction.fromJson(e is Map<String, dynamic> ? e : {}))
           .toList();
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('RecurringTransaction.loadAll error: $e\n$st');
       return [];
     }
   }

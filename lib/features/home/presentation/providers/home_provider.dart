@@ -304,12 +304,17 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
   Future<void> _load() async {
     if (_isLoaded) return;
     _isLoaded = true;
-    final records = await _isar.isarTransactions.where().findAll();
-    if (records.isNotEmpty) {
-      state = records.map(_isarToTx).toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+    try {
+      final records = await _isar.isarTransactions.where().findAll();
+      if (records.isNotEmpty) {
+        state = records.map(_isarToTx).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+      }
+    } catch (e) {
+      debugPrint('TransactionsNotifier._load: failed to load transactions: $e');
+      _isLoaded = false;
+      rethrow;
     }
-    _isLoaded = true;
   }
 
   Future<void> seed() async {
@@ -398,13 +403,30 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
 
   Future<void> add(Transaction t) async {
     _isLoaded = true;
-    state = [t, ...state];
-    if (t.accountId != null) {
-      final delta = t.isIncome ? t.amount : -t.amount;
-      await _ref.read(accountsProvider.notifier).adjustBalance(t.accountId!, delta);
+    try {
+      // Insert into database first, then update state (fail-safe order)
+      await _isar.writeTxn(() => _isar.isarTransactions.put(_txToIsar(t)));
+
+      // Only update state after DB write succeeds
+      state = [t, ...state];
+
+      // Update balance after state sync
+      if (t.accountId != null) {
+        final delta = t.isIncome ? t.amount : -t.amount;
+        try {
+          await _ref.read(accountsProvider.notifier).adjustBalance(t.accountId!, delta);
+        } catch (e) {
+          debugPrint('TransactionsNotifier.add: balance adjustment failed: $e');
+          // Transaction was added but balance wasn't updated — notify user
+          // (UI should show warning or trigger manual balance correction)
+        }
+      }
+    } catch (e) {
+      debugPrint('TransactionsNotifier.add: failed to add transaction: $e');
+      // Revert state change if DB write failed
+      state = state.where((tx) => tx.id != t.id).toList();
+      rethrow;
     }
-    // Single-record insert — no existing record with this txId, no conflict.
-    await _isar.writeTxn(() => _isar.isarTransactions.put(_txToIsar(t)));
   }
 
   Future<void> update(Transaction updated, Transaction original) async {
@@ -491,7 +513,7 @@ final monthlyExpensesProvider = Provider<double>((ref) {
 
 class SavingsTransfersNotifier extends StateNotifier<double> {
   SavingsTransfersNotifier() : super(0.0) {
-    _load();
+    _load().catchError((e) => debugPrint('SavingsTransfersNotifier._load failed: $e'));
   }
 
   String get _key {
@@ -500,7 +522,12 @@ class SavingsTransfersNotifier extends StateNotifier<double> {
   }
 
   Future<void> _load() async {
-    state = await LocalPrefsService.getDouble(_key);
+    try {
+      state = await LocalPrefsService.getDouble(_key);
+    } catch (e) {
+      debugPrint('SavingsTransfersNotifier._load: error loading value: $e');
+      state = 0.0;
+    }
   }
 
   Future<void> addTransfer(double amount) async {
@@ -741,11 +768,16 @@ final accountStatsProvider =
 
 class TransferHistoryNotifier extends StateNotifier<List<TransferRecord>> {
   TransferHistoryNotifier() : super(const []) {
-    _load();
+    _load().catchError((e) => debugPrint('TransferHistoryNotifier._load failed: $e'));
   }
 
   Future<void> _load() async {
-    state = await TransferRecord.loadAll();
+    try {
+      state = await TransferRecord.loadAll();
+    } catch (e) {
+      debugPrint('TransferHistoryNotifier._load: error loading transfers: $e');
+      state = const [];
+    }
   }
 
   Future<void> add(TransferRecord record) async {

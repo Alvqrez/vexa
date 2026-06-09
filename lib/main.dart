@@ -39,7 +39,11 @@ void main() async {
   // initializeDateFormatting es local y rápido; GoogleFonts se omite
   // del bloqueo para no colgar si no hay internet o el font no está cacheado.
   await initializeDateFormatting('es', null);
-  GoogleFonts.pendingFonts([GoogleFonts.plusJakartaSans()]).ignore();
+  GoogleFonts.pendingFonts([GoogleFonts.plusJakartaSans()]).then((_) {
+    debugPrint('GoogleFonts loaded successfully');
+  }).catchError((e) {
+    debugPrint('GoogleFonts load error (non-critical): $e');
+  });
   await NotificationService.init();
 
   runApp(

@@ -79,7 +79,7 @@ class UserProfile {
 
 class UserProfileNotifier extends StateNotifier<UserProfile> {
   UserProfileNotifier() : super(const UserProfile()) {
-    _load();
+    _load().catchError((e) => debugPrint('UserProfileNotifier._load failed: $e'));
   }
 
   Future<void> _load() async {
@@ -149,18 +149,22 @@ class NotifPrefs {
 
 class NotifPrefsNotifier extends StateNotifier<NotifPrefs> {
   NotifPrefsNotifier() : super(const NotifPrefs()) {
-    _load();
+    _load().catchError((e) => debugPrint('NotifPrefsNotifier._load failed: $e'));
   }
 
   Future<void> _load() async {
-    final dailyTip =
-        await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
-    final prediction = await LocalPrefsService.getBool('notif_prediction',
-        defaultValue: true);
-    state = NotifPrefs(dailyTip: dailyTip, prediction: prediction);
+    try {
+      final dailyTip =
+          await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
+      final prediction = await LocalPrefsService.getBool('notif_prediction',
+          defaultValue: true);
+      state = NotifPrefs(dailyTip: dailyTip, prediction: prediction);
+    } catch (e) {
+      debugPrint('NotifPrefsNotifier._load: error loading preferences: $e');
+    }
   }
 
-  void reload() => _load();
+  Future<void> reload() => _load();
 }
 
 final notifPrefsProvider =

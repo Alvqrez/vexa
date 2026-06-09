@@ -38,7 +38,8 @@ class Loan {
 
   double get remainingAmount =>
       (amount - paidAmount).clamp(0.0, double.infinity);
-  bool get isSettled => remainingAmount <= 0;
+  // Allow tolerance of 1 cent for floating point precision
+  bool get isSettled => remainingAmount <= 0.01;
   double get progressFraction =>
       amount > 0 ? (paidAmount / amount).clamp(0.0, 1.0) : 0.0;
 

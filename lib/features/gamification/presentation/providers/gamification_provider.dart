@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/models/streak.dart';
 import '../../../../core/data/local_prefs_service.dart';
@@ -6,23 +7,44 @@ import '../../../../core/data/local_prefs_service.dart';
 
 class StreakNotifier extends StateNotifier<Streak> {
   StreakNotifier() : super(Streak.initial) {
-    _load();
+    _load().catchError((e) => debugPrint('StreakNotifier._load failed: $e'));
   }
 
   Future<void> _load() async {
-    final current = await LocalPrefsService.getInt('streak_current');
-    final longest = await LocalPrefsService.getInt('streak_longest');
-    final activeStr = await LocalPrefsService.getString('streak_last_active');
-    final txStr = await LocalPrefsService.getString('streak_last_tx');
+    try {
+      final current = await LocalPrefsService.getInt('streak_current');
+      final longest = await LocalPrefsService.getInt('streak_longest');
+      final activeStr = await LocalPrefsService.getString('streak_last_active');
+      final txStr = await LocalPrefsService.getString('streak_last_tx');
 
-    state = Streak(
-      currentStreak: current,
-      longestStreak: longest,
-      lastActiveDate:
-          activeStr != null ? DateTime.parse(activeStr) : DateTime(2000),
-      lastTransactionDate:
-          txStr != null ? DateTime.parse(txStr) : DateTime(2000),
-    );
+      DateTime lastActive = DateTime(2000);
+      DateTime lastTx = DateTime(2000);
+
+      if (activeStr != null) {
+        try {
+          lastActive = DateTime.parse(activeStr);
+        } catch (e) {
+          debugPrint('StreakNotifier: invalid lastActiveDate: $activeStr');
+        }
+      }
+
+      if (txStr != null) {
+        try {
+          lastTx = DateTime.parse(txStr);
+        } catch (e) {
+          debugPrint('StreakNotifier: invalid lastTransactionDate: $txStr');
+        }
+      }
+
+      state = Streak(
+        currentStreak: current,
+        longestStreak: longest,
+        lastActiveDate: lastActive,
+        lastTransactionDate: lastTx,
+      );
+    } catch (e) {
+      debugPrint('StreakNotifier._load: error loading streak data: $e');
+    }
   }
 
   Future<void> _save() async {

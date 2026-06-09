@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'subscriptions_provider.dart';
 
@@ -33,6 +34,7 @@ class SubscriptionProcessor {
               .chargeSubscription(subscription);
           processed++;
         } catch (e) {
+          debugPrint('SubscriptionProcessor: failed to charge ${subscription.name}: $e');
           // Continuar con otras suscripciones si hay error
         }
       }
@@ -59,9 +61,14 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
 
   final Ref _ref;
   DateTime? _lastProcessed;
+  bool _initialized = false;
 
   void _initializeAutoProcessing() {
+    if (_initialized) return;
+    _initialized = true;
     // Procesar cada vez que la app se abre o se enfoca
+    // Listener se registra una sola vez y es automáticamente cancelado
+    // cuando el provider se dispone
     _ref.listen(subscriptionsProvider, (previous, next) {
       _scheduleProcessing();
     });
@@ -84,8 +91,13 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
     state = true;
     try {
       final processor = _ref.read(subscriptionProcessorProvider);
-      await processor.processSubscriptions();
+      final processed = await processor.processSubscriptions();
+      if (processed > 0) {
+        debugPrint('SubscriptionAutoProcessor: processed $processed subscriptions');
+      }
       _lastProcessed = DateTime.now();
+    } catch (e, st) {
+      debugPrint('SubscriptionAutoProcessor._processSubscriptions error: $e\n$st');
     } finally {
       state = false;
     }
@@ -95,8 +107,14 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
     state = true;
     try {
       final processor = _ref.read(subscriptionProcessorProvider);
-      await processor.processSubscriptions();
+      final processed = await processor.processSubscriptions();
+      if (processed > 0) {
+        debugPrint('SubscriptionAutoProcessor: manual trigger processed $processed subscriptions');
+      }
       _lastProcessed = DateTime.now();
+    } catch (e, st) {
+      debugPrint('SubscriptionAutoProcessor.processNow error: $e\n$st');
+      rethrow;
     } finally {
       state = false;
     }

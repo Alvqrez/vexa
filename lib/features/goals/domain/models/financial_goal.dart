@@ -23,8 +23,8 @@ class FinancialGoal {
   final String? note;
   final bool completed;
 
-  double get progress => (current / target).clamp(0.0, 1.0);
-  bool get isCompleted => current >= target;
+  double get progress => target > 0 ? (current / target).clamp(0.0, 1.0) : 0.0;
+  bool get isCompleted => target > 0 && current >= target;
   int get daysLeft => deadline.difference(DateTime.now()).inDays;
 
   String get deadlineLabel {

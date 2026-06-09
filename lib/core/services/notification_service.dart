@@ -10,8 +10,8 @@ abstract final class NotificationService {
   static const _channelName = 'Vexa Finance';
 
   static const _idDailyTip = 1;
-  static const _idBudgetBase = 200;
-  static const _idSubsBase = 100;
+  static const _idBudgetBase = 10000; // Reservar rango [10000-10999] para budgets
+  static const _idSubsBase = 20000;   // Reservar rango [20000-20999] para suscripciones
 
   static Future<void> init() async {
     if (_initialized) return;
