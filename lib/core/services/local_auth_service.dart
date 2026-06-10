@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -30,14 +31,11 @@ class LocalAuthService {
 
   // ── Hashing ───────────────────────────────────────────────────────────────
 
-  /// Generates a random 32-character salt using crypto random bytes.
+  /// Generates a cryptographically random 32-character hex salt.
   static String _generateSalt() {
-    final random = DateTime.now().microsecondsSinceEpoch ^
-        DateTime.now().millisecondsSinceEpoch ^
-        Object().hashCode.abs();
-    final timestamp = DateTime.now().toUtc().toString();
-    final combined = '$random-$timestamp-${random ^ timestamp.hashCode}';
-    return sha256.convert(utf8.encode(combined)).toString().substring(0, 32);
+    final rng = Random.secure();
+    final bytes = List<int>.generate(32, (_) => rng.nextInt(256));
+    return sha256.convert(bytes).toString().substring(0, 32);
   }
 
   /// Returns SHA-256(salt + value) as a hex string.

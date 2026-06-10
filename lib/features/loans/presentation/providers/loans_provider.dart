@@ -157,7 +157,7 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
 
     // Cobrar lo prestado = ingreso. Pagar lo debido = gasto.
     final effectiveAccountId = accountId ?? loan.accountId;
-    _addTransaction(
+    await _addTransaction(
       merchant: loan.type == LoanType.lentByMe
           ? 'Cobro préstamo: ${loan.name}'
           : 'Pago deuda: ${loan.name}',

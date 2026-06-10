@@ -29,7 +29,11 @@ class LocalPrefsService {
   static Future<void> _flush() async {
     try {
       final file = await _getFile();
-      await file.writeAsString(jsonEncode(_cache));
+      final tmp = File('${file.path}.tmp');
+      await tmp.writeAsString(jsonEncode(_cache));
+      // Atomic rename: if the app crashes during writeAsString the original
+      // file is untouched; the .tmp is discarded on next read.
+      await tmp.rename(file.path);
     } catch (e) {
       debugPrint('LocalPrefsService._flush error: $e');
     }

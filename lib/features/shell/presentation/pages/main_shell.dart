@@ -193,7 +193,7 @@ class _MainShellState extends ConsumerState<MainShell>
                   accountId: current.accountId,
                   note: current.note,
                 );
-                ref.read(transactionsProvider.notifier).add(t);
+                await ref.read(transactionsProvider.notifier).add(t);
               }
             }
             final nextD = current.frequency.nextDateFrom(
@@ -232,6 +232,14 @@ class _MainShellState extends ConsumerState<MainShell>
     } else {
       await NotificationService.cancelDailyTip();
     }
+
+    // Immediate alerts (subscription + budget) fire at most once per calendar day.
+    final now = DateTime.now();
+    final todayKey = '${now.year}-${now.month}-${now.day}';
+    final lastAlertDay = await LocalPrefsService.getString('last_alert_day');
+    if (lastAlertDay == todayKey) return;
+    await LocalPrefsService.setString('last_alert_day', todayKey);
+
     // Subscription expiry alerts
     final subs = ref.read(subscriptionsProvider)
         .where((s) => s.isActive && s.daysUntilBilling <= 3)
