@@ -3,8 +3,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Simple synchronous-friendly key-value store backed by a JSON file.
-/// Uses an in-memory cache so repeated reads don't hit disk.
 class LocalPrefsService {
   static Map<String, dynamic>? _cache;
 
@@ -72,7 +70,10 @@ class LocalPrefsService {
     await _flush();
   }
 
-  static Future<double> getDouble(String key, {double defaultValue = 0.0}) async {
+  static Future<double> getDouble(
+    String key, {
+    double defaultValue = 0.0,
+  }) async {
     final data = await _read();
     final v = data[key];
     if (v == null) return defaultValue;

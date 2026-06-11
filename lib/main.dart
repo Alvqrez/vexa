@@ -6,6 +6,7 @@ import 'package:isar/isar.dart';
 import 'core/data/isar_service.dart';
 import 'core/providers/isar_provider.dart';
 import 'core/services/notification_service.dart';
+import 'core/utils/receipt_image_store.dart';
 import 'app.dart';
 
 void main() async {
@@ -45,6 +46,7 @@ void main() async {
     debugPrint('GoogleFonts load error (non-critical): $e');
   });
   await NotificationService.init();
+  await ReceiptImageStore.init();
 
   runApp(
     ProviderScope(

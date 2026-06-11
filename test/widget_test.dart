@@ -9,5 +9,12 @@ void main() {
       const ProviderScope(child: VexaApp()),
     );
     expect(find.byType(MaterialApp), findsOneWidget);
+
+    // Drena la secuencia del splash (delays encadenados + animaciones +
+    // transición de navegación) para que no queden timers pendientes al
+    // desmontar el árbol — de lo contrario el framework de test falla.
+    for (var i = 0; i < 15; i++) {
+      await tester.pump(const Duration(milliseconds: 400));
+    }
   });
 }

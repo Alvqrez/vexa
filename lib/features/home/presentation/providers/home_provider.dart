@@ -8,6 +8,7 @@ import '../../domain/models/transfer_record.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/utils/receipt_image_store.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 
@@ -96,7 +97,8 @@ IsarTransaction _txToIsar(Transaction t) => IsarTransaction()
   ..date = t.date
   ..accountId = t.accountId
   ..note = t.note
-  ..tags = List.from(t.tags);
+  ..tags = List.from(t.tags)
+  ..imagePaths = List.from(t.imagePaths);
 
 Transaction _isarToTx(IsarTransaction it) => Transaction(
       id: it.txId,
@@ -111,6 +113,7 @@ Transaction _isarToTx(IsarTransaction it) => Transaction(
       accountId: it.accountId,
       note: it.note,
       tags: List.from(it.tags),
+      imagePaths: List.from(it.imagePaths),
     );
 
 // ── Notifiers ─────────────────────────────────────────────────────────────────
@@ -460,6 +463,16 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
           .adjustBalance(t.accountId!, reverse);
     }
     await _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
+    // Limpieza de fotos adjuntas. No se borran al instante: el snackbar de
+    // "Deshacer" puede re-insertar la transacción con sus mismas imágenes.
+    if (t.imagePaths.isNotEmpty) {
+      Future.delayed(const Duration(seconds: 6), () {
+        final stillDeleted = !state.any((tx) => tx.id == t.id);
+        if (stillDeleted) {
+          ReceiptImageStore.deleteAll(t.imagePaths);
+        }
+      });
+    }
   }
 
   Future<void> reset() async {

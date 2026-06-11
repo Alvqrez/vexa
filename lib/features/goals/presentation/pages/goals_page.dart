@@ -347,6 +347,9 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                         onSave: (updated) {
                           ref.read(goalsProvider.notifier).update(updated);
                         },
+                        onDelete: () {
+                          ref.read(goalsProvider.notifier).remove(g.id);
+                        },
                       ),
                     );
                   },
@@ -876,9 +879,14 @@ class _TipBanner extends StatelessWidget {
 // ── Edit goal sheet ───────────────────────────────────────────────────────────
 
 class _EditGoalSheet extends StatefulWidget {
-  const _EditGoalSheet({required this.goal, required this.onSave});
+  const _EditGoalSheet({
+    required this.goal,
+    required this.onSave,
+    required this.onDelete,
+  });
   final FinancialGoal goal;
   final void Function(FinancialGoal) onSave;
+  final VoidCallback onDelete;
 
   @override
   State<_EditGoalSheet> createState() => _EditGoalSheetState();
@@ -976,6 +984,48 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
   String get _deadlineLabel {
     final d = _deadline;
     return '${d.day} ${_monthNames[d.month - 1]} ${d.year}';
+  }
+
+  void _confirmDelete() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: c.cardElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text('¿Eliminar meta?',
+            style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+        content: Text(
+          'Se eliminará "${widget.goal.title}" y su progreso registrado. '
+          'Esta acción no se puede deshacer.',
+          style: AppTypography.bodyM
+              .copyWith(color: c.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text('Cancelar',
+                style:
+                    AppTypography.labelL.copyWith(color: c.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(dialogCtx).pop(); // cerrar diálogo
+              Navigator.of(context).pop(); // cerrar sheet
+              widget.onDelete();
+            },
+            child: Text('Eliminar',
+                style: AppTypography.labelL.copyWith(
+                    color: AppColors.negative,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -1121,6 +1171,33 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
                     textAlign: TextAlign.center,
                     style: AppTypography.labelL.copyWith(
                         color: AppColors.textInverse, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GestureDetector(
+              onTap: _confirmDelete,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: AppColors.negative.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  border: Border.all(
+                      color: AppColors.negative.withValues(alpha: 0.25),
+                      width: 0.5),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.delete_outline_rounded,
+                        size: 16, color: AppColors.negative),
+                    const SizedBox(width: 6),
+                    Text('Eliminar meta',
+                        style: AppTypography.labelL.copyWith(
+                            color: AppColors.negative,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               ),
             ),
           ],

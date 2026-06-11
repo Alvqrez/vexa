@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/utils/receipt_image_store.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -190,6 +192,31 @@ class TransactionDetailPage extends ConsumerWidget {
               ),
             ),
 
+            // Photos
+            if (transaction.imagePaths.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xxl),
+              Text(
+                'Fotos adjuntas',
+                style: AppTypography.labelL.copyWith(
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 88,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: transaction.imagePaths.length,
+                  separatorBuilder: (_, i) =>
+                      const SizedBox(width: AppSpacing.md),
+                  itemBuilder: (_, i) => _ReceiptPhoto(
+                    fileName: transaction.imagePaths[i],
+                  ),
+                ),
+              ),
+            ],
+
             const SizedBox(height: AppSpacing.xxl),
 
             // Action buttons
@@ -269,6 +296,110 @@ class TransactionDetailPage extends ConsumerWidget {
     if (txDay == today) return 'Hoy';
     if (txDay == today.subtract(const Duration(days: 1))) return 'Ayer';
     return DateFormat('d MMM yyyy', 'es').format(date);
+  }
+}
+
+// ── Receipt photo (thumbnail + visor a pantalla completa) ─────────────────────
+
+class _ReceiptPhoto extends StatelessWidget {
+  const _ReceiptPhoto({required this.fileName});
+  final String fileName;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final path = ReceiptImageStore.resolve(fileName);
+    if (path == null) {
+      return Container(
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          color: c.glass,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.glassBorder, width: 0.5),
+        ),
+        child: Icon(Icons.image_not_supported_outlined,
+            size: 22, color: c.textTertiary),
+      );
+    }
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        Navigator.of(context).push(
+          PageRouteBuilder(
+            opaque: false,
+            barrierColor: Colors.black.withValues(alpha: 0.92),
+            pageBuilder: (_, anim, secondaryAnim) => FadeTransition(
+              opacity: anim,
+              child: _FullScreenPhoto(path: path),
+            ),
+          ),
+        );
+      },
+      child: Hero(
+        tag: 'receipt_$fileName',
+        child: Container(
+          width: 88,
+          height: 88,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: c.glassBorder, width: 0.5),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.file(
+            File(path),
+            fit: BoxFit.cover,
+            cacheWidth: 264,
+            errorBuilder: (_, e, st) => Icon(
+                Icons.broken_image_outlined,
+                size: 22,
+                color: c.textTertiary),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FullScreenPhoto extends StatelessWidget {
+  const _FullScreenPhoto({required this.path});
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                maxScale: 4,
+                child: Image.file(File(path), fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close_rounded,
+                      size: 20, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

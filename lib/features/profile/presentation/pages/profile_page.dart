@@ -17,6 +17,7 @@ import 'currency_page.dart';
 import 'notifications_page.dart';
 import 'security_page.dart';
 import 'help_center_page.dart';
+import '../../../coach/presentation/pages/time_machine_page.dart';
 import 'rate_app_page.dart';
 import 'about_page.dart';
 import 'settings_page.dart';
@@ -524,6 +525,12 @@ class _SupportSettings extends StatelessWidget {
           label: 'Educación financiera',
           color: AppColors.petroleum,
           onTap: () => _push(context, const EducationPage()),
+        ),
+        _SettingsItem(
+          icon: Icons.history_toggle_off_rounded,
+          label: 'Vexa Time Machine',
+          color: const Color(0xFF7C5CFC),
+          onTap: () => _push(context, const TimeMachinePage()),
         ),
         _SettingsItem(
           icon: Icons.help_outline_rounded,

@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../../../core/utils/receipt_image_store.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -23,12 +26,17 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
     this.existing,
     this.defaultType = TransactionType.expense,
     this.defaultAccountId,
+    this.initialAmount,
+    this.initialCategoryId,
   });
 
   final Transaction? existing;
   final TransactionType defaultType;
   /// When set, pre-selects this account without overriding with last-used.
   final String? defaultAccountId;
+  /// Carry-over state from the quick-add sheet ("Más detalles").
+  final String? initialAmount;
+  final String? initialCategoryId;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -49,6 +57,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   bool _noteExpanded = false;
   bool _isRecurring = false;
   RecurrenceFrequency _recurrenceFreq = RecurrenceFrequency.monthly;
+
+  /// Nombres de archivo de fotos adjuntas (recibos/tickets).
+  final List<String> _imageNames = [];
+
+  /// Fotos quitadas durante la edición — se borran del disco solo al guardar.
+  final List<String> _removedImages = [];
 
   static const _monthNames = [
     'ene', 'feb', 'mar', 'abr', 'may', 'jun',
@@ -80,14 +94,24 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         : WalletCategoryType.expense;
     _category = e != null
         ? resolveCategory(e.category, cats)
-        : cats.firstWhere((c) => c.type == catType, orElse: () => cats.first);
+        : widget.initialCategoryId != null
+            ? resolveCategory(widget.initialCategoryId!, cats)
+            : cats.firstWhere((c) => c.type == catType,
+                orElse: () => cats.first);
 
     _selectedDate = e?.date ?? DateTime.now();
+
+    if (e == null &&
+        widget.initialAmount != null &&
+        widget.initialAmount!.isNotEmpty) {
+      _amountStr = widget.initialAmount!;
+    }
 
     if (e != null) {
       _amountStr = e.amount.toStringAsFixed(2);
       _selectedAccountId = e.accountId;
       _noteCtrl.text = e.note ?? '';
+      _imageNames.addAll(e.imagePaths);
       if (e.note != null && e.note!.isNotEmpty) _noteExpanded = true;
       _merchantCtrl.text =
           e.merchant != _category.name ? e.merchant : '';
@@ -225,6 +249,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         accountId: _selectedAccountId,
         note: note,
         tags: const [],
+        imagePaths: List.from(_imageNames),
       );
       await ref.read(transactionsProvider.notifier).update(updated, widget.existing!);
     } else {
@@ -237,9 +262,14 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
+        imagePaths: List.from(_imageNames),
       );
       await ref.read(transactionsProvider.notifier).add(transaction);
       await ref.read(streakProvider.notifier).recordTransaction();
+    }
+    // Las fotos quitadas se borran del disco solo después de guardar.
+    if (_removedImages.isNotEmpty) {
+      await ReceiptImageStore.deleteAll(_removedImages);
     }
 
     if (_selectedAccountId != null) {
@@ -370,6 +400,100 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     } else {
       _noteFocusNode.unfocus();
     }
+  }
+
+  static const int _maxPhotos = 3;
+
+  Future<void> _attachPhoto() async {
+    if (_imageNames.length >= _maxPhotos) {
+      _showError('Máximo $_maxPhotos fotos por transacción');
+      return;
+    }
+    HapticFeedback.selectionClick();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final sc = sheetCtx.colors;
+        return Container(
+          decoration: BoxDecoration(
+            color: sc.card,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.cardRadiusL)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.xxl,
+            AppSpacing.lg,
+            AppSpacing.xxl,
+            AppSpacing.xxl + MediaQuery.of(sheetCtx).padding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Adjuntar foto',
+                  style:
+                      AppTypography.headingS.copyWith(color: sc.textPrimary)),
+              const SizedBox(height: AppSpacing.lg),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PhotoSourceButton(
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Cámara',
+                      onTap: () =>
+                          Navigator.of(sheetCtx).pop(ImageSource.camera),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _PhotoSourceButton(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Galería',
+                      onTap: () =>
+                          Navigator.of(sheetCtx).pop(ImageSource.gallery),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    if (source == null || !mounted) return;
+
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1600,
+        imageQuality: 80,
+      );
+      if (picked == null || !mounted) return;
+      final name = await ReceiptImageStore.persist(picked);
+      if (name == null) {
+        if (mounted) _showError('No se pudo guardar la foto');
+        return;
+      }
+      if (mounted) setState(() => _imageNames.add(name));
+    } catch (e) {
+      if (mounted) _showError('No se pudo acceder a la imagen');
+    }
+  }
+
+  void _removePhoto(String name) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      _imageNames.remove(name);
+      // Si venía de la transacción original, se borra del disco al guardar;
+      // si era nueva, puede borrarse de inmediato.
+      final wasOriginal =
+          widget.existing?.imagePaths.contains(name) ?? false;
+      if (wasOriginal) {
+        _removedImages.add(name);
+      } else {
+        ReceiptImageStore.delete(name);
+      }
+    });
   }
 
   Color get _typeColor =>
@@ -700,7 +824,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               ),
             ),
 
-          // ── Nota toggle ───────────────────────────────────────────────────
+          // ── Nota + foto ───────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenPadding, 10,
@@ -710,13 +834,51 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
               alignment: Alignment.topCenter,
-              child: _noteExpanded
-                  ? _ExpandedNote(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_noteExpanded)
+                    _ExpandedNote(
                       controller: _noteCtrl,
                       focusNode: _noteFocusNode,
                       onCollapse: _toggleNote,
                     )
-                  : _NoteButton(onTap: _toggleNote),
+                  else
+                    Row(
+                      children: [
+                        _NoteButton(onTap: _toggleNote),
+                        const SizedBox(width: AppSpacing.lg),
+                        _AttachPhotoButton(
+                          count: _imageNames.length,
+                          onTap: _attachPhoto,
+                        ),
+                      ],
+                    ),
+                  if (_noteExpanded) ...[
+                    const SizedBox(height: 6),
+                    _AttachPhotoButton(
+                      count: _imageNames.length,
+                      onTap: _attachPhoto,
+                    ),
+                  ],
+                  if (_imageNames.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 56,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _imageNames.length,
+                        separatorBuilder: (_, i) =>
+                            const SizedBox(width: AppSpacing.sm),
+                        itemBuilder: (_, i) => _PhotoThumb(
+                          fileName: _imageNames[i],
+                          onRemove: () => _removePhoto(_imageNames[i]),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
 
@@ -850,6 +1012,140 @@ class _NoteButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Attach photo button ───────────────────────────────────────────────────────
+
+class _AttachPhotoButton extends StatelessWidget {
+  const _AttachPhotoButton({required this.count, required this.onTap});
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.photo_camera_outlined,
+                size: 13, color: c.textTertiary),
+            const SizedBox(width: 3),
+            Text(
+              count > 0 ? 'Foto ($count)' : 'Adjuntar foto',
+              style: TextStyle(
+                color: c.textTertiary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Photo source button (cámara / galería) ────────────────────────────────────
+
+class _PhotoSourceButton extends StatelessWidget {
+  const _PhotoSourceButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: c.glass,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          border: Border.all(color: c.glassBorder, width: 0.5),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 22, color: AppColors.emerald),
+            const SizedBox(height: 6),
+            Text(label,
+                style:
+                    AppTypography.labelM.copyWith(color: c.textSecondary)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Photo thumbnail with remove ───────────────────────────────────────────────
+
+class _PhotoThumb extends StatelessWidget {
+  const _PhotoThumb({required this.fileName, required this.onRemove});
+  final String fileName;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final path = ReceiptImageStore.resolve(fileName);
+    return Stack(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: c.glass,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: c.glassBorder, width: 0.5),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: path != null
+              ? Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                  cacheWidth: 168,
+                  errorBuilder: (_, e2, st) => Icon(
+                      Icons.broken_image_outlined,
+                      size: 18,
+                      color: c.textTertiary),
+                )
+              : Icon(Icons.image_not_supported_outlined,
+                  size: 18, color: c.textTertiary),
+        ),
+        Positioned(
+          top: 2,
+          right: 2,
+          child: GestureDetector(
+            onTap: onRemove,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.65),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close_rounded,
+                  size: 12, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

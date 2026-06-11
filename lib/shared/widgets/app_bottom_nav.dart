@@ -11,7 +11,7 @@ import '../../features/home/presentation/providers/home_provider.dart';
 
 // ── Nav item descriptor ───────────────────────────────────────────────────────
 
-enum _NavTabType { home, wallet, analysis, budget, goals }
+enum _NavTabType { home, wallet, coach, budget, goals }
 
 class _NavItem {
   const _NavItem({required this.type, required this.label});
@@ -27,7 +27,7 @@ class AppBottomNav extends ConsumerWidget {
   static const _items = [
     _NavItem(type: _NavTabType.home, label: 'Inicio'),
     _NavItem(type: _NavTabType.wallet, label: 'Cartera'),
-    _NavItem(type: _NavTabType.analysis, label: 'Análisis'),
+    _NavItem(type: _NavTabType.coach, label: 'Vexa Coach'),
     _NavItem(type: _NavTabType.budget, label: 'Presupuesto'),
     _NavItem(type: _NavTabType.goals, label: 'Metas'),
   ];
@@ -248,7 +248,7 @@ class _NavButtonState extends ConsumerState<_NavButton>
     return switch (widget.item.type) {
       _NavTabType.home => _HomeIcon(color: color, ctrl: _ctrl, animated: widget.animated),
       _NavTabType.wallet => _WalletIcon(color: color, rotate: _rotate, animated: widget.animated),
-      _NavTabType.analysis => _AnalysisBarsIcon(color: color, barHeight: _barHeight, animated: widget.animated),
+      _NavTabType.coach => _CoachIcon(color: color, pulse: _barHeight, animated: widget.animated),
       _NavTabType.budget => _BudgetCircleIcon(color: color, arcProgress: _arcProgress, animated: widget.animated),
       _NavTabType.goals => _GoalsIcon(color: color, lift: _rotate, animated: widget.animated),
     };
@@ -294,70 +294,26 @@ class _WalletIcon extends StatelessWidget {
   }
 }
 
-// ── Analysis bars icon — bars pulse up/down ───────────────────────────────────
+// ── Coach icon — sparkle with subtle scale pulse ──────────────────────────────
 
-class _AnalysisBarsIcon extends StatelessWidget {
-  const _AnalysisBarsIcon(
-      {required this.color,
-      required this.barHeight,
-      required this.animated});
+class _CoachIcon extends StatelessWidget {
+  const _CoachIcon(
+      {required this.color, required this.pulse, required this.animated});
   final Color color;
-  final Animation<double> barHeight;
+  final Animation<double> pulse;
   final bool animated;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: barHeight,
-      builder: (_, child) => SizedBox(
-        width: 22,
-        height: 22,
-        child: CustomPaint(
-          painter: _BarsPainter(
-            color: color,
-            progress: animated ? barHeight.value : 1.0,
-          ),
-        ),
+      animation: pulse,
+      builder: (_, child) => Transform.scale(
+        scale: animated ? pulse.value : 1.0,
+        child: child,
       ),
+      child: Icon(Icons.auto_awesome_rounded, size: 22, color: color),
     );
   }
-}
-
-class _BarsPainter extends CustomPainter {
-  const _BarsPainter({required this.color, required this.progress});
-  final Color color;
-  final double progress;
-
-  // Normalized heights for each bar: short, tall, medium
-  static const _heights = [0.45, 1.0, 0.65];
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const barCount = 3;
-    // Divide width into equal slots; bar uses 58% of each slot, centered.
-    final slot = size.width / barCount;
-    final barW = slot * 0.58;
-    final leftPad = (slot - barW) / 2; // center bar within its slot
-
-    final paint = Paint()..color = color;
-
-    for (int i = 0; i < barCount; i++) {
-      final targetH = _heights[i] * size.height;
-      final h = (targetH * progress).clamp(0.0, size.height);
-      if (h < 0.5) continue; // skip invisible bars
-      final left = slot * i + leftPad;
-      final top = size.height - h;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, top, barW, h),
-        const Radius.circular(2),
-      );
-      canvas.drawRRect(rect, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(_BarsPainter old) =>
-      old.progress != progress || old.color != color;
 }
 
 // ── Budget arc icon — arc sweeps around ──────────────────────────────────────

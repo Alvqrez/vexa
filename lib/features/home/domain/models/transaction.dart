@@ -11,6 +11,7 @@ class Transaction {
     this.accountId,
     this.note,
     this.tags = const [],
+    this.imagePaths = const [],
   });
 
   final String id;
@@ -23,6 +24,8 @@ class Transaction {
   final String? accountId;
   final String? note;
   final List<String> tags;
+  /// Absolute paths to attached receipt/ticket photos on local storage.
+  final List<String> imagePaths;
 
   bool get isIncome => type == TransactionType.income;
 
@@ -40,6 +43,7 @@ class Transaction {
     String? accountId,
     String? note,
     List<String>? tags,
+    List<String>? imagePaths,
     bool clearNote = false,
   }) {
     return Transaction(
@@ -52,6 +56,7 @@ class Transaction {
       accountId: accountId ?? this.accountId,
       note: clearNote ? null : (note ?? this.note),
       tags: tags ?? this.tags,
+      imagePaths: imagePaths ?? this.imagePaths,
     );
   }
 }

@@ -8,11 +8,11 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/utils/id_gen.dart';
 import '../../../../shared/widgets/app_bottom_nav.dart';
-import '../../../../shared/widgets/expandable_fab.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../home/presentation/pages/add_transaction_page.dart';
+import '../../../home/presentation/pages/quick_add_sheet.dart';
 import '../../../wallet/presentation/pages/wallet_page.dart';
-import '../../../analysis/presentation/pages/analysis_page.dart';
+import '../../../coach/presentation/pages/vexa_coach_page.dart';
 import '../../../budget/presentation/pages/budget_page.dart';
 import '../../../goals/presentation/pages/goals_page.dart';
 import '../../../goals/domain/models/financial_goal.dart';
@@ -61,8 +61,8 @@ const _kTutorialSteps = [
   ),
   _TutorialStep(
     navIndex: 2,
-    title: 'Análisis',
-    description: 'Gráficas y reportes que muestran hacia dónde va tu dinero cada mes.',
+    title: 'Vexa Coach',
+    description: 'Tu centro de inteligencia financiera: score, insights, retos, proyecciones y el análisis completo de tu mes.',
   ),
   _TutorialStep(
     navIndex: 3,
@@ -76,8 +76,8 @@ const _kTutorialSteps = [
   ),
   _TutorialStep(
     navIndex: -1,
-    title: 'Agregar transacción',
-    description: 'Con este botón registras gastos, ingresos, nuevas metas y suscripciones de forma rápida.',
+    title: 'Registro rápido',
+    description: 'Toca el botón y registra un gasto en segundos: monto, categoría y listo. Desde ahí también creas ingresos, transferencias, metas y suscripciones.',
   ),
 ];
 
@@ -86,8 +86,6 @@ const _kTutorialSteps = [
 class _MainShellState extends ConsumerState<MainShell>
     with SingleTickerProviderStateMixin {
   late AnimationController _fabCtrl;
-  bool _fabOpen = false;
-  final _fabKey = GlobalKey<ExpandableFabState>();
 
   bool _showTutorial = false;
   int _tutorialStep = 0;
@@ -95,7 +93,7 @@ class _MainShellState extends ConsumerState<MainShell>
   static const _pages = [
     HomePage(),
     WalletPage(),
-    AnalysisPage(),
+    VexaCoachPage(),
     BudgetPage(),
     GoalsPage(),
   ];
@@ -132,8 +130,6 @@ class _MainShellState extends ConsumerState<MainShell>
     _fabCtrl.dispose();
     super.dispose();
   }
-
-  void _closeFab() => _fabKey.currentState?.close();
 
   void _nextTutorialStep() {
     if (_tutorialStep < _kTutorialSteps.length - 1) {
@@ -291,7 +287,6 @@ class _MainShellState extends ConsumerState<MainShell>
     final index = ref.watch(selectedNavIndexProvider);
 
     ref.listen<int>(selectedNavIndexProvider, (_, next) {
-      _closeFab(); // Close FAB on tab switch
       if (next == 4) {
         _fabCtrl.reverse();
       } else {
@@ -314,17 +309,6 @@ class _MainShellState extends ConsumerState<MainShell>
             // ── Animated tab content ───────────────────────────────────
             _FadeIndexedStack(index: index, children: _pages),
 
-            // ── Dismissal barrier — sits ABOVE pages but BELOW nav and FAB.
-            // Visible only when the FAB menu is open. Tapping it closes the FAB.
-            if (_fabOpen)
-              Positioned.fill(
-                child: GestureDetector(
-                  onTap: _closeFab,
-                  behavior: HitTestBehavior.opaque,
-                  child: const ColoredBox(color: Colors.transparent),
-                ),
-              ),
-
             // ── Bottom nav ─────────────────────────────────────────────
             const Positioned(
               left: 0,
@@ -342,7 +326,7 @@ class _MainShellState extends ConsumerState<MainShell>
                 onSkip: _endTutorial,
               ),
 
-            // ── Expandable FAB ─────────────────────────────────────────
+            // ── Quick add FAB ──────────────────────────────────────────
             Positioned(
               right: AppSpacing.screenPadding,
               bottom: AppSpacing.bottomNavHeight +
@@ -358,12 +342,7 @@ class _MainShellState extends ConsumerState<MainShell>
                     parent: _fabCtrl,
                     curve: Curves.easeOut,
                   ),
-                  child: ExpandableFab(
-                    key: _fabKey,
-                    actions: _buildActions(context),
-                    onOpenChanged: (open) =>
-                        setState(() => _fabOpen = open),
-                  ),
+                  child: _QuickAddFab(onTap: () => _openQuickAdd(context)),
                 ),
               ),
             ),
@@ -373,50 +352,35 @@ class _MainShellState extends ConsumerState<MainShell>
     );
   }
 
-  List<FabAction> _buildActions(BuildContext context) => [
-        FabAction(
-          icon: Icons.remove_rounded,
-          label: 'Nuevo gasto',
-          color: AppColors.negative,
-          onTap: () => showTransactionSheet(context,
-              defaultType: TransactionType.expense),
+  void _openQuickAdd(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (_) => QuickAddSheet(
+        onTransfer: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const _TransferSheet(),
         ),
-        FabAction(
-          icon: Icons.add_rounded,
-          label: 'Nuevo ingreso',
-          color: AppColors.positive,
-          onTap: () => showTransactionSheet(context,
-              defaultType: TransactionType.income),
+        onGoal: () => _showAddGoal(context),
+        onSubscription: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => const AddSubscriptionSheet(),
         ),
-        FabAction(
-          icon: Icons.compare_arrows_rounded,
-          label: 'Transferencia',
-          color: AppColors.catTransport,
-          onTap: () => showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const _TransferSheet(),
-          ),
+        onMoreDetails: (type, amount, categoryId) => showTransactionSheet(
+          context,
+          defaultType: type,
+          initialAmount: amount,
+          initialCategoryId: categoryId,
         ),
-        FabAction(
-          icon: Icons.flag_rounded,
-          label: 'Nueva meta',
-          color: AppColors.petroleum,
-          onTap: () => _showAddGoal(context),
-        ),
-        FabAction(
-          icon: Icons.subscriptions_rounded,
-          label: 'Suscripción',
-          color: AppColors.warning,
-          onTap: () => showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (_) => const AddSubscriptionSheet(),
-          ),
-        ),
-      ];
+      ),
+    );
+  }
 
   void _showAddGoal(BuildContext context) {
     ref.read(selectedNavIndexProvider.notifier).state = 4;
@@ -438,6 +402,8 @@ void showTransactionSheet(
   BuildContext context, {
   Transaction? existing,
   TransactionType defaultType = TransactionType.expense,
+  String? initialAmount,
+  String? initialCategoryId,
 }) {
   showModalBottomSheet(
     context: context,
@@ -447,8 +413,81 @@ void showTransactionSheet(
     builder: (_) => AddTransactionSheet(
       existing: existing,
       defaultType: defaultType,
+      initialAmount: initialAmount,
+      initialCategoryId: initialCategoryId,
     ),
   );
+}
+
+// ── Quick add FAB ─────────────────────────────────────────────────────────────
+
+class _QuickAddFab extends StatefulWidget {
+  const _QuickAddFab({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  State<_QuickAddFab> createState() => _QuickAddFabState();
+}
+
+class _QuickAddFabState extends State<_QuickAddFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _press;
+
+  @override
+  void initState() {
+    super.initState();
+    _press = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+      lowerBound: 0.92,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _press.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _press.reverse(),
+      onTapUp: (_) => _press.forward(),
+      onTapCancel: () => _press.forward(),
+      onTap: () {
+        HapticFeedback.selectionClick();
+        widget.onTap();
+      },
+      child: ScaleTransition(
+        scale: _press,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.emerald, AppColors.emeraldDim],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.emerald.withValues(alpha: 0.32),
+                blurRadius: 20,
+                spreadRadius: -4,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.add_rounded,
+              color: AppColors.textInverse, size: 26),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Fade-in tab switcher (replaces IndexedStack) ──────────────────────────────

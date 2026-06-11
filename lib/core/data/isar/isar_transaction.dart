@@ -15,4 +15,5 @@ class IsarTransaction {
   String? accountId;
   String? note;
   late List<String> tags = [];
+  late List<String> imagePaths = [];
 }

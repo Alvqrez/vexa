@@ -4,258 +4,116 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../calendar/presentation/pages/financial_calendar_page.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
-import '../../../../core/providers/settings_provider.dart';
 
-class AnalysisPage extends StatefulWidget {
-  const AnalysisPage({super.key});
+// Widgets de análisis financiero del Vexa Coach.
+// Migrados desde la antigua pestaña Análisis y reorganizados:
+// cada gráfica va acompañada de interpretación, no solo datos.
 
-  @override
-  State<AnalysisPage> createState() => _AnalysisPageState();
-}
+// ── Shared surface card ───────────────────────────────────────────────────────
 
-class _AnalysisPageState extends State<AnalysisPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _stagger;
-
-  static const _sectionCount = 9;
-
-  @override
-  void initState() {
-    super.initState();
-    _stagger = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    )..forward();
-  }
-
-  @override
-  void dispose() {
-    _stagger.dispose();
-    super.dispose();
-  }
-
-  Widget _reveal(int i, Widget child) {
-    final start = i / _sectionCount * 0.55;
-    final end = (start + 0.55).clamp(0.0, 1.0);
-    return FadeTransition(
-      opacity: CurvedAnimation(
-        parent: _stagger,
-        curve: Interval(start, end, curve: AppCurves.gentle),
-      ),
-      child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.10), end: Offset.zero)
-            .animate(CurvedAnimation(
-          parent: _stagger,
-          curve: Interval(start, end, curve: AppCurves.spring),
-        )),
-        child: child,
-      ),
-    );
-  }
+class SurfaceCard extends StatelessWidget {
+  const SurfaceCard({super.key, required this.child, this.padding});
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        const _AnalysisBg(),
-        SafeArea(
-          bottom: false,
-          child: CustomScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding),
-                sliver: SliverList(
-                  delegate: SliverChildListDelegate([
-                    const SizedBox(height: AppSpacing.lg),
-                    _reveal(0, const _AnalysisHeader()),
-                    const SizedBox(height: AppSpacing.xxl),
-                    _reveal(1, const _OverviewRow()),
-                    const SizedBox(height: AppSpacing.md),
-                    _reveal(2, const _InterpretCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, const _BalanceLineChartCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(4, _SpendingTrendCard(stagger: _stagger)),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(5, const _CategoryPieChartCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(6, const _FinancialIntelligenceSection()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(7, const _CategoryBreakdown()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(8, const _TopSpendsList()),
-                    const SizedBox(
-                      height: AppSpacing.bottomNavHeight +
-                          AppSpacing.bottomNavBottomPadding +
-                          AppSpacing.xxxl,
-                    ),
-                  ]),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Background ────────────────────────────────────────────────────────────────
-
-class _AnalysisBg extends StatelessWidget {
-  const _AnalysisBg();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Positioned.fill(
-      child: Stack(
-        children: [
-          Container(color: c.background),
-          Positioned(
-            top: -100,
-            left: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.emerald.withValues(alpha: 0.10),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
-          ),
-          Positioned(
-            top: 380,
-            right: -100,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: [
-                  AppColors.petroleum.withValues(alpha: 0.12),
-                  Colors.transparent,
-                ]),
-              ),
-            ),
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: context.colors.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: child,
     );
   }
 }
 
-// ── Header ────────────────────────────────────────────────────────────────────
+// ── Shared section card ───────────────────────────────────────────────────────
 
-class _AnalysisHeader extends ConsumerWidget {
-  const _AnalysisHeader();
+class CoachSectionCard extends StatelessWidget {
+  const CoachSectionCard({
+    super.key,
+    required this.title,
+    required this.badge,
+    required this.badgeColor,
+    required this.child,
+  });
+  final String title;
+  final String badge;
+  final Color badgeColor;
+  final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(selectedAnalysisMonthProvider);
-    final now = DateTime.now();
-    final isCurrentMonth =
-        selected.year == now.year && selected.month == now.month;
-    final label = DateFormat('MMMM yyyy', 'es').format(selected);
-    final capitalized = label[0].toUpperCase() + label.substring(1);
-
+  Widget build(BuildContext context) {
     final c = context.colors;
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Análisis',
-                  style: AppTypography.headingM
-                      .copyWith(color: c.textPrimary)),
-              const SizedBox(height: 6),
-              // Month selector
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      final prev = DateTime(selected.year,
-                          selected.month - 1);
-                      ref
-                          .read(selectedAnalysisMonthProvider.notifier)
-                          .state = prev;
-                    },
-                    child: Icon(Icons.chevron_left_rounded,
-                        size: 20, color: c.textSecondary),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(capitalized,
-                      style: AppTypography.labelM
-                          .copyWith(color: c.textTertiary)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: isCurrentMonth
-                        ? null
-                        : () {
-                            HapticFeedback.selectionClick();
-                            final next = DateTime(selected.year,
-                                selected.month + 1);
-                            ref
-                                .read(selectedAnalysisMonthProvider
-                                    .notifier)
-                                .state = next;
-                          },
-                    child: Icon(Icons.chevron_right_rounded,
-                        size: 20,
-                        color: isCurrentMonth
-                            ? c.textTertiary.withValues(alpha: 0.3)
-                            : c.textSecondary),
-                  ),
-                ],
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL + 3),
+        color: c.glass,
+        border: Border.all(color: c.glassBorder, width: 0.5),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
+          color: c.cardElevated,
         ),
-        GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => const FinancialCalendarPage()),
-          ),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c.glass,
-              borderRadius: BorderRadius.circular(11),
-              border:
-                  Border.all(color: c.glassBorder, width: 0.5),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title,
+                    style: AppTypography.headingS
+                        .copyWith(color: context.colors.textPrimary)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeColor.withValues(alpha: 0.12),
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.pillRadius),
+                  ),
+                  child: Text(badge,
+                      style:
+                          AppTypography.eyebrow.copyWith(color: badgeColor)),
+                ),
+              ],
             ),
-            child: Icon(Icons.calendar_month_rounded,
-                size: 17, color: c.textSecondary),
-          ),
+            const SizedBox(height: AppSpacing.xl),
+            child,
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-// ── Overview row ──────────────────────────────────────────────────────────────
+// ── Overview row (ingresos / gastos / ahorrado) ───────────────────────────────
 
-class _OverviewRow extends ConsumerWidget {
-  const _OverviewRow();
+class CoachOverviewRow extends ConsumerWidget {
+  const CoachOverviewRow({super.key});
 
   String _fmt(double v, String sym) {
     if (v >= 1000) return '$sym${(v / 1000).toStringAsFixed(1)}k';
@@ -318,11 +176,9 @@ class _StatTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
-        borderRadius:
-            BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
         color: context.colors.glass,
-        border: Border.all(
-            color: context.colors.glassBorder, width: 0.5),
+        border: Border.all(color: context.colors.glassBorder, width: 0.5),
       ),
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
@@ -357,18 +213,18 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-// ── Balance line chart (fl_chart) ─────────────────────────────────────────────
+// ── Balance line chart (7 días) ───────────────────────────────────────────────
 
-class _BalanceLineChartCard extends ConsumerStatefulWidget {
-  const _BalanceLineChartCard();
+class CoachBalanceLineChart extends ConsumerStatefulWidget {
+  const CoachBalanceLineChart({super.key});
 
   @override
-  ConsumerState<_BalanceLineChartCard> createState() =>
-      _BalanceLineChartCardState();
+  ConsumerState<CoachBalanceLineChart> createState() =>
+      _CoachBalanceLineChartState();
 }
 
-class _BalanceLineChartCardState
-    extends ConsumerState<_BalanceLineChartCard>
+class _CoachBalanceLineChartState
+    extends ConsumerState<CoachBalanceLineChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
@@ -400,8 +256,8 @@ class _BalanceLineChartCardState
       final daysAgo = now.difference(t.date).inDays;
       if (daysAgo >= 0 && daysAgo < 7) {
         final day = 6 - daysAgo;
-        dayTotals[day] = (dayTotals[day] ?? 0) +
-            (t.isIncome ? t.amount : -t.amount);
+        dayTotals[day] =
+            (dayTotals[day] ?? 0) + (t.isIncome ? t.amount : -t.amount);
       }
     }
     double running = 0;
@@ -425,7 +281,7 @@ class _BalanceLineChartCardState
       return DateFormat('E', 'es').format(d);
     });
 
-    return _SectionCard(
+    return CoachSectionCard(
       title: 'Evolución del balance',
       badge: '7 días',
       badgeColor: AppColors.petroleum,
@@ -436,7 +292,9 @@ class _BalanceLineChartCardState
           builder: (context, child) {
             final progress = _anim.value;
             final visibleSpots = spots
-                .take((spots.length * progress).ceil().clamp(1, spots.length))
+                .take((spots.length * progress)
+                    .ceil()
+                    .clamp(1, spots.length))
                 .toList();
 
             return LineChart(
@@ -545,18 +403,18 @@ class _BalanceLineChartCardState
   }
 }
 
-// ── Spending trend bar chart (real data) ─────────────────────────────────────
+// ── Spending trend bar chart (6 meses) ────────────────────────────────────────
 
-class _SpendingTrendCard extends ConsumerStatefulWidget {
-  const _SpendingTrendCard({required this.stagger});
-  final AnimationController stagger;
+class CoachSpendingTrendCard extends ConsumerStatefulWidget {
+  const CoachSpendingTrendCard({super.key});
 
   @override
-  ConsumerState<_SpendingTrendCard> createState() =>
-      _SpendingTrendCardState();
+  ConsumerState<CoachSpendingTrendCard> createState() =>
+      _CoachSpendingTrendCardState();
 }
 
-class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
+class _CoachSpendingTrendCardState
+    extends ConsumerState<CoachSpendingTrendCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _bar;
   late Animation<double> _barAnim;
@@ -578,13 +436,21 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
     super.dispose();
   }
 
+  String _monthAbbr(int month) {
+    const abbrs = [
+      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    ];
+    return abbrs[(month - 1).clamp(0, 11)];
+  }
+
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(monthlySpendingTrendProvider);
     final now = DateTime.now();
     final currentLabel = _monthAbbr(now.month);
 
-    return _SectionCard(
+    return CoachSectionCard(
       title: 'Tendencia de gastos',
       badge: '6 meses',
       badgeColor: AppColors.negative,
@@ -620,7 +486,8 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
                   return Text(
                     d.label,
                     style: AppTypography.labelS.copyWith(
-                      color: isCurrent ? AppColors.emerald : c.textTertiary,
+                      color:
+                          isCurrent ? AppColors.emerald : c.textTertiary,
                       fontWeight:
                           isCurrent ? FontWeight.w600 : FontWeight.w400,
                     ),
@@ -632,14 +499,6 @@ class _SpendingTrendCardState extends ConsumerState<_SpendingTrendCard>
         ],
       ),
     );
-  }
-
-  String _monthAbbr(int month) {
-    const abbrs = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-    ];
-    return abbrs[(month - 1).clamp(0, 11)];
   }
 }
 
@@ -660,6 +519,7 @@ class _BarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final maxVal = data.fold(0.0, (m, d) => math.max(m, d.value));
+    if (maxVal == 0) return;
     final barWidth = size.width / data.length * 0.5;
     final gap = size.width / data.length;
 
@@ -717,21 +577,24 @@ class _BarChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarChartPainter old) =>
-      old.progress != progress || old.currentLabel != currentLabel ||
-      old.barColor != barColor || old.lineColor != lineColor;
+      old.progress != progress ||
+      old.currentLabel != currentLabel ||
+      old.barColor != barColor ||
+      old.lineColor != lineColor;
 }
 
-// ── Category pie chart (fl_chart) ─────────────────────────────────────────────
+// ── Category pie chart ────────────────────────────────────────────────────────
 
-class _CategoryPieChartCard extends ConsumerStatefulWidget {
-  const _CategoryPieChartCard();
+class CoachCategoryPieChart extends ConsumerStatefulWidget {
+  const CoachCategoryPieChart({super.key});
 
   @override
-  ConsumerState<_CategoryPieChartCard> createState() =>
-      _CategoryPieChartCardState();
+  ConsumerState<CoachCategoryPieChart> createState() =>
+      _CoachCategoryPieChartState();
 }
 
-class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
+class _CoachCategoryPieChartState
+    extends ConsumerState<CoachCategoryPieChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
@@ -763,12 +626,14 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
     final total = breakdown.values.fold(0.0, (a, b) => a + b);
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final resolved = entries.map((e) => (
-          cat: resolveCategory(e.key, walletCats),
-          value: e.value,
-        )).toList();
+    final resolved = entries
+        .map((e) => (
+              cat: resolveCategory(e.key, walletCats),
+              value: e.value,
+            ))
+        .toList();
 
-    return _SectionCard(
+    return CoachSectionCard(
       title: 'Distribución por categoría',
       badge: 'este mes',
       badgeColor: AppColors.petroleum,
@@ -788,8 +653,9 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
                   pieTouchData: PieTouchData(
                     touchCallback: (event, response) {
                       setState(() {
-                        _touchedIndex =
-                            response?.touchedSection?.touchedSectionIndex ?? -1;
+                        _touchedIndex = response
+                                ?.touchedSection?.touchedSectionIndex ??
+                            -1;
                       });
                     },
                   ),
@@ -840,8 +706,8 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(item.cat.name,
-                            style: AppTypography.labelS.copyWith(
-                                color: c.textSecondary)),
+                            style: AppTypography.labelS
+                                .copyWith(color: c.textSecondary)),
                       ),
                       Text(
                         '${(pct * 100).toStringAsFixed(0)}%',
@@ -861,315 +727,10 @@ class _CategoryPieChartCardState extends ConsumerState<_CategoryPieChartCard>
   }
 }
 
-// ── Financial intelligence ────────────────────────────────────────────────────
+// ── Category breakdown (barras de progreso) ───────────────────────────────────
 
-class _FinancialIntelligenceSection extends ConsumerWidget {
-  const _FinancialIntelligenceSection();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prediction = ref.watch(predictionProvider);
-    final breakdown = ref.watch(analysisCategoryBreakdownProvider);
-    final income = ref.watch(analysisIncomeProvider);
-    final expenses = ref.watch(analysisExpensesProvider);
-    final savedToAccount = ref.watch(monthlySavingsProvider);
-    final topCat = ref.watch(analysisTopCategoryProvider);
-    final currency = ref.watch(currencySymbolProvider);
-
-    final insights = _buildInsights(
-      prediction: prediction,
-      breakdown: breakdown,
-      income: income,
-      expenses: expenses,
-      savedToAccount: savedToAccount,
-      topCategory: topCat,
-      currency: currency,
-    );
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.emerald, AppColors.petroleum],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  size: 14, color: Colors.white),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Text('Inteligencia financiera',
-                style: AppTypography.headingS.copyWith(
-                    color: context.colors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4)),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ...insights.map((insight) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _InsightCard(insight: insight),
-            )),
-      ],
-    );
-  }
-
-  List<_Insight> _buildInsights({
-    required MonthlyPrediction prediction,
-    required Map<String, double> breakdown,
-    required double income,
-    required double expenses,
-    required double savedToAccount,
-    required WalletCategory? topCategory,
-    required String currency,
-  }) {
-    final insights = <_Insight>[];
-    final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final daysElapsed = now.day;
-    final daysLeft = daysInMonth - daysElapsed;
-
-    // ── 1. Proyección concreta con días restantes ─────────────────────────────
-    if (income > 0 || expenses > 0) {
-      final dailyExpense = daysElapsed > 0 ? expenses / daysElapsed : 0.0;
-      final projectedTotal = expenses + dailyExpense * daysLeft;
-      final balance = income - projectedTotal;
-      if (income > 0 && balance > 0) {
-        insights.add(_Insight(
-          icon: Icons.calendar_today_rounded,
-          color: AppColors.positive,
-          title: 'Proyección al día $daysInMonth',
-          body: 'Con tus ingresos de $currency${income.toStringAsFixed(0)} y '
-              '$currency${dailyExpense.toStringAsFixed(0)}/día de gasto, '
-              'terminarás el mes con aprox. $currency${balance.toStringAsFixed(0)} disponibles.',
-          type: _InsightType.positive,
-        ));
-      } else if (income > 0) {
-        final overrun = (projectedTotal - income).toStringAsFixed(0);
-        insights.add(_Insight(
-          icon: Icons.running_with_errors_rounded,
-          color: AppColors.negative,
-          title: 'Alerta: gastos proyectados altos',
-          body: 'A $currency${dailyExpense.toStringAsFixed(0)}/día de gasto '
-              'gastarás $currency$overrun más de lo que ganas este mes. '
-              'Recorta $currency${(dailyExpense * 0.15).toStringAsFixed(0)}/día para salir en cero.',
-          type: _InsightType.warning,
-        ));
-      }
-    }
-
-    // ── 2. Regla 50/30/20 adaptada al ingreso real ────────────────────────────
-    if (income > 0) {
-      final target50 = income * 0.50;
-      final target30 = income * 0.30;
-      final target20 = income * 0.20;
-
-      // Classify spending: needs = food+transport+health, wants = rest
-      const needsCats = {'wc1', 'wc2', 'wc5'}; // Comida, Transporte, Salud
-      final actualNeeds = breakdown.entries
-          .where((e) => needsCats.contains(e.key))
-          .fold(0.0, (s, e) => s + e.value);
-      final actualWants = breakdown.entries
-          .where((e) => !needsCats.contains(e.key))
-          .fold(0.0, (s, e) => s + e.value);
-
-      final needsPct = (actualNeeds / income * 100).toStringAsFixed(0);
-      final wantsPct = (actualWants / income * 100).toStringAsFixed(0);
-      final savedPct = income > 0
-          ? (savedToAccount / income * 100).toStringAsFixed(0)
-          : '0';
-
-      String body;
-      _InsightType type;
-      if (actualNeeds <= target50 && actualWants <= target30) {
-        body = 'Regla 50/30/20 para $currency${income.toStringAsFixed(0)}: '
-            'necesidades $currency${target50.toStringAsFixed(0)} (llevas $currency${actualNeeds.toStringAsFixed(0)}, $needsPct%), '
-            'gustos $currency${target30.toStringAsFixed(0)} (llevas $currency${actualWants.toStringAsFixed(0)}, $wantsPct%), '
-            'ahorro $currency${target20.toStringAsFixed(0)} (llevas $currency${savedToAccount.toStringAsFixed(0)}, $savedPct%). ¡Vas bien!';
-        type = _InsightType.positive;
-      } else if (actualNeeds > target50) {
-        final excess = (actualNeeds - target50).toStringAsFixed(0);
-        body = 'Regla 50/30/20: llevas $currency${actualNeeds.toStringAsFixed(0)} '
-            'en necesidades — $currency$excess por encima del límite de $currency${target50.toStringAsFixed(0)} (50%). '
-            'Revisa transporte y comida para recuperar ese margen.';
-        type = _InsightType.warning;
-      } else {
-        final excess = (actualWants - target30).toStringAsFixed(0);
-        body = 'Llevas $currency${actualWants.toStringAsFixed(0)} en gustos — '
-            '$currency$excess por encima del límite de $currency${target30.toStringAsFixed(0)} (30%). '
-            'Recorta entretenimiento o compras para quedar dentro del objetivo.';
-        type = _InsightType.warning;
-      }
-      insights.add(_Insight(
-        icon: Icons.pie_chart_outline_rounded,
-        color: type == _InsightType.positive ? AppColors.emerald : AppColors.warning,
-        title: 'Regla 50/30/20',
-        body: body,
-        type: type,
-      ));
-    }
-
-    // ── 3. Acción de ahorro concreta ──────────────────────────────────────────
-    if (income > 0) {
-      final target20 = income * 0.20;
-      if (savedToAccount == 0) {
-        insights.add(_Insight(
-          icon: Icons.savings_rounded,
-          color: AppColors.warning,
-          title: 'Acción: transfiere a Ahorro hoy',
-          body: 'No has ahorrado nada este mes. '
-              'Transfiere $currency${target20.toStringAsFixed(0)} (20% de tus ingresos) '
-              'a tu cuenta Ahorro ahora mismo — el mejor momento es siempre el día de cobro.',
-          type: _InsightType.warning,
-        ));
-      } else if (savedToAccount < target20) {
-        final missing = (target20 - savedToAccount).toStringAsFixed(0);
-        insights.add(_Insight(
-          icon: Icons.savings_rounded,
-          color: AppColors.petroleum,
-          title: 'Ahorro: te faltan $currency$missing',
-          body: 'Llevas $currency${savedToAccount.toStringAsFixed(0)} ahorrados. '
-              'Para llegar al 20% ($currency${target20.toStringAsFixed(0)}) '
-              'transfieres $currency$missing más a tu cuenta Ahorro antes del día $daysInMonth.',
-          type: _InsightType.neutral,
-        ));
-      } else {
-        insights.add(_Insight(
-          icon: Icons.check_circle_outline_rounded,
-          color: AppColors.positive,
-          title: 'Objetivo de ahorro cumplido',
-          body: 'Ahorraste $currency${savedToAccount.toStringAsFixed(0)} '
-              '(${(savedToAccount / income * 100).toStringAsFixed(0)}% de tus ingresos). '
-              'Superaste el objetivo del 20%. Considera invertir el excedente.',
-          type: _InsightType.positive,
-        ));
-      }
-    }
-
-    // ── 4. Acción sobre la categoría más cara ─────────────────────────────────
-    if (topCategory != null && breakdown.isNotEmpty && income > 0) {
-      final topAmount = breakdown[topCategory.id] ?? 0;
-      final reduction10 = topAmount * 0.10;
-      final pctOfIncome = (topAmount / income * 100).toStringAsFixed(0);
-      insights.add(_Insight(
-        icon: topCategory.icon,
-        color: topCategory.color,
-        title: '${topCategory.name}: $pctOfIncome% de tus ingresos',
-        body: 'Gastaste $currency${topAmount.toStringAsFixed(0)} en ${topCategory.name.toLowerCase()} este mes. '
-            'Reducir solo un 10% ($currency${reduction10.toStringAsFixed(0)}) '
-            'te daría $currency${(reduction10 * 12).toStringAsFixed(0)} extra al año.',
-        type: _InsightType.neutral,
-      ));
-    }
-
-    // ── 5. Velocidad de gasto vs avance del mes ───────────────────────────────
-    if (income > 0 && expenses > 0) {
-      final monthProgress = daysElapsed / daysInMonth;
-      final spendingProgress = expenses / income;
-      if (spendingProgress > monthProgress + 0.15) {
-        final daysAhead = ((spendingProgress - monthProgress) * daysInMonth).round();
-        insights.add(_Insight(
-          icon: Icons.speed_rounded,
-          color: AppColors.negative,
-          title: 'Gastas más rápido de lo que ingresa',
-          body: 'Llevas el ${(spendingProgress * 100).toStringAsFixed(0)}% '
-              'del ingreso gastado con solo el ${(monthProgress * 100).toStringAsFixed(0)}% del mes. '
-              'Vas $daysAhead días adelantado en gasto — congela compras no esenciales hasta el día ${daysElapsed + daysAhead}.',
-          type: _InsightType.warning,
-        ));
-      }
-    }
-
-    return insights.take(5).toList();
-  }
-}
-
-enum _InsightType { positive, warning, neutral }
-
-class _Insight {
-  const _Insight({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.body,
-    required this.type,
-  });
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String body;
-  final _InsightType type;
-}
-
-class _InsightCard extends StatelessWidget {
-  const _InsightCard({required this.insight});
-  final _Insight insight;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    final bgColor = switch (insight.type) {
-      _InsightType.positive => AppColors.positive.withValues(alpha: 0.05),
-      _InsightType.warning => AppColors.warning.withValues(alpha: 0.05),
-      _InsightType.neutral => c.glassMedium,
-    };
-    final borderColor = switch (insight.type) {
-      _InsightType.positive => AppColors.positive.withValues(alpha: 0.15),
-      _InsightType.warning => AppColors.warning.withValues(alpha: 0.15),
-      _InsightType.neutral => c.glassBorder,
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: borderColor, width: 0.5),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: insight.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(insight.icon, size: 16, color: insight.color),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(insight.title,
-                    style: AppTypography.labelL.copyWith(
-                        color: c.textPrimary,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(insight.body,
-                    style: AppTypography.labelM.copyWith(
-                        color: c.textSecondary, height: 1.5)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Category breakdown (progress bars) ────────────────────────────────────────
-
-class _CategoryBreakdown extends ConsumerWidget {
-  const _CategoryBreakdown();
+class CoachCategoryBreakdown extends ConsumerWidget {
+  const CoachCategoryBreakdown({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1286,7 +847,8 @@ class _CatBarState extends State<_CatBar>
                   Text(widget.category.name,
                       style: AppTypography.labelM
                           .copyWith(color: c.textSecondary)),
-                  Text('${widget.currency}${widget.spent.toStringAsFixed(2)}',
+                  Text(
+                      '${widget.currency}${widget.spent.toStringAsFixed(2)}',
                       style: AppTypography.labelL
                           .copyWith(color: c.textPrimary)),
                 ],
@@ -1322,8 +884,8 @@ class _CatBarState extends State<_CatBar>
 
 // ── Top spends list ───────────────────────────────────────────────────────────
 
-class _TopSpendsList extends ConsumerWidget {
-  const _TopSpendsList();
+class CoachTopSpendsList extends ConsumerWidget {
+  const CoachTopSpendsList({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1333,7 +895,8 @@ class _TopSpendsList extends ConsumerWidget {
     final walletCats = ref.watch(walletCategoriesProvider);
     final m = ref.watch(selectedAnalysisMonthProvider);
     final expenses = transactions
-        .where((t) => !t.isIncome && t.date.month == m.month && t.date.year == m.year)
+        .where((t) =>
+            !t.isIncome && t.date.month == m.month && t.date.year == m.year)
         .toList()
       ..sort((a, b) => b.amount.compareTo(a.amount));
     final top = expenses.take(4).toList();
@@ -1359,7 +922,8 @@ class _TopSpendsList extends ConsumerWidget {
                   child: Row(
                     children: [
                       Builder(builder: (_) {
-                        final cat = resolveCategory(top[i].category, walletCats);
+                        final cat =
+                            resolveCategory(top[i].category, walletCats);
                         return Container(
                           width: 36,
                           height: 36,
@@ -1367,7 +931,8 @@ class _TopSpendsList extends ConsumerWidget {
                             color: cat.surface,
                             borderRadius: BorderRadius.circular(11),
                           ),
-                          child: Icon(cat.icon, size: 16, color: cat.color),
+                          child:
+                              Icon(cat.icon, size: 16, color: cat.color),
                         );
                       }),
                       const SizedBox(width: AppSpacing.md),
@@ -1376,11 +941,14 @@ class _TopSpendsList extends ConsumerWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(top[i].merchant,
-                                style: AppTypography.labelL.copyWith(
-                                    color: c.textPrimary)),
-                            Text(resolveCategory(top[i].category, walletCats).name,
-                                style: AppTypography.labelS.copyWith(
-                                    color: c.textTertiary)),
+                                style: AppTypography.labelL
+                                    .copyWith(color: c.textPrimary)),
+                            Text(
+                                resolveCategory(
+                                        top[i].category, walletCats)
+                                    .name,
+                                style: AppTypography.labelS
+                                    .copyWith(color: c.textTertiary)),
                           ],
                         ),
                       ),
@@ -1409,73 +977,10 @@ class _TopSpendsList extends ConsumerWidget {
   }
 }
 
-// ── Shared section card ───────────────────────────────────────────────────────
+// ── Interpret card + sheet ────────────────────────────────────────────────────
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
-    required this.title,
-    required this.badge,
-    required this.badgeColor,
-    required this.child,
-  });
-  final String title;
-  final String badge;
-  final Color badgeColor;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        borderRadius:
-            BorderRadius.circular(AppSpacing.cardRadiusL + 3),
-        color: c.glass,
-        border: Border.all(color: c.glassBorder, width: 0.5),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-          color: c.cardElevated,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title,
-                    style: AppTypography.headingS
-                        .copyWith(color: context.colors.textPrimary)),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: badgeColor.withValues(alpha: 0.12),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.pillRadius),
-                  ),
-                  child: Text(badge,
-                      style: AppTypography.eyebrow
-                          .copyWith(color: badgeColor)),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Interpret card ────────────────────────────────────────────────────────────
-
-class _InterpretCard extends ConsumerWidget {
-  const _InterpretCard();
+class CoachInterpretCard extends ConsumerWidget {
+  const CoachInterpretCard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -1527,7 +1032,7 @@ class _InterpretCard extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Interpretar análisis',
+                  Text('Interpretar mi mes',
                       style: AppTypography.labelL.copyWith(
                           color: c.textPrimary,
                           fontWeight: FontWeight.w600)),
@@ -1549,8 +1054,6 @@ class _InterpretCard extends ConsumerWidget {
     );
   }
 }
-
-// ── Interpret sheet ───────────────────────────────────────────────────────────
 
 class _InterpretSheet extends ConsumerWidget {
   const _InterpretSheet();
@@ -1588,12 +1091,13 @@ class _InterpretSheet extends ConsumerWidget {
         : catTotals.entries.reduce((a, b) => a.value > b.value ? a : b);
     final topCat = topCatEntry == null
         ? null
-        : (cat: resolveCategory(topCatEntry.key, walletCats), value: topCatEntry.value);
+        : (
+            cat: resolveCategory(topCatEntry.key, walletCats),
+            value: topCatEntry.value
+          );
 
-    // net = income − expenses (real available cash); savings = transfers to savings accounts
     final net = income - expenses;
-    final savingsRate =
-        income > 0 ? ((net / income) * 100).round() : 0;
+    final savingsRate = income > 0 ? ((net / income) * 100).round() : 0;
     final expenseDelta = prevExpenses > 0
         ? (((expenses - prevExpenses) / prevExpenses) * 100).round()
         : null;
@@ -1616,11 +1120,12 @@ class _InterpretSheet extends ConsumerWidget {
       ),
       if (expenseDelta != null)
         _InterpretInsight(
-          icon: expenseDelta > 0
-              ? Icons.north_rounded
-              : Icons.south_rounded,
-          color: expenseDelta > 0 ? AppColors.negative : AppColors.positive,
-          title: expenseDelta > 0 ? 'Gastos en aumento' : 'Gastos a la baja',
+          icon:
+              expenseDelta > 0 ? Icons.north_rounded : Icons.south_rounded,
+          color:
+              expenseDelta > 0 ? AppColors.negative : AppColors.positive,
+          title:
+              expenseDelta > 0 ? 'Gastos en aumento' : 'Gastos a la baja',
           body: expenseDelta == 0
               ? 'Tus gastos son similares al mes anterior.'
               : 'Tus gastos ${expenseDelta > 0 ? 'subieron' : 'bajaron'} un ${expenseDelta.abs()}% respecto al mes pasado (${_fmt(prevExpenses, currency)} → ${_fmt(expenses, currency)}).',
@@ -1639,7 +1144,8 @@ class _InterpretSheet extends ConsumerWidget {
           icon: Icons.category_outlined,
           color: AppColors.catEntertainment,
           title: 'Mayor gasto: ${topCat.cat.name}',
-          body: '${topCat.cat.name} representa ${_fmt(topCat.value, currency)} — el ${expenses > 0 ? ((topCat.value / expenses) * 100).round() : 0}% de tus gastos totales este mes.',
+          body:
+              '${topCat.cat.name} representa ${_fmt(topCat.value, currency)} — el ${expenses > 0 ? ((topCat.value / expenses) * 100).round() : 0}% de tus gastos totales este mes.',
         ),
       _InterpretInsight(
         icon: Icons.savings_outlined,
@@ -1670,8 +1176,8 @@ class _InterpretSheet extends ConsumerWidget {
       builder: (_, scrollCtrl) => Container(
         decoration: BoxDecoration(
           color: context.colors.card,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
         ),
         child: Column(
           children: [
@@ -1681,14 +1187,15 @@ class _InterpretSheet extends ConsumerWidget {
                 width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: context.colors.textTertiary.withValues(alpha: 0.4),
+                  color:
+                      context.colors.textTertiary.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.xxl, AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.xxl,
+                  AppSpacing.lg, AppSpacing.xxl, AppSpacing.lg),
               child: Row(
                 children: [
                   Container(
@@ -1738,7 +1245,8 @@ class _InterpretSheet extends ConsumerWidget {
                             color: ins.color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(ins.icon, size: 16, color: ins.color),
+                          child:
+                              Icon(ins.icon, size: 16, color: ins.color),
                         ),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
@@ -1781,32 +1289,4 @@ class _InterpretInsight {
   final Color color;
   final String title;
   final String body;
-}
-
-// ── Shared surface card ───────────────────────────────────────────────────────
-
-class SurfaceCard extends StatelessWidget {
-  const SurfaceCard({super.key, required this.child, this.padding});
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding,
-      decoration: BoxDecoration(
-        color: context.colors.card,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: context.colors.glassBorder, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
 }

@@ -12,7 +12,6 @@ import '../widgets/smart_insights_widget.dart';
 import '../widgets/summary_cards.dart';
 import '../widgets/transactions_section.dart';
 import '../widgets/financial_projection_widget.dart';
-import '../../../health/presentation/widgets/health_score_widget.dart';
 import '../../../education/presentation/widgets/daily_tip_card.dart';
 import '../../../budget/presentation/widgets/budget_notification_banner.dart';
 
@@ -107,8 +106,6 @@ class _HomePageState extends State<HomePage>
                         _section(3, const SmartInsightsWidget()),
                         const SizedBox(height: AppSpacing.xl),
                         _section(4, const DailyTipCard()),
-                        const SizedBox(height: AppSpacing.xl),
-                        _section(5, const HealthScoreWidget()),
                         const SizedBox(height: AppSpacing.xl),
                         _section(6, const AccountsCarousel()),
                         const SizedBox(height: AppSpacing.xxl),

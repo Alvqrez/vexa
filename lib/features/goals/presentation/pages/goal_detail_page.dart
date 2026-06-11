@@ -43,6 +43,48 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
     super.dispose();
   }
 
+  void _confirmDelete(FinancialGoal goal) {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showDialog<void>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: c.cardElevated,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        title: Text('¿Eliminar meta?',
+            style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+        content: Text(
+          'Se eliminará "${goal.title}" y su progreso registrado. '
+          'Esta acción no se puede deshacer.',
+          style: AppTypography.bodyM
+              .copyWith(color: c.textSecondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: Text('Cancelar',
+                style:
+                    AppTypography.labelL.copyWith(color: c.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              HapticFeedback.mediumImpact();
+              Navigator.of(dialogCtx).pop(); // cerrar diálogo
+              Navigator.of(context).pop(); // salir del detalle
+              ref.read(goalsProvider.notifier).remove(goal.id);
+            },
+            child: Text('Eliminar',
+                style: AppTypography.labelL.copyWith(
+                    color: AppColors.negative,
+                    fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddProgress(FinancialGoal goal) {
     showModalBottomSheet(
       context: context,
@@ -128,22 +170,47 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                     delegate: SliverChildListDelegate([
                       const SizedBox(height: AppSpacing.lg),
 
-                      // Back button
-                      GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.of(context).pop();
-                        },
-                        child: Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.06),
-                            borderRadius: BorderRadius.circular(11),
+                      // Top bar: back + delete
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              Navigator.of(context).pop();
+                            },
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: Icon(Icons.arrow_back_rounded,
+                                  size: 18, color: c.textSecondary),
+                            ),
                           ),
-                          child: Icon(Icons.arrow_back_rounded,
-                              size: 18, color: c.textSecondary),
-                        ),
+                          const Spacer(),
+                          GestureDetector(
+                            onTap: () => _confirmDelete(goal),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: AppColors.negative
+                                    .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(11),
+                                border: Border.all(
+                                    color: AppColors.negative
+                                        .withValues(alpha: 0.25),
+                                    width: 0.5),
+                              ),
+                              child: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color: AppColors.negative),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.xxl),
 

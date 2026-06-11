@@ -281,7 +281,8 @@ void main() {
         final score = (savingsScore * 0.40 + budgetScore * 0.40 + incomeScore * 0.20)
             .clamp(0.0, 100.0);
 
-        expect(score, closeTo(72.0, 0.01));
+        // 80×0.40 + 60×0.40 + 70×0.20 = 32 + 24 + 14 = 70
+        expect(score, closeTo(70.0, 0.01));
       });
     });
 

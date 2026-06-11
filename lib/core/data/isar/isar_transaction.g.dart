@@ -37,28 +37,33 @@ const IsarTransactionSchema = CollectionSchema(
       name: r'date',
       type: IsarType.dateTime,
     ),
-    r'merchant': PropertySchema(
+    r'imagePaths': PropertySchema(
       id: 4,
+      name: r'imagePaths',
+      type: IsarType.stringList,
+    ),
+    r'merchant': PropertySchema(
+      id: 5,
       name: r'merchant',
       type: IsarType.string,
     ),
     r'note': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'note',
       type: IsarType.string,
     ),
     r'tags': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'txId': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'txId',
       type: IsarType.string,
     ),
     r'typeStr': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'typeStr',
       type: IsarType.string,
     )
@@ -104,6 +109,13 @@ int _isarTransactionEstimateSize(
     }
   }
   bytesCount += 3 + object.categoryStr.length * 3;
+  bytesCount += 3 + object.imagePaths.length * 3;
+  {
+    for (var i = 0; i < object.imagePaths.length; i++) {
+      final value = object.imagePaths[i];
+      bytesCount += value.length * 3;
+    }
+  }
   bytesCount += 3 + object.merchant.length * 3;
   {
     final value = object.note;
@@ -133,11 +145,12 @@ void _isarTransactionSerialize(
   writer.writeDouble(offsets[1], object.amount);
   writer.writeString(offsets[2], object.categoryStr);
   writer.writeDateTime(offsets[3], object.date);
-  writer.writeString(offsets[4], object.merchant);
-  writer.writeString(offsets[5], object.note);
-  writer.writeStringList(offsets[6], object.tags);
-  writer.writeString(offsets[7], object.txId);
-  writer.writeString(offsets[8], object.typeStr);
+  writer.writeStringList(offsets[4], object.imagePaths);
+  writer.writeString(offsets[5], object.merchant);
+  writer.writeString(offsets[6], object.note);
+  writer.writeStringList(offsets[7], object.tags);
+  writer.writeString(offsets[8], object.txId);
+  writer.writeString(offsets[9], object.typeStr);
 }
 
 IsarTransaction _isarTransactionDeserialize(
@@ -152,11 +165,12 @@ IsarTransaction _isarTransactionDeserialize(
   object.categoryStr = reader.readString(offsets[2]);
   object.date = reader.readDateTime(offsets[3]);
   object.id = id;
-  object.merchant = reader.readString(offsets[4]);
-  object.note = reader.readStringOrNull(offsets[5]);
-  object.tags = reader.readStringList(offsets[6]) ?? [];
-  object.txId = reader.readString(offsets[7]);
-  object.typeStr = reader.readString(offsets[8]);
+  object.imagePaths = reader.readStringList(offsets[4]) ?? [];
+  object.merchant = reader.readString(offsets[5]);
+  object.note = reader.readStringOrNull(offsets[6]);
+  object.tags = reader.readStringList(offsets[7]) ?? [];
+  object.txId = reader.readString(offsets[8]);
+  object.typeStr = reader.readString(offsets[9]);
   return object;
 }
 
@@ -176,14 +190,16 @@ P _isarTransactionDeserializeProp<P>(
     case 3:
       return (reader.readDateTime(offset)) as P;
     case 4:
-      return (reader.readString(offset)) as P;
-    case 5:
-      return (reader.readStringOrNull(offset)) as P;
-    case 6:
       return (reader.readStringList(offset) ?? []) as P;
-    case 7:
+    case 5:
       return (reader.readString(offset)) as P;
+    case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readStringList(offset) ?? []) as P;
     case 8:
+      return (reader.readString(offset)) as P;
+    case 9:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -850,6 +866,231 @@ extension IsarTransactionQueryFilter
         upper: upper,
         includeUpper: includeUpper,
       ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementEqualTo(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementGreaterThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementLessThan(
+    String value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementBetween(
+    String lower,
+    String upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'imagePaths',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'imagePaths',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'imagePaths',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'imagePaths',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsElementIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'imagePaths',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsLengthEqualTo(int length) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        length,
+        true,
+        length,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        0,
+        true,
+        0,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        0,
+        false,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsLengthLessThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        0,
+        true,
+        length,
+        include,
+      );
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsLengthGreaterThan(
+    int length, {
+    bool include = false,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        length,
+        include,
+        999999,
+        true,
+      );
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      imagePathsLengthBetween(
+    int lower,
+    int upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.listLength(
+        r'imagePaths',
+        lower,
+        includeLower,
+        upper,
+        includeUpper,
+      );
     });
   }
 
@@ -1907,6 +2148,13 @@ extension IsarTransactionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarTransaction, IsarTransaction, QDistinct>
+      distinctByImagePaths() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'imagePaths');
+    });
+  }
+
   QueryBuilder<IsarTransaction, IsarTransaction, QDistinct> distinctByMerchant(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1972,6 +2220,13 @@ extension IsarTransactionQueryProperty
   QueryBuilder<IsarTransaction, DateTime, QQueryOperations> dateProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'date');
+    });
+  }
+
+  QueryBuilder<IsarTransaction, List<String>, QQueryOperations>
+      imagePathsProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'imagePaths');
     });
   }
 

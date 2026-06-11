@@ -82,15 +82,21 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
       list = list.where((t) => t.category == _catFilter).toList();
     }
 
-    // Search
+    // Search: nombre, nota, categoría, etiquetas y monto
     if (_query.trim().isNotEmpty) {
-      final q = _query.toLowerCase();
+      final q = _query.trim().toLowerCase();
+      final qAmount = double.tryParse(q.replaceAll(',', '.'));
       list = list.where((t) {
         final catName = resolveCategory(t.category, walletCats).name.toLowerCase();
+        final amountMatch = qAmount != null &&
+            ((t.amount - qAmount).abs() < 0.005 ||
+                t.amount.toStringAsFixed(2).startsWith(q) ||
+                t.amount.toStringAsFixed(0) == q);
         return t.merchant.toLowerCase().contains(q) ||
             catName.contains(q) ||
             t.tags.any((tag) => tag.toLowerCase().contains(q)) ||
-            (t.note?.toLowerCase().contains(q) ?? false);
+            (t.note?.toLowerCase().contains(q) ?? false) ||
+            amountMatch;
       }).toList();
     }
 
@@ -553,7 +559,7 @@ class _SearchBar extends StatelessWidget {
         focusNode: focusNode,
         style: AppTypography.bodyM.copyWith(color: c.textPrimary),
         decoration: InputDecoration(
-          hintText: 'Buscar por comercio, categoría, etiqueta…',
+          hintText: 'Buscar por nombre, nota, categoría o monto…',
           hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
           prefixIcon: Icon(Icons.search_rounded,
               size: 18, color: c.textTertiary),
