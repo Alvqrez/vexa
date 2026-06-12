@@ -48,12 +48,14 @@ class StreakNotifier extends StateNotifier<Streak> {
   }
 
   Future<void> _save() async {
-    await LocalPrefsService.setInt('streak_current', state.currentStreak);
-    await LocalPrefsService.setInt('streak_longest', state.longestStreak);
-    await LocalPrefsService.setString(
-        'streak_last_active', state.lastActiveDate.toIso8601String());
-    await LocalPrefsService.setString(
-        'streak_last_tx', state.lastTransactionDate.toIso8601String());
+    await Future.wait([
+      LocalPrefsService.setInt('streak_current', state.currentStreak),
+      LocalPrefsService.setInt('streak_longest', state.longestStreak),
+      LocalPrefsService.setString(
+          'streak_last_active', state.lastActiveDate.toIso8601String()),
+      LocalPrefsService.setString(
+          'streak_last_tx', state.lastTransactionDate.toIso8601String()),
+    ]);
   }
 
   Future<void> recordActivity() async {

@@ -19,19 +19,31 @@ class TransactionItem extends ConsumerStatefulWidget {
     required this.transaction,
     this.isLast = false,
     this.enableSwipe = true,
+    this.isSelected = false,
+    this.selectionMode = false,
+    this.onSelectToggle,
+    this.selectionRadius,
   });
 
   final Transaction transaction;
   final bool isLast;
   final bool enableSwipe;
+  final bool isSelected;
+  final bool selectionMode;
+  final VoidCallback? onSelectToggle;
+  /// Dynamic corner radius for the selection highlight.
+  /// Passed by the parent so adjacent selected items form one merged rect.
+  final BorderRadius? selectionRadius;
 
   @override
   ConsumerState<TransactionItem> createState() => _TransactionItemState();
 }
 
 class _TransactionItemState extends ConsumerState<TransactionItem>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _press;
+  late AnimationController _flash;
+  late Animation<double> _flashOpacity;
 
   @override
   void initState() {
@@ -43,12 +55,49 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
       upperBound: 1.0,
       value: 1.0,
     );
+    _flash = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    // Single smooth pulse: fast in, brief hold, slow out.
+    _flashOpacity = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 0.11)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 25,
+      ),
+      TweenSequenceItem(tween: ConstantTween(0.11), weight: 20),
+      TweenSequenceItem(
+        tween: Tween(begin: 0.11, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 55,
+      ),
+    ]).animate(_flash);
+
+    // Fire flash on mount if this transaction was just added via Quick Add.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(newTransactionIdsProvider).contains(widget.transaction.id)) {
+        _startFlash();
+      }
+    });
   }
 
   @override
   void dispose() {
     _press.dispose();
+    _flash.dispose();
     super.dispose();
+  }
+
+  void _startFlash() {
+    if (_flash.isAnimating) return;
+    final current = ref.read(newTransactionIdsProvider);
+    if (current.contains(widget.transaction.id)) {
+      ref.read(newTransactionIdsProvider.notifier).state =
+          {...current}..remove(widget.transaction.id);
+    }
+    _flash.forward(from: 0);
   }
 
   void _openDetail() {
@@ -124,6 +173,11 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
 
   @override
   Widget build(BuildContext context) {
+    // Fires when provider changes while tile is already mounted (e.g. already on screen).
+    ref.listen<Set<String>>(newTransactionIdsProvider, (_, ids) {
+      if (ids.contains(widget.transaction.id)) _startFlash();
+    });
+
     final c = context.colors;
     final t = widget.transaction;
     final cats = ref.watch(walletCategoriesProvider);
@@ -143,11 +197,29 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
       onTapDown: (_) => _press.reverse(),
       onTapUp: (_) => _press.forward(),
       onTapCancel: () => _press.forward(),
-      onTap: _openDetail,
+      onTap: widget.selectionMode ? widget.onSelectToggle : _openDetail,
+      onLongPress: !widget.selectionMode && widget.onSelectToggle != null
+          ? () {
+              HapticFeedback.mediumImpact();
+              widget.onSelectToggle!();
+            }
+          : null,
       child: ScaleTransition(
         scale: _press,
-        child: Container(
-          margin: EdgeInsets.only(bottom: widget.isLast ? 0 : 2),
+        child: AnimatedBuilder(
+          animation: _flash,
+          builder: (_, child) => Container(
+            decoration: BoxDecoration(
+              color: widget.isSelected
+                  ? AppColors.petroleum.withValues(alpha: 0.18)
+                  : AppColors.emerald.withValues(alpha: _flashOpacity.value),
+              borderRadius: widget.isSelected
+                  ? (widget.selectionRadius ??
+                      BorderRadius.circular(AppSpacing.cardRadius.toDouble()))
+                  : null,
+            ),
+            child: child,
+          ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
@@ -292,7 +364,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
       ),
     );
 
-    if (!widget.enableSwipe) return tile;
+    if (!widget.enableSwipe || widget.selectionMode) return tile;
 
     return Dismissible(
       key: ValueKey(t.id),

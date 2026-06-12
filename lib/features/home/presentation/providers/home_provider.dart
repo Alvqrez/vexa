@@ -434,23 +434,32 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
 
   Future<void> update(Transaction updated, Transaction original) async {
     _isLoaded = true;
+    final prevState = state;
     state = [
       for (final t in state)
         if (t.id == updated.id) updated else t,
     ];
-    if (original.accountId != null) {
-      final reverse = original.isIncome ? -original.amount : original.amount;
-      await _ref
-          .read(accountsProvider.notifier)
-          .adjustBalance(original.accountId!, reverse);
+    try {
+      if (original.accountId != null) {
+        final reverse =
+            original.isIncome ? -original.amount : original.amount;
+        await _ref
+            .read(accountsProvider.notifier)
+            .adjustBalance(original.accountId!, reverse);
+      }
+      if (updated.accountId != null) {
+        final delta = updated.isIncome ? updated.amount : -updated.amount;
+        await _ref
+            .read(accountsProvider.notifier)
+            .adjustBalance(updated.accountId!, delta);
+      }
+      await _persistAll();
+    } catch (e) {
+      // Rollback optimistic state update on failure.
+      state = prevState;
+      debugPrint('TransactionsNotifier.update: failed, rolled back: $e');
+      rethrow;
     }
-    if (updated.accountId != null) {
-      final delta = updated.isIncome ? updated.amount : -updated.amount;
-      await _ref
-          .read(accountsProvider.notifier)
-          .adjustBalance(updated.accountId!, delta);
-    }
-    await _persistAll();
   }
 
   Future<void> delete(Transaction t) async {
@@ -506,21 +515,34 @@ final totalBalanceProvider = Provider<double>((ref) {
       .fold(0.0, (sum, a) => sum + a.balance);
 });
 
-final monthlyIncomeProvider = Provider<double>((ref) {
+/// Single-pass provider: income, expenses AND category breakdown in one O(n).
+/// All three derived providers watch this to avoid redundant list scans.
+final _monthlyStatsProvider = Provider<
+    ({double income, double expenses, Map<String, double> breakdown})>((ref) {
   final now = DateTime.now();
-  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (t.isIncome && t.date.month == now.month && t.date.year == now.year) return sum + t.amount;
-    return sum;
-  });
+  double income = 0;
+  double expenses = 0;
+  final breakdown = <String, double>{};
+  for (final t in ref.watch(transactionsProvider)) {
+    if (t.date.month == now.month && t.date.year == now.year) {
+      if (t.isIncome) {
+        income += t.amount;
+      } else {
+        expenses += t.amount;
+        breakdown[t.category] = (breakdown[t.category] ?? 0) + t.amount;
+      }
+    }
+  }
+  return (income: income, expenses: expenses, breakdown: breakdown);
 });
 
-final monthlyExpensesProvider = Provider<double>((ref) {
-  final now = DateTime.now();
-  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (!t.isIncome && t.date.month == now.month && t.date.year == now.year) return sum + t.amount;
-    return sum;
-  });
-});
+final monthlyIncomeProvider = Provider<double>(
+  (ref) => ref.watch(_monthlyStatsProvider).income,
+);
+
+final monthlyExpensesProvider = Provider<double>(
+  (ref) => ref.watch(_monthlyStatsProvider).expenses,
+);
 
 // ── Savings transfers tracker ─────────────────────────────────────────────────
 
@@ -588,11 +610,6 @@ final monthOverMonthProvider = Provider<double?>((ref) {
   return ((thisIncome - lastIncome) / lastIncome) * 100;
 });
 
-/// Fallback spending ratio for widgets that only import home_provider.
-/// Use [budgetSpendingRatioProvider] from budget_provider for full accuracy
-/// when a budget has been configured.
-final spendingRatioProvider = Provider<double>((ref) => 0.0);
-
 final selectedNavIndexProvider = StateProvider<int>((ref) => 0);
 
 // ── Analysis month selector ───────────────────────────────────────────────────
@@ -602,33 +619,36 @@ final selectedAnalysisMonthProvider = StateProvider<DateTime>((ref) {
   return DateTime(now.year, now.month);
 });
 
-final analysisIncomeProvider = Provider<double>((ref) {
+/// Single-pass provider for analysis tab: income, expenses, category breakdown.
+final _analysisStatsProvider = Provider<
+    ({double income, double expenses, Map<String, double> breakdown})>((ref) {
   final m = ref.watch(selectedAnalysisMonthProvider);
-  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (t.isIncome && t.date.month == m.month && t.date.year == m.year) return sum + t.amount;
-    return sum;
-  });
-});
-
-final analysisExpensesProvider = Provider<double>((ref) {
-  final m = ref.watch(selectedAnalysisMonthProvider);
-  return ref.watch(transactionsProvider).fold(0.0, (sum, t) {
-    if (!t.isIncome && t.date.month == m.month && t.date.year == m.year) return sum + t.amount;
-    return sum;
-  });
-});
-
-final analysisCategoryBreakdownProvider = Provider<Map<String, double>>((ref) {
-  final m = ref.watch(selectedAnalysisMonthProvider);
-  final transactions = ref
-      .watch(transactionsProvider)
-      .where((t) => !t.isIncome && t.date.month == m.month && t.date.year == m.year);
-  final map = <String, double>{};
-  for (final t in transactions) {
-    map[t.category] = (map[t.category] ?? 0) + t.amount;
+  double income = 0;
+  double expenses = 0;
+  final breakdown = <String, double>{};
+  for (final t in ref.watch(transactionsProvider)) {
+    if (t.date.month != m.month || t.date.year != m.year) continue;
+    if (t.isIncome) {
+      income += t.amount;
+    } else {
+      expenses += t.amount;
+      breakdown[t.category] = (breakdown[t.category] ?? 0) + t.amount;
+    }
   }
-  return map;
+  return (income: income, expenses: expenses, breakdown: breakdown);
 });
+
+final analysisIncomeProvider = Provider<double>(
+  (ref) => ref.watch(_analysisStatsProvider).income,
+);
+
+final analysisExpensesProvider = Provider<double>(
+  (ref) => ref.watch(_analysisStatsProvider).expenses,
+);
+
+final analysisCategoryBreakdownProvider = Provider<Map<String, double>>(
+  (ref) => ref.watch(_analysisStatsProvider).breakdown,
+);
 
 final analysisTopCategoryProvider = Provider<WalletCategory?>((ref) {
   final breakdown = ref.watch(analysisCategoryBreakdownProvider);
@@ -640,19 +660,9 @@ final analysisTopCategoryProvider = Provider<WalletCategory?>((ref) {
 
 // ── Category breakdown ────────────────────────────────────────────────────────
 
-final categoryBreakdownProvider = Provider<Map<String, double>>((ref) {
-  final now = DateTime.now();
-  final transactions = ref
-      .watch(transactionsProvider)
-      .where((t) => !t.isIncome && t.date.month == now.month && t.date.year == now.year)
-      .toList();
-
-  final map = <String, double>{};
-  for (final t in transactions) {
-    map[t.category] = (map[t.category] ?? 0) + t.amount;
-  }
-  return map;
-});
+final categoryBreakdownProvider = Provider<Map<String, double>>(
+  (ref) => ref.watch(_monthlyStatsProvider).breakdown,
+);
 
 final topCategoryProvider = Provider<WalletCategory?>((ref) {
   final breakdown = ref.watch(categoryBreakdownProvider);
@@ -808,3 +818,63 @@ final transferHistoryProvider =
     StateNotifierProvider<TransferHistoryNotifier, List<TransferRecord>>(
   (ref) => TransferHistoryNotifier(),
 );
+
+// ── Balance history (last 30 days, cumulative) ────────────────────────────────
+
+class BalancePoint {
+  const BalancePoint({required this.date, required this.balance});
+  final DateTime date;
+  final double balance;
+}
+
+/// Reconstructs the daily balance for the last 30 days by walking backward
+/// from the current total balance and undoing each day's transactions.
+final balanceHistoryProvider = Provider<List<BalancePoint>>((ref) {
+  final transactions = ref.watch(transactionsProvider);
+  final accounts = ref.watch(accountsProvider);
+
+  if (accounts.isEmpty) return [];
+
+  final currentBalance =
+      accounts.fold(0.0, (sum, a) => sum + a.balance);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+
+  // Group transactions by calendar day
+  final txByDay = <DateTime, List<Transaction>>{};
+  for (final t in transactions) {
+    final day = DateTime(t.date.year, t.date.month, t.date.day);
+    txByDay.putIfAbsent(day, () => []).add(t);
+  }
+
+  // Walk backward from today: balance[today] = current, then undo each day
+  final points = <BalancePoint>[];
+  var balance = currentBalance;
+
+  for (var i = 0; i < 30; i++) {
+    final day = today.subtract(Duration(days: i));
+    points.add(BalancePoint(date: day, balance: balance));
+    for (final t in (txByDay[day] ?? [])) {
+      // Undo the transaction effect to get balance before that day
+      if (t.type == TransactionType.income) {
+        balance -= t.amount;
+      } else {
+        balance += t.amount;
+      }
+    }
+  }
+
+  // Return in chronological order (oldest → newest)
+  return points.reversed.toList();
+});
+
+// ── UI feedback signals ───────────────────────────────────────────────────────
+
+/// Incremented each time a transaction is saved via Quick Add.
+/// The FAB listens to this and plays its pulse animation.
+final fabPulseProvider = StateProvider<int>((ref) => 0);
+
+/// IDs of transactions added in the current session that have not yet
+/// been acknowledged by a flash animation in the list.
+final newTransactionIdsProvider =
+    StateProvider<Set<String>>((ref) => const {});

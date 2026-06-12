@@ -10,8 +10,6 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../calendar/presentation/pages/financial_calendar_page.dart';
 import '../../../home/presentation/providers/home_provider.dart';
-import '../../../challenges/presentation/pages/challenges_page.dart';
-import '../../../challenges/presentation/providers/challenges_provider.dart';
 import '../../domain/models/vexa_score.dart';
 import '../../domain/insights_engine.dart';
 import '../providers/vexa_score_provider.dart';
@@ -20,27 +18,28 @@ import '../widgets/coach_charts.dart';
 import '../widgets/cashflow_projection_section.dart';
 import 'time_machine_page.dart';
 
-/// Centro de inteligencia financiera de Vexa: score, insights, retos,
-/// proyecciones, Time Machine y el análisis completo del mes.
-class VexaCoachPage extends StatefulWidget {
+/// Centro de inteligencia financiera de Vexa.
+/// Rediseñado: Score + 3 acciones rápidas + selector Insights / Tu mes.
+class VexaCoachPage extends ConsumerStatefulWidget {
   const VexaCoachPage({super.key});
 
   @override
-  State<VexaCoachPage> createState() => _VexaCoachPageState();
+  ConsumerState<VexaCoachPage> createState() => _VexaCoachPageState();
 }
 
-class _VexaCoachPageState extends State<VexaCoachPage>
+class _VexaCoachPageState extends ConsumerState<VexaCoachPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _stagger;
+  int _tab = 0; // 0 = Insights, 1 = Tu mes
 
-  static const _sectionCount = 12;
+  static const _sectionCount = 5;
 
   @override
   void initState() {
     super.initState();
     _stagger = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1300),
+      duration: const Duration(milliseconds: 1100),
     )..forward();
   }
 
@@ -51,7 +50,7 @@ class _VexaCoachPageState extends State<VexaCoachPage>
   }
 
   Widget _reveal(int i, Widget child) {
-    final start = i / _sectionCount * 0.55;
+    final start = (i / _sectionCount * 0.50).clamp(0.0, 0.65);
     final end = (start + 0.55).clamp(0.0, 1.0);
     return FadeTransition(
       opacity: CurvedAnimation(
@@ -67,6 +66,17 @@ class _VexaCoachPageState extends State<VexaCoachPage>
         )),
         child: child,
       ),
+    );
+  }
+
+  void _showProjection() {
+    HapticFeedback.lightImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (_) => const _ProjectionSheet(),
     );
   }
 
@@ -86,33 +96,53 @@ class _VexaCoachPageState extends State<VexaCoachPage>
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
                     const SizedBox(height: AppSpacing.lg),
+
+                    // ── Header ────────────────────────────────────────────
                     _reveal(0, const _CoachHeader()),
                     const SizedBox(height: AppSpacing.xl),
+
+                    // ── Vexa Score ────────────────────────────────────────
                     _reveal(1, const _VexaScoreCard()),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // ── 3 quick-action chips ──────────────────────────────
+                    _reveal(2, _QuickActionRow(
+                      onProjection: _showProjection,
+                    )),
                     const SizedBox(height: AppSpacing.xl),
-                    _reveal(2, const _InsightsSection()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(3, const _ChallengesEntryCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(4, const CashflowProjectionSection()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(5, const _TimeMachineEntryCard()),
-                    const SizedBox(height: AppSpacing.xxl),
-                    _reveal(6, const _MonthSectionHeader()),
-                    const SizedBox(height: AppSpacing.md),
-                    _reveal(7, const CoachOverviewRow()),
-                    const SizedBox(height: AppSpacing.md),
-                    _reveal(7, const CoachInterpretCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(8, const CoachBalanceLineChart()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(9, const CoachSpendingTrendCard()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(10, const CoachCategoryPieChart()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(11, const CoachCategoryBreakdown()),
-                    const SizedBox(height: AppSpacing.xl),
-                    _reveal(11, const CoachTopSpendsList()),
+
+                    // ── Tab selector ──────────────────────────────────────
+                    _reveal(3, _CoachTabSelector(
+                      selected: _tab,
+                      onChanged: (t) => setState(() => _tab = t),
+                    )),
+                    const SizedBox(height: AppSpacing.lg),
+
+                    // ── Tab content ───────────────────────────────────────
+                    _reveal(
+                      4,
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 280),
+                        switchInCurve: Curves.easeOutCubic,
+                        switchOutCurve: Curves.easeInCubic,
+                        transitionBuilder: (child, anim) => FadeTransition(
+                          opacity: anim,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.04),
+                              end: Offset.zero,
+                            ).animate(anim),
+                            child: child,
+                          ),
+                        ),
+                        child: _tab == 0
+                            ? const _InsightsSection(
+                                key: ValueKey('insights'))
+                            : const _MonthAnalysis(
+                                key: ValueKey('month')),
+                      ),
+                    ),
+
                     const SizedBox(
                       height: AppSpacing.bottomNavHeight +
                           AppSpacing.bottomNavBottomPadding +
@@ -223,7 +253,7 @@ class _CoachHeader extends ConsumerWidget {
   }
 }
 
-// ── Vexa Score (header principal) ─────────────────────────────────────────────
+// ── Vexa Score ────────────────────────────────────────────────────────────────
 
 class _VexaScoreCard extends ConsumerStatefulWidget {
   const _VexaScoreCard();
@@ -327,7 +357,6 @@ class _VexaScoreCardState extends ConsumerState<_VexaScoreCard>
         children: [
           Row(
             children: [
-              // Gauge
               AnimatedBuilder(
                 animation: _arcAnim,
                 builder: (_, child) => SizedBox(
@@ -419,8 +448,6 @@ class _VexaScoreCardState extends ConsumerState<_VexaScoreCard>
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
-
-          // Factores
           Row(
             children: [
               _FactorPill(label: 'Ahorro', value: score.savingsScore),
@@ -434,8 +461,6 @@ class _VexaScoreCardState extends ConsumerState<_VexaScoreCard>
             ],
           ),
           const SizedBox(height: AppSpacing.md),
-
-          // Explicación: el factor más débil
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(AppSpacing.md),
@@ -537,9 +562,11 @@ class _ScoreArcPainter extends CustomPainter {
       Paint()
         ..shader = SweepGradient(
           startAngle: startAngle,
-          endAngle: startAngle + sweepAngle * progress.clamp(0.0, 1.0),
+          endAngle:
+              startAngle + sweepAngle * progress.clamp(0.0, 1.0),
           colors: [color.withValues(alpha: 0.5), color],
-        ).createShader(Rect.fromCircle(center: center, radius: radius))
+        ).createShader(
+            Rect.fromCircle(center: center, radius: radius))
         ..strokeWidth = 8
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
@@ -551,48 +578,274 @@ class _ScoreArcPainter extends CustomPainter {
       old.progress != progress || old.color != color;
 }
 
-// ── Insights inteligentes ─────────────────────────────────────────────────────
+// ── Quick action chips row ────────────────────────────────────────────────────
+
+class _QuickActionRow extends ConsumerWidget {
+  const _QuickActionRow({required this.onProjection});
+  final VoidCallback onProjection;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionChip(
+            icon: Icons.timeline_rounded,
+            label: 'Proyección',
+            color: AppColors.petroleum,
+            subtitle: '30–90 días',
+            onTap: onProjection,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: _ActionChip(
+            icon: Icons.history_toggle_off_rounded,
+            label: 'Time Machine',
+            color: const Color(0xFF7C5CFC),
+            subtitle: 'Simular futuro',
+            onTap: () {
+              HapticFeedback.lightImpact();
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const TimeMachinePage()),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionChip extends StatefulWidget {
+  const _ActionChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.subtitle,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  final String? subtitle;
+
+  @override
+  State<_ActionChip> createState() => _ActionChipState();
+}
+
+class _ActionChipState extends State<_ActionChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _press;
+
+  @override
+  void initState() {
+    super.initState();
+    _press = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 90),
+      lowerBound: 0.94,
+      upperBound: 1.0,
+      value: 1.0,
+    );
+  }
+
+  @override
+  void dispose() {
+    _press.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTapDown: (_) => _press.reverse(),
+      onTapUp: (_) {
+        _press.forward();
+        widget.onTap();
+      },
+      onTapCancel: () => _press.forward(),
+      child: ScaleTransition(
+        scale: _press,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+            border: Border.all(
+                color: widget.color.withValues(alpha: 0.25), width: 0.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: widget.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(widget.icon, size: 17, color: widget.color),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                widget.label,
+                style: AppTypography.labelM.copyWith(
+                  color: c.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (widget.subtitle != null) ...[
+                const SizedBox(height: 1),
+                Text(
+                  widget.subtitle!,
+                  style: AppTypography.labelS.copyWith(
+                    color: c.textTertiary,
+                    fontSize: 10,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tab selector ──────────────────────────────────────────────────────────────
+
+class _CoachTabSelector extends StatelessWidget {
+  const _CoachTabSelector({
+    required this.selected,
+    required this.onChanged,
+  });
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      height: 40,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: c.glass,
+        borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+        border: Border.all(color: c.glassBorder, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          _Tab(
+            label: 'Insights',
+            icon: Icons.auto_awesome_rounded,
+            active: selected == 0,
+            onTap: () => onChanged(0),
+          ),
+          _Tab(
+            label: 'Tu mes',
+            icon: Icons.bar_chart_rounded,
+            active: selected == 1,
+            onTap: () => onChanged(1),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tab extends StatelessWidget {
+  const _Tab({
+    required this.label,
+    required this.icon,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: active ? c.card : Colors.transparent,
+            borderRadius:
+                BorderRadius.circular(AppSpacing.pillRadius),
+            border: active
+                ? Border.all(color: c.glassBorder, width: 0.5)
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: active
+                    ? AppColors.petroleum
+                    : c.textTertiary,
+              ),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: AppTypography.labelM.copyWith(
+                  color: active ? c.textPrimary : c.textTertiary,
+                  fontWeight: active
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Insights tab ──────────────────────────────────────────────────────────────
 
 class _InsightsSection extends ConsumerWidget {
-  const _InsightsSection();
+  const _InsightsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final insights = ref.watch(coachInsightsProvider);
-    final c = context.colors;
-    if (insights.isEmpty) return const SizedBox.shrink();
+
+    if (insights.isEmpty) {
+      return _EmptyState(
+        icon: Icons.auto_awesome_rounded,
+        title: 'Sin insights aún',
+        body: 'Registra transacciones y Vexa Coach analizará tus patrones.',
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.emerald, AppColors.petroleum],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.auto_awesome_rounded,
-                  size: 14, color: Colors.white),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Text('Insights de tu dinero',
-                style: AppTypography.headingS.copyWith(
-                    color: c.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.4)),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        ...insights.map((insight) => Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _InsightCard(insight: insight),
-            )),
-      ],
+      children: insights.map((insight) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: _InsightCard(insight: insight),
+          )).toList(),
     );
   }
 }
@@ -655,161 +908,37 @@ class _InsightCard extends StatelessWidget {
   }
 }
 
-// ── Acceso a retos y hábitos ──────────────────────────────────────────────────
+// ── "Tu mes" tab ──────────────────────────────────────────────────────────────
 
-class _ChallengesEntryCard extends ConsumerWidget {
-  const _ChallengesEntryCard();
+class _MonthAnalysis extends ConsumerWidget {
+  const _MonthAnalysis({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final c = context.colors;
-    final active = ref.watch(activeChallengesProvider);
-    final pending = ref.watch(pendingTodayProvider);
-
-    final subtitle = active.isEmpty
-        ? 'Construye hábitos que cuidan tu dinero'
-        : pending > 0
-            ? '$pending reto${pending == 1 ? '' : 's'} pendiente${pending == 1 ? '' : 's'} hoy'
-            : '¡Todo al día! ${active.length} reto${active.length == 1 ? '' : 's'} en curso';
-
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const ChallengesPage()),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: c.card,
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border: Border.all(
-              color: AppColors.warning.withValues(alpha: 0.30),
-              width: 0.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppColors.warningSurface,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.local_fire_department_rounded,
-                  size: 20, color: AppColors.warning),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Retos y hábitos',
-                      style: AppTypography.labelL.copyWith(
-                          color: c.textPrimary,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(subtitle,
-                      style: AppTypography.labelS
-                          .copyWith(color: c.textSecondary)),
-                ],
-              ),
-            ),
-            if (pending > 0)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                margin: const EdgeInsets.only(right: AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: AppColors.warning,
-                  borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-                ),
-                child: Text('$pending',
-                    style: AppTypography.labelS.copyWith(
-                        color: AppColors.textInverse,
-                        fontWeight: FontWeight.w800)),
-              ),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: c.textTertiary),
-          ],
-        ),
-      ),
+    return const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _MonthSectionHeader(),
+        SizedBox(height: AppSpacing.md),
+        CoachOverviewRow(),
+        SizedBox(height: AppSpacing.md),
+        CoachInterpretCard(),
+        SizedBox(height: AppSpacing.xl),
+        CoachDailyHeatMap(),
+        SizedBox(height: AppSpacing.xl),
+        CoachCategoryMonthlyBars(),
+        SizedBox(height: AppSpacing.xl),
+        CoachCategoryPieChart(),
+        SizedBox(height: AppSpacing.xl),
+        CoachCategoryBreakdown(),
+        SizedBox(height: AppSpacing.xl),
+        CoachTopSpendsList(),
+      ],
     );
   }
 }
 
-// ── Acceso a Time Machine ─────────────────────────────────────────────────────
-
-class _TimeMachineEntryCard extends StatelessWidget {
-  const _TimeMachineEntryCard();
-
-  static const _accent = Color(0xFF7C5CFC);
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const TimeMachinePage()),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _accent.withValues(alpha: 0.14),
-              _accent.withValues(alpha: 0.04),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          border:
-              Border.all(color: _accent.withValues(alpha: 0.30), width: 0.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [_accent, Color(0xFF5A3FD4)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.history_toggle_off_rounded,
-                  size: 20, color: Colors.white),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Vexa Time Machine',
-                      style: AppTypography.labelL.copyWith(
-                          color: c.textPrimary,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text('Descubre cuánto valdría ese gasto en el futuro',
-                      style: AppTypography.labelS
-                          .copyWith(color: c.textSecondary)),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: c.textTertiary),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Encabezado de la sección "Tu mes" con selector ────────────────────────────
+// ── Month section header (selector ← mes →) ───────────────────────────────────
 
 class _MonthSectionHeader extends ConsumerWidget {
   const _MonthSectionHeader();
@@ -844,7 +973,8 @@ class _MonthSectionHeader extends ConsumerWidget {
         ),
         const SizedBox(width: 4),
         Text(capitalized,
-            style: AppTypography.labelM.copyWith(color: c.textTertiary)),
+            style:
+                AppTypography.labelM.copyWith(color: c.textTertiary)),
         const SizedBox(width: 4),
         GestureDetector(
           onTap: isCurrentMonth
@@ -861,6 +991,107 @@ class _MonthSectionHeader extends ConsumerWidget {
                   : c.textSecondary),
         ),
       ],
+    );
+  }
+}
+
+// ── Projection sheet ──────────────────────────────────────────────────────────
+
+class _ProjectionSheet extends StatelessWidget {
+  const _ProjectionSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        color: c.surface,
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(AppSpacing.cardRadiusL),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: c.glassBorderStrong,
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.pillRadius),
+                ),
+              ),
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding,
+                AppSpacing.lg,
+                AppSpacing.screenPadding,
+                MediaQuery.of(context).padding.bottom + AppSpacing.xl,
+              ),
+              child: const CashflowProjectionSection(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+  final IconData icon;
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xxl),
+      decoration: BoxDecoration(
+        color: c.card,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        border: Border.all(color: c.glassBorder, width: 0.5),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppColors.emeraldSurface,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 22, color: AppColors.emerald),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(title,
+              style: AppTypography.labelL.copyWith(
+                  color: c.textPrimary, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          Text(
+            body,
+            textAlign: TextAlign.center,
+            style: AppTypography.labelM
+                .copyWith(color: c.textSecondary, height: 1.5),
+          ),
+        ],
+      ),
     );
   }
 }

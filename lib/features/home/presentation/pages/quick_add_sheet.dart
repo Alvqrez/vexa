@@ -15,6 +15,7 @@ import '../../../gamification/presentation/providers/gamification_provider.dart'
 import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../../shared/widgets/numeric_keypad.dart';
+import 'category_picker_sheet.dart';
 
 /// Registro rápido: monto → categoría → guardar en 2-3 interacciones.
 /// La fecha es hoy, la cuenta es la última usada y el tipo por defecto es gasto.
@@ -70,7 +71,31 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
           _categoryId = lastCat;
         }
       });
+      // Step 2: show category picker overlay on top of this sheet
+      if (mounted) _showCategoryPicker();
     });
+  }
+
+  Future<void> _showCategoryPicker() async {
+    final result = await showModalBottomSheet<WalletCategory>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (_) => CategoryPickerSheet(
+        initialType: _type,
+        selectedCategoryId: _categoryId,
+      ),
+    );
+    if (!mounted) return;
+    if (result != null) {
+      setState(() {
+        _type = result.type == WalletCategoryType.income
+            ? TransactionType.income
+            : TransactionType.expense;
+        _categoryId = result.id;
+      });
+    }
   }
 
   List<WalletCategory> _categoriesFor(TransactionType type) {
@@ -132,15 +157,8 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
       return;
     }
 
-    final currency = ref.read(currencySymbolProvider);
-    final isIncome = _type == TransactionType.income;
-    final color = isIncome ? AppColors.positive : AppColors.negative;
-    final amountStr = amount >= 1000
-        ? '$currency${(amount / 1000).toStringAsFixed(1)}k'
-        : '$currency${amount.toStringAsFixed(2)}';
-    final contextColors = context.colors;
+    // Capture navigator before async gaps.
     final navigator = Navigator.of(context);
-    final messenger = ScaffoldMessenger.of(context);
 
     final transaction = Transaction(
       id: generateId(),
@@ -161,46 +179,11 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
     HapticFeedback.mediumImpact();
     if (!mounted) return;
+    // Mark this transaction for flash animation in the list.
+    ref.read(newTransactionIdsProvider.notifier).state = {transaction.id};
     navigator.pop();
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.check_rounded, size: 15, color: color),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Text(
-                '${isIncome ? 'Ingreso' : 'Gasto'} de $amountStr registrado',
-                style: AppTypography.labelM
-                    .copyWith(color: contextColors.textPrimary),
-              ),
-            ],
-          ),
-          backgroundColor: contextColors.card,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
-          margin: const EdgeInsets.fromLTRB(
-            AppSpacing.screenPadding,
-            0,
-            AppSpacing.screenPadding,
-            AppSpacing.bottomNavHeight +
-                AppSpacing.bottomNavBottomPadding +
-                AppSpacing.md,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          ),
-        ),
-      );
+    // Pulse the FAB as haptic-visual confirmation.
+    ref.read(fabPulseProvider.notifier).state++;
   }
 
   void _openAccountPicker() {

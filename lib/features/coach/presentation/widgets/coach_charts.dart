@@ -10,7 +10,6 @@ import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
-import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
@@ -213,29 +212,304 @@ class _StatTile extends StatelessWidget {
   }
 }
 
-// ── Balance line chart (7 días) ───────────────────────────────────────────────
+// ── Daily activity heat map ───────────────────────────────────────────────────
 
-class CoachBalanceLineChart extends ConsumerStatefulWidget {
-  const CoachBalanceLineChart({super.key});
+class CoachDailyHeatMap extends ConsumerStatefulWidget {
+  const CoachDailyHeatMap({super.key});
 
   @override
-  ConsumerState<CoachBalanceLineChart> createState() =>
-      _CoachBalanceLineChartState();
+  ConsumerState<CoachDailyHeatMap> createState() => _CoachDailyHeatMapState();
 }
 
-class _CoachBalanceLineChartState
-    extends ConsumerState<CoachBalanceLineChart>
+class _CoachDailyHeatMapState extends ConsumerState<CoachDailyHeatMap> {
+  int? _selectedDay;
+  double _selectedNet = 0;
+
+  Color _cellColor(
+      BuildContext context, double net, bool hasData, double maxAbs) {
+    final c = context.colors;
+    if (!hasData || net == 0) return c.glassMedium;
+    final intensity = (net.abs() / maxAbs).clamp(0.12, 1.0);
+    return net < 0
+        ? AppColors.negative.withValues(alpha: intensity)
+        : AppColors.positive.withValues(alpha: intensity);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final transactions = ref.watch(transactionsProvider);
+    final month = ref.watch(selectedAnalysisMonthProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    // weekday: 1=Mon…7=Sun → pad (weekday-1) empty cells before day 1
+    final firstWeekday = DateTime(month.year, month.month, 1).weekday;
+
+    final dayNets = <int, double>{};
+    for (final t in transactions) {
+      if (t.date.month != month.month || t.date.year != month.year) continue;
+      final d = t.date.day;
+      dayNets[d] = (dayNets[d] ?? 0) + (t.isIncome ? t.amount : -t.amount);
+    }
+
+    double maxAbs = 1.0;
+    for (final v in dayNets.values) {
+      if (v.abs() > maxAbs) maxAbs = v.abs();
+    }
+
+    final cells = <(int, double, bool)>[];
+    for (var i = 0; i < firstWeekday - 1; i++) {
+      cells.add((0, 0.0, false));
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      cells.add((d, dayNets[d] ?? 0.0, dayNets.containsKey(d)));
+    }
+    while (cells.length % 7 != 0) {
+      cells.add((0, 0.0, false));
+    }
+
+    final numWeeks = cells.length ~/ 7;
+    const gap = 3.0;
+    const headers = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+
+    return CoachSectionCard(
+      title: 'Actividad diaria',
+      badge: DateFormat('MMMM', 'es').format(month),
+      badgeColor: AppColors.petroleum,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: headers
+                .map((h) => Expanded(
+                      child: Center(
+                        child: Text(h,
+                            style: AppTypography.labelS.copyWith(
+                                color: c.textTertiary, fontSize: 10)),
+                      ),
+                    ))
+                .toList(),
+          ),
+          const SizedBox(height: 6),
+          for (int row = 0; row < numWeeks; row++) ...[
+            Row(
+              children: [
+                for (int col = 0; col < 7; col++) ...[
+                  Expanded(
+                    child: _DayCell(
+                      day: cells[row * 7 + col].$1,
+                      net: cells[row * 7 + col].$2,
+                      hasData: cells[row * 7 + col].$3,
+                      color: _cellColor(
+                        context,
+                        cells[row * 7 + col].$2,
+                        cells[row * 7 + col].$3,
+                        maxAbs,
+                      ),
+                      isSelected: cells[row * 7 + col].$1 != 0 &&
+                          _selectedDay == cells[row * 7 + col].$1,
+                      onTap: cells[row * 7 + col].$1 == 0
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                final d = cells[row * 7 + col].$1;
+                                if (_selectedDay == d) {
+                                  _selectedDay = null;
+                                } else {
+                                  _selectedDay = d;
+                                  _selectedNet = cells[row * 7 + col].$2;
+                                }
+                              });
+                            },
+                    ),
+                  ),
+                  if (col < 6) const SizedBox(width: gap),
+                ],
+              ],
+            ),
+            if (row < numWeeks - 1) const SizedBox(height: gap),
+          ],
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selectedDay != null
+                ? Padding(
+                    key: ValueKey(_selectedDay),
+                    padding: const EdgeInsets.only(top: AppSpacing.lg),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: c.glass,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.cardRadius),
+                        border: Border.all(color: c.glassBorder, width: 0.5),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _selectedNet >= 0
+                                ? Icons.arrow_upward_rounded
+                                : Icons.arrow_downward_rounded,
+                            size: 13,
+                            color: _selectedNet >= 0
+                                ? AppColors.positive
+                                : AppColors.negative,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Día $_selectedDay — '
+                            '${_selectedNet >= 0 ? '+' : ''}'
+                            '$currency${_selectedNet.abs().toStringAsFixed(2)}',
+                            style: AppTypography.labelM.copyWith(
+                              color: _selectedNet >= 0
+                                  ? AppColors.positive
+                                  : AppColors.negative,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey('hm_empty')),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _HeatLegendItem(
+                  color: AppColors.negative.withValues(alpha: 0.7),
+                  label: 'Gastos'),
+              const SizedBox(width: AppSpacing.lg),
+              _HeatLegendItem(color: c.glassMedium, label: 'Sin datos'),
+              const SizedBox(width: AppSpacing.lg),
+              _HeatLegendItem(
+                  color: AppColors.positive.withValues(alpha: 0.7),
+                  label: 'Ingresos'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayCell extends StatelessWidget {
+  const _DayCell({
+    required this.day,
+    required this.net,
+    required this.hasData,
+    required this.color,
+    required this.isSelected,
+    this.onTap,
+  });
+
+  final int day;
+  final double net;
+  final bool hasData;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    if (day == 0) return AspectRatio(aspectRatio: 1, child: Container());
+    return GestureDetector(
+      onTap: onTap,
+      child: AspectRatio(
+        aspectRatio: 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(5),
+            border: isSelected
+                ? Border.all(
+                    color: c.textPrimary.withValues(alpha: 0.5), width: 1.5)
+                : null,
+          ),
+          child: Center(
+            child: Text(
+              '$day',
+              style: AppTypography.labelS.copyWith(
+                color: hasData && net != 0
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : c.textTertiary,
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeatLegendItem extends StatelessWidget {
+  const _HeatLegendItem({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(
+              color: color, borderRadius: BorderRadius.circular(3)),
+        ),
+        const SizedBox(width: 5),
+        Text(label,
+            style: AppTypography.labelS
+                .copyWith(color: context.colors.textTertiary, fontSize: 10)),
+      ],
+    );
+  }
+}
+
+// ── Monthly category stacked bar chart ───────────────────────────────────────
+
+class CoachCategoryMonthlyBars extends ConsumerStatefulWidget {
+  const CoachCategoryMonthlyBars({super.key});
+
+  @override
+  ConsumerState<CoachCategoryMonthlyBars> createState() =>
+      _CoachCategoryMonthlyBarsState();
+}
+
+class _CoachCategoryMonthlyBarsState
+    extends ConsumerState<CoachCategoryMonthlyBars>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
-  late Animation<double> _anim;
+  late Animation<double> _progress;
+
+  int? _selBarIdx;
+  String? _selSegKey;
+  double _selAmount = 0;
+  WalletCategory? _selCat;
+
+  static const double _chartH = 140.0;
+  static const double _gapW = 8.0;
+  static const _monthAbbrs = [
+    'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+    'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  ];
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400));
-    _anim = CurvedAnimation(parent: _ctrl, curve: AppCurves.spring);
-    Future.delayed(const Duration(milliseconds: 600), () {
+        vsync: this, duration: const Duration(milliseconds: 1200));
+    _progress = CurvedAnimation(parent: _ctrl, curve: AppCurves.spring);
+    Future.delayed(const Duration(milliseconds: 400), () {
       if (mounted) _ctrl.forward();
     });
   }
@@ -246,341 +520,205 @@ class _CoachBalanceLineChartState
     super.dispose();
   }
 
-  List<FlSpot> _buildSpots(List<Transaction> transactions) {
-    final now = DateTime.now();
-    final dayTotals = <int, double>{};
-    for (var d = 0; d < 7; d++) {
-      dayTotals[d] = 0;
-    }
-    for (final t in transactions) {
-      final daysAgo = now.difference(t.date).inDays;
-      if (daysAgo >= 0 && daysAgo < 7) {
-        final day = 6 - daysAgo;
-        dayTotals[day] =
-            (dayTotals[day] ?? 0) + (t.isIncome ? t.amount : -t.amount);
-      }
-    }
-    double running = 0;
-    return List.generate(7, (i) {
-      running += dayTotals[i] ?? 0;
-      return FlSpot(i.toDouble(), running);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final transactions = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
-    final spots = _buildSpots(transactions);
-    final minY = spots.map((s) => s.y).reduce(math.min) - 50;
-    final maxY = spots.map((s) => s.y).reduce(math.max) + 50;
+    final walletCats = ref.watch(walletCategoriesProvider);
 
-    final dayLabels = List.generate(7, (i) {
-      final d = DateTime.now().subtract(Duration(days: 6 - i));
-      return DateFormat('E', 'es').format(d);
-    });
-
-    return CoachSectionCard(
-      title: 'Evolución del balance',
-      badge: '7 días',
-      badgeColor: AppColors.petroleum,
-      child: SizedBox(
-        height: 180,
-        child: AnimatedBuilder(
-          animation: _anim,
-          builder: (context, child) {
-            final progress = _anim.value;
-            final visibleSpots = spots
-                .take((spots.length * progress)
-                    .ceil()
-                    .clamp(1, spots.length))
-                .toList();
-
-            return LineChart(
-              LineChartData(
-                minX: 0,
-                maxX: 6,
-                minY: minY,
-                maxY: maxY,
-                clipData: const FlClipData.all(),
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: false,
-                  horizontalInterval: (maxY - minY) / 4,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: c.glassBorder,
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 24,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= dayLabels.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Text(
-                          dayLabels[i],
-                          style: AppTypography.labelS.copyWith(
-                            color: i == 6
-                                ? AppColors.emerald
-                                : c.textTertiary,
-                            fontSize: 10,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => c.cardElevated,
-                    getTooltipItems: (spots) => spots
-                        .map((s) => LineTooltipItem(
-                              '$currency${s.y.toStringAsFixed(0)}',
-                              AppTypography.labelM.copyWith(
-                                  color: AppColors.emerald,
-                                  fontWeight: FontWeight.w600),
-                            ))
-                        .toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: visibleSpots,
-                    isCurved: true,
-                    curveSmoothness: 0.35,
-                    color: AppColors.emerald,
-                    barWidth: 2.5,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) {
-                        if (index != visibleSpots.length - 1) {
-                          return FlDotCirclePainter(
-                            radius: 0,
-                            color: Colors.transparent,
-                            strokeColor: Colors.transparent,
-                          );
-                        }
-                        return FlDotCirclePainter(
-                          radius: 4,
-                          color: AppColors.emerald,
-                          strokeWidth: 2,
-                          strokeColor: c.background,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          AppColors.emerald.withValues(alpha: 0.18),
-                          AppColors.emerald.withValues(alpha: 0.0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-// ── Spending trend bar chart (6 meses) ────────────────────────────────────────
-
-class CoachSpendingTrendCard extends ConsumerStatefulWidget {
-  const CoachSpendingTrendCard({super.key});
-
-  @override
-  ConsumerState<CoachSpendingTrendCard> createState() =>
-      _CoachSpendingTrendCardState();
-}
-
-class _CoachSpendingTrendCardState
-    extends ConsumerState<CoachSpendingTrendCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _bar;
-  late Animation<double> _barAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _bar = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1400));
-    _barAnim = CurvedAnimation(parent: _bar, curve: AppCurves.spring);
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) _bar.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _bar.dispose();
-    super.dispose();
-  }
-
-  String _monthAbbr(int month) {
-    const abbrs = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
-    ];
-    return abbrs[(month - 1).clamp(0, 11)];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final data = ref.watch(monthlySpendingTrendProvider);
     final now = DateTime.now();
-    final currentLabel = _monthAbbr(now.month);
+    final monthData = List.generate(6, (i) {
+      final m = DateTime(now.year, now.month - 5 + i);
+      final catTotals = <String, double>{};
+      for (final t in transactions) {
+        if (t.isIncome || t.date.month != m.month || t.date.year != m.year) {
+          continue;
+        }
+        catTotals[t.category] = (catTotals[t.category] ?? 0) + t.amount;
+      }
+      final total = catTotals.values.fold(0.0, (s, v) => s + v);
+      return (m: m, cats: catTotals, total: total);
+    });
+
+    final maxTotal = monthData.fold(0.0, (mx, d) => math.max(mx, d.total));
 
     return CoachSectionCard(
-      title: 'Tendencia de gastos',
+      title: 'Gastos por categoría',
       badge: '6 meses',
       badgeColor: AppColors.negative,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AnimatedBuilder(
-            animation: _barAnim,
-            builder: (context, child) {
-              final c = context.colors;
-              return SizedBox(
-                height: 120,
-                child: CustomPaint(
-                  painter: _BarChartPainter(
-                    data: data,
-                    progress: _barAnim.value,
-                    currentLabel: currentLabel,
-                    barColor: c.glassMedium,
-                    lineColor: c.glassBorder,
-                  ),
-                  size: Size.infinite,
-                ),
+            animation: _progress,
+            builder: (ctx, _) {
+              return LayoutBuilder(
+                builder: (ctx, constraints) {
+                  final barW = (constraints.maxWidth - 5 * _gapW) / 6;
+                  return Column(
+                    children: [
+                      SizedBox(
+                        height: _chartH,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            for (int i = 0; i < monthData.length; i++) ...[
+                              if (i > 0) const SizedBox(width: _gapW),
+                              SizedBox(
+                                width: barW,
+                                height: _chartH,
+                                child: Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: _buildBar(
+                                      ctx, monthData[i], maxTotal, walletCats, i),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          for (int i = 0; i < monthData.length; i++) ...[
+                            if (i > 0) const SizedBox(width: _gapW),
+                            SizedBox(
+                              width: barW,
+                              child: Center(
+                                child: Text(
+                                  _monthAbbrs[monthData[i].m.month - 1],
+                                  style: AppTypography.labelS.copyWith(
+                                    color: monthData[i].m.month == now.month &&
+                                            monthData[i].m.year == now.year
+                                        ? AppColors.emerald
+                                        : c.textTertiary,
+                                    fontSize: 10,
+                                    fontWeight:
+                                        monthData[i].m.month == now.month &&
+                                                monthData[i].m.year == now.year
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  );
+                },
               );
             },
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Builder(
-            builder: (context) {
-              final c = context.colors;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: data.map((d) {
-                  final isCurrent = d.label == currentLabel;
-                  return Text(
-                    d.label,
-                    style: AppTypography.labelS.copyWith(
-                      color:
-                          isCurrent ? AppColors.emerald : c.textTertiary,
-                      fontWeight:
-                          isCurrent ? FontWeight.w600 : FontWeight.w400,
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            child: _selCat != null
+                ? Padding(
+                    key: ValueKey('$_selBarIdx:$_selSegKey'),
+                    padding: const EdgeInsets.only(top: AppSpacing.lg),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: c.glass,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.cardRadius),
+                        border: Border.all(color: c.glassBorder, width: 0.5),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: _selCat!.color.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(9),
+                            ),
+                            child: Icon(_selCat!.icon,
+                                size: 14, color: _selCat!.color),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Text(_selCat!.name,
+                                style: AppTypography.labelM
+                                    .copyWith(color: c.textPrimary)),
+                          ),
+                          Text(
+                            '-$currency${_selAmount.toStringAsFixed(2)}',
+                            style: AppTypography.labelL.copyWith(
+                                color: AppColors.negative,
+                                fontWeight: FontWeight.w600),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                }).toList(),
-              );
-            },
+                  )
+                : const SizedBox.shrink(key: ValueKey('bar_empty')),
           ),
         ],
       ),
     );
   }
-}
 
-class _BarChartPainter extends CustomPainter {
-  const _BarChartPainter({
-    required this.data,
-    required this.progress,
-    required this.currentLabel,
-    required this.barColor,
-    required this.lineColor,
-  });
-  final List<({String label, double value})> data;
-  final double progress;
-  final String currentLabel;
-  final Color barColor;
-  final Color lineColor;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final maxVal = data.fold(0.0, (m, d) => math.max(m, d.value));
-    if (maxVal == 0) return;
-    final barWidth = size.width / data.length * 0.5;
-    final gap = size.width / data.length;
-
-    for (int i = 0; i < data.length; i++) {
-      final d = data[i];
-      final isCurrent = d.label == currentLabel;
-      final barH = (d.value / maxVal) * size.height * progress;
-      final x = gap * i + gap / 2;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(x - barWidth / 2, size.height - barH, barWidth, barH),
-        const Radius.circular(6),
+  Widget _buildBar(
+    BuildContext context,
+    ({DateTime m, Map<String, double> cats, double total}) data,
+    double maxTotal,
+    List<WalletCategory> walletCats,
+    int barIdx,
+  ) {
+    final c = context.colors;
+    if (data.total == 0 || maxTotal == 0) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(6),
+        child: Container(height: 4 * _progress.value, color: c.glassMedium),
       );
-      if (isCurrent) {
-        canvas.drawRRect(
-          rect,
-          Paint()
-            ..shader = LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppColors.emerald, AppColors.emeraldDim],
-            ).createShader(Rect.fromLTWH(
-                x - barWidth / 2, size.height - barH, barWidth, barH)),
-        );
-        canvas.drawRRect(
-          rect,
-          Paint()
-            ..color = AppColors.emerald.withValues(alpha: 0.25)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-        );
-      } else {
-        canvas.drawRRect(
-          rect,
-          Paint()
-            ..color = barColor
-            ..style = PaintingStyle.fill,
-        );
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(
-            Rect.fromLTWH(x - barWidth / 2, size.height - barH, barWidth, 2),
-            const Radius.circular(6),
-          ),
-          Paint()..color = Colors.white.withValues(alpha: 0.12),
-        );
-      }
     }
-    final linePaint = Paint()
-      ..color = lineColor
-      ..strokeWidth = 0.5;
-    canvas.drawLine(
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-      linePaint,
+    final barH = (data.total / maxTotal) * _chartH * _progress.value;
+    final segs = data.cats.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: SizedBox(
+        height: barH.clamp(4.0, _chartH),
+        width: double.infinity,
+        child: Column(
+          children: segs.map((seg) {
+            final frac = seg.value / data.total;
+            final cat = resolveCategory(seg.key, walletCats);
+            final isSelected = _selBarIdx == barIdx && _selSegKey == seg.key;
+            return Expanded(
+              flex: (frac * 1000).round().clamp(1, 1000),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() {
+                    if (isSelected) {
+                      _selBarIdx = null;
+                      _selSegKey = null;
+                      _selCat = null;
+                    } else {
+                      _selBarIdx = barIdx;
+                      _selSegKey = seg.key;
+                      _selAmount = seg.value;
+                      _selCat = cat;
+                    }
+                  });
+                },
+                child: Container(
+                  color: cat.color.withValues(alpha: isSelected ? 1.0 : 0.78),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
-
-  @override
-  bool shouldRepaint(_BarChartPainter old) =>
-      old.progress != progress ||
-      old.currentLabel != currentLabel ||
-      old.barColor != barColor ||
-      old.lineColor != lineColor;
 }
 
 // ── Category pie chart ────────────────────────────────────────────────────────

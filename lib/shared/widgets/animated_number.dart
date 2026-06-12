@@ -66,7 +66,7 @@ class _AnimatedNumberState extends State<AnimatedNumber>
     ]).animate(_flash);
 
     _flashSlide = Tween<Offset>(
-      begin: const Offset(0, 0.5),
+      begin: const Offset(0, 0.25),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _flash,
@@ -120,8 +120,9 @@ class _AnimatedNumberState extends State<AnimatedNumber>
     final badgeColor =
         isPositive ? const Color(0xFF00D68F) : const Color(0xFFFF5F82);
 
-    return Stack(
-      clipBehavior: Clip.none,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Main counter
         AnimatedBuilder(
@@ -148,16 +149,15 @@ class _AnimatedNumberState extends State<AnimatedNumber>
           },
         ),
 
-        // Change badge (+/- indicator)
+        // Change badge — appears to the right of the number, same baseline.
         if (widget.showChangeBadge)
-          Positioned(
-            top: -(widget.style.fontSize ?? 40) * 0.55,
-            left: 0,
-            child: AnimatedBuilder(
-              animation: _flash,
-              builder: (_, child) {
-                if (_flash.value == 0) return const SizedBox.shrink();
-                return FadeTransition(
+          AnimatedBuilder(
+            animation: _flash,
+            builder: (_, child) {
+              if (_flash.value == 0) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: FadeTransition(
                   opacity: _flashOpacity,
                   child: SlideTransition(
                     position: _flashSlide,
@@ -196,9 +196,9 @@ class _AnimatedNumberState extends State<AnimatedNumber>
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
       ],
     );

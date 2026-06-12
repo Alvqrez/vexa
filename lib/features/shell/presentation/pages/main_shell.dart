@@ -144,6 +144,10 @@ class _MainShellState extends ConsumerState<MainShell>
     }
   }
 
+  // Maximum occurrences to backfill per recurring rule per session.
+  // Prevents runaway loops when the app hasn't been opened for months.
+  static const _kMaxBackfillPerRule = 62;
+
   Future<void> _processRecurring() async {
     try {
       final all = await RecurringTransaction.loadAll();
@@ -165,8 +169,11 @@ class _MainShellState extends ConsumerState<MainShell>
           continue;
         }
         var current = r;
+        int backfillCount = 0;
         try {
-          while (!current.nextDate.isAfter(today)) {
+          while (!current.nextDate.isAfter(today) &&
+              backfillCount < _kMaxBackfillPerRule) {
+            backfillCount++;
             final dayAllowed = current.weekDays == null ||
                 current.weekDays!.contains(current.nextDate.weekday);
             if (dayAllowed) {
@@ -421,17 +428,21 @@ void showTransactionSheet(
 
 // ── Quick add FAB ─────────────────────────────────────────────────────────────
 
-class _QuickAddFab extends StatefulWidget {
+class _QuickAddFab extends ConsumerStatefulWidget {
   const _QuickAddFab({required this.onTap});
   final VoidCallback onTap;
 
   @override
-  State<_QuickAddFab> createState() => _QuickAddFabState();
+  ConsumerState<_QuickAddFab> createState() => _QuickAddFabState();
 }
 
-class _QuickAddFabState extends State<_QuickAddFab>
-    with SingleTickerProviderStateMixin {
+class _QuickAddFabState extends ConsumerState<_QuickAddFab>
+    with TickerProviderStateMixin {
   late final AnimationController _press;
+  late final AnimationController _pulse;
+  late final Animation<double> _scaleAnim;
+  late final Animation<double> _ringScale;
+  late final Animation<double> _ringOpacity;
 
   @override
   void initState() {
@@ -443,47 +454,110 @@ class _QuickAddFabState extends State<_QuickAddFab>
       upperBound: 1.0,
       value: 1.0,
     );
+    // Initialised at value=1 so the ring starts invisible (opacity ends at 0).
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+      value: 1.0,
+    );
+    // Button scale: 1.0 → 1.14 → 1.0 in a single forward pass.
+    _scaleAnim = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.14)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 30,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.14, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 70,
+      ),
+    ]).animate(_pulse);
+    // Ring expands outward from the FAB.
+    _ringScale = Tween<double>(begin: 1.0, end: 1.9).animate(
+      CurvedAnimation(parent: _pulse, curve: Curves.easeOut),
+    );
+    // Ring fades in quickly then fades out slowly.
+    _ringOpacity = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.65), weight: 15),
+      TweenSequenceItem(tween: Tween(begin: 0.65, end: 0.0), weight: 85),
+    ]).animate(_pulse);
   }
 
   @override
   void dispose() {
     _press.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _press.reverse(),
-      onTapUp: (_) => _press.forward(),
-      onTapCancel: () => _press.forward(),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        widget.onTap();
-      },
-      child: ScaleTransition(
-        scale: _press,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.emerald, AppColors.emeraldDim],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.emerald.withValues(alpha: 0.32),
-                blurRadius: 20,
-                spreadRadius: -4,
-                offset: const Offset(0, 8),
+    ref.listen(fabPulseProvider, (_, _) => _pulse.forward(from: 0));
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            // Expanding ring — only painted while the pulse is running.
+            Transform.scale(
+              scale: _ringScale.value,
+              child: Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.emerald
+                        .withValues(alpha: _ringOpacity.value),
+                    width: 2.5,
+                  ),
+                ),
               ),
-            ],
+            ),
+            // Button with combined press + pulse scale.
+            Transform.scale(
+              scale: _scaleAnim.value,
+              child: child,
+            ),
+          ],
+        );
+      },
+      child: GestureDetector(
+        onTapDown: (_) => _press.reverse(),
+        onTapUp: (_) => _press.forward(),
+        onTapCancel: () => _press.forward(),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          widget.onTap();
+        },
+        child: ScaleTransition(
+          scale: _press,
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.emerald, AppColors.emeraldDim],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.emerald.withValues(alpha: 0.32),
+                  blurRadius: 20,
+                  spreadRadius: -4,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.add_rounded,
+                color: AppColors.textInverse, size: 26),
           ),
-          child: const Icon(Icons.add_rounded,
-              color: AppColors.textInverse, size: 26),
         ),
       ),
     );
@@ -509,6 +583,8 @@ class _FadeIndexedStack extends StatefulWidget {
 class _FadeIndexedStackState extends State<_FadeIndexedStack>
     with TickerProviderStateMixin {
   late final List<AnimationController> _ctrls;
+  late final List<CurvedAnimation> _anims;
+  late final List<Animation<Offset>> _slideAnims;
   late final List<bool> _visible;
 
   @override
@@ -530,6 +606,17 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
       });
       return ctrl;
     });
+    // Cache CurvedAnimation and slide animations to avoid re-creating (and
+    // leaking) animation objects on every build call.
+    _anims = List.generate(n, (i) => CurvedAnimation(
+      parent: _ctrls[i],
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    ));
+    _slideAnims = List.generate(n, (i) => Tween<Offset>(
+      begin: const Offset(0, 0.03),
+      end: Offset.zero,
+    ).animate(_anims[i]));
   }
 
   @override
@@ -544,6 +631,9 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
 
   @override
   void dispose() {
+    for (final a in _anims) {
+      a.dispose();
+    }
     for (final c in _ctrls) {
       c.dispose();
     }
@@ -555,20 +645,12 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
     return Stack(
       fit: StackFit.expand,
       children: List.generate(widget.children.length, (i) {
-        final anim = CurvedAnimation(
-          parent: _ctrls[i],
-          curve: Curves.easeOutCubic,
-          reverseCurve: Curves.easeInCubic,
-        );
         return Offstage(
           offstage: !_visible[i],
           child: FadeTransition(
-            opacity: anim,
+            opacity: _anims[i],
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.03),
-                end: Offset.zero,
-              ).animate(anim),
+              position: _slideAnims[i],
               child: RepaintBoundary(child: widget.children[i]),
             ),
           ),

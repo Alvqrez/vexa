@@ -22,6 +22,7 @@ import 'rate_app_page.dart';
 import 'about_page.dart';
 import 'settings_page.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../../../home/presentation/pages/customize_home_sheet.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -354,9 +355,8 @@ class _StatsRow extends ConsumerWidget {
     final savingsRate = income > 0
         ? ((income - expenses) / income * 100).round().clamp(0, 100)
         : 0;
-    final monthLabel =
-        DateFormat('MMM', 'es').format(now)[0].toUpperCase() +
-        DateFormat('MMM', 'es').format(now).substring(1);
+    final rawMonth = DateFormat('MMM', 'es').format(now);
+    final monthLabel = rawMonth[0].toUpperCase() + rawMonth.substring(1);
 
     return Row(
       children: [
@@ -464,6 +464,16 @@ class _AccountSettings extends ConsumerWidget {
     );
   }
 
+  void _openCustomizeHome(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (_) => const CustomizeHomeSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currencyCode = ref.watch(currencyCodeProvider);
@@ -475,6 +485,12 @@ class _AccountSettings extends ConsumerWidget {
           label: 'Datos personales',
           color: AppColors.petroleum,
           onTap: () => _push(context, const PersonalDataPage()),
+        ),
+        _SettingsItem(
+          icon: Icons.dashboard_customize_rounded,
+          label: 'Personalizar inicio',
+          color: AppColors.catEntertainment,
+          onTap: () => _openCustomizeHome(context),
         ),
         _SettingsItem(
           icon: Icons.euro_rounded,
