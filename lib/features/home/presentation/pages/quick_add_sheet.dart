@@ -18,18 +18,46 @@ import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/providers/subcategories_provider.dart';
 import '../../../wallet/presentation/widgets/subcategory_form_sheet.dart';
 import '../../../../shared/widgets/numeric_keypad.dart';
-import 'category_picker_sheet.dart';
+import '../../../../shared/widgets/drag_handle.dart';
+import '../../../../core/utils/amount_formatter.dart';
+
+/// Resultado que QuickAddSheet devuelve al pop para que el shell maneje el flujo.
+sealed class QuickAddOutcome {
+  const QuickAddOutcome();
+}
+
+/// La transacción fue guardada correctamente.
+class QuickAddSaved extends QuickAddOutcome {
+  const QuickAddSaved();
+}
+
+/// El usuario intentó confirmar sin categoría; el shell debe abrir el picker.
+class QuickAddNeedsCategory extends QuickAddOutcome {
+  const QuickAddNeedsCategory(this.amount);
+  final String amount;
+}
 
 /// Registro rápido: monto → categoría → guardar en 2-3 interacciones.
 /// La fecha es hoy, la cuenta es la última usada y el tipo por defecto es gasto.
 class QuickAddSheet extends ConsumerStatefulWidget {
   const QuickAddSheet({
     super.key,
+    this.initialType = TransactionType.expense,
+    this.initialCategoryId,
+    this.initialSubcategoryId,
+    this.initialAmount,
+    this.initialAccountId,
     this.onTransfer,
     this.onGoal,
     this.onSubscription,
     this.onMoreDetails,
   });
+
+  final TransactionType initialType;
+  final String? initialCategoryId;
+  final String? initialSubcategoryId;
+  final String? initialAmount;
+  final String? initialAccountId;
 
   /// Accesos secundarios — el shell inyecta los flujos existentes.
   final VoidCallback? onTransfer;
@@ -50,8 +78,8 @@ class QuickAddSheet extends ConsumerStatefulWidget {
 }
 
 class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
-  TransactionType _type = TransactionType.expense;
-  String _amountStr = '';
+  late TransactionType _type;
+  final _amountNotifier = ValueNotifier<String>('');
   String? _categoryId;
   String? _subcategoryId;
   String? _accountId;
@@ -59,52 +87,25 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   @override
   void initState() {
     super.initState();
+    _type = widget.initialType;
+    _categoryId = widget.initialCategoryId;
+    _subcategoryId = widget.initialSubcategoryId;
+    if (widget.initialAmount != null && widget.initialAmount!.isNotEmpty) {
+      _amountNotifier.value = widget.initialAmount!;
+    }
     final accounts = ref.read(accountsProvider);
-    _accountId = accounts.firstOrNull?.id;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final lastAccount = await LocalPrefsService.getString('last_account_id');
-      final lastCat =
-          await LocalPrefsService.getString('last_quick_cat_${_type.name}');
-      if (!mounted) return;
-      setState(() {
-        final currentAccounts = ref.read(accountsProvider);
-        if (lastAccount != null &&
-            currentAccounts.any((a) => a.id == lastAccount)) {
-          _accountId = lastAccount;
-        }
-        final cats = _categoriesFor(_type);
-        if (lastCat != null && cats.any((c) => c.id == lastCat)) {
-          _categoryId = lastCat;
-        }
-      });
-      // Step 2: show category picker overlay on top of this sheet
-      if (mounted) _showCategoryPicker();
-    });
+    final candidateId = widget.initialAccountId;
+    if (candidateId != null && accounts.any((a) => a.id == candidateId)) {
+      _accountId = candidateId;
+    } else {
+      _accountId = accounts.firstOrNull?.id;
+    }
   }
 
-  Future<void> _showCategoryPicker() async {
-    final result = await showModalBottomSheet<CategorySelection>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      enableDrag: false,
-      builder: (_) => CategoryPickerSheet(
-        initialType: _type,
-        selectedCategoryId: _categoryId,
-        selectedSubcategoryId: _subcategoryId,
-      ),
-    );
-    if (!mounted) return;
-    if (result != null) {
-      setState(() {
-        _type = result.category.type == WalletCategoryType.income
-            ? TransactionType.income
-            : TransactionType.expense;
-        _categoryId = result.category.id;
-        _subcategoryId = result.subcategory?.id;
-      });
-    }
+  @override
+  void dispose() {
+    _amountNotifier.dispose();
+    super.dispose();
   }
 
   /// Selector rápido de subcategoría al mantener presionado un chip.
@@ -215,9 +216,8 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   }
 
   WalletCategory? get _selectedCategory {
-    final cats = _categoriesFor(_type);
-    if (cats.isEmpty) return null;
-    return cats.where((c) => c.id == _categoryId).firstOrNull ?? cats.first;
+    if (_categoryId == null) return null;
+    return _categoriesFor(_type).where((c) => c.id == _categoryId).firstOrNull;
   }
 
   Color get _typeColor =>
@@ -233,33 +233,17 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     });
   }
 
-  ({String integer, String decimal}) get _splitDisplay {
-    final raw = _amountStr;
-    if (raw.isEmpty) return (integer: '0', decimal: '.00');
-    String intPart;
-    String decPart;
-    if (raw.contains('.')) {
-      final idx = raw.indexOf('.');
-      intPart = raw.substring(0, idx).isEmpty ? '0' : raw.substring(0, idx);
-      final d = raw.substring(idx + 1);
-      decPart = d.isEmpty ? '.' : (d.length == 1 ? '.${d}0' : '.$d');
-    } else {
-      intPart = raw;
-      decPart = '.00';
-    }
-    final buf = StringBuffer();
-    for (int i = 0; i < intPart.length; i++) {
-      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
-      buf.write(intPart[i]);
-    }
-    return (integer: buf.toString(), decimal: decPart);
-  }
-
   Future<void> _submit() async {
-    final amount = double.tryParse(_amountStr);
-    final cat = _selectedCategory;
-    if (amount == null || amount <= 0 || cat == null) {
+    final amountStr = _amountNotifier.value;
+    final amount = double.tryParse(amountStr);
+    if (amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
+      return;
+    }
+    final cat = _selectedCategory;
+    if (cat == null) {
+      HapticFeedback.heavyImpact();
+      Navigator.of(context).pop(QuickAddNeedsCategory(amountStr));
       return;
     }
 
@@ -287,13 +271,12 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     if (_accountId != null) {
       await LocalPrefsService.setString('last_account_id', _accountId!);
     }
-    await LocalPrefsService.setString('last_quick_cat_${_type.name}', cat.id);
 
     HapticFeedback.mediumImpact();
     if (!mounted) return;
     // Mark this transaction for flash animation in the list.
     ref.read(newTransactionIdsProvider.notifier).state = {transaction.id};
-    navigator.pop();
+    navigator.pop(const QuickAddSaved());
     // Pulse the FAB as haptic-visual confirmation.
     ref.read(fabPulseProvider.notifier).state++;
   }
@@ -387,7 +370,6 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     final cats = _categoriesFor(_type);
     final selected = _selectedCategory;
     final account = accounts.where((a) => a.id == _accountId).firstOrNull;
-    final split = _splitDisplay;
 
     return Container(
       decoration: BoxDecoration(
@@ -402,19 +384,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Drag handle ────────────────────────────────────────────────
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.md),
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.glassBorderStrong,
-                  borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-                ),
-              ),
-            ),
-          ),
+          const DragHandle(),
 
           // ── Header: toggle tipo + accesos secundarios ──────────────────
           Padding(
@@ -466,53 +436,59 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
           ),
 
           // ── Monto ──────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenPadding, 14, AppSpacing.screenPadding, 0),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      currency,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: _typeColor.withValues(alpha: 0.65),
-                        height: 1,
+          ValueListenableBuilder<String>(
+            valueListenable: _amountNotifier,
+            builder: (_, amountStr, _) {
+              final split = splitAmount(amountStr);
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenPadding, 14, AppSpacing.screenPadding, 0),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          currency,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: _typeColor.withValues(alpha: 0.65),
+                            height: 1,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    split.integer,
-                    style: TextStyle(
-                      fontSize: 46,
-                      fontWeight: FontWeight.w800,
-                      color: _typeColor,
-                      letterSpacing: -1.5,
-                      height: 1,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Text(
-                      split.decimal,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: _typeColor.withValues(alpha: 0.45),
-                        letterSpacing: -0.5,
-                        height: 1,
+                      const SizedBox(width: 2),
+                      Text(
+                        split.integer,
+                        style: TextStyle(
+                          fontSize: 46,
+                          fontWeight: FontWeight.w800,
+                          color: _typeColor,
+                          letterSpacing: -1.5,
+                          height: 1,
+                        ),
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Text(
+                          split.decimal,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: _typeColor.withValues(alpha: 0.45),
+                            letterSpacing: -0.5,
+                            height: 1,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
 
           // ── Categorías (chips horizontales) ────────────────────────────
@@ -642,7 +618,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                       final cat = _selectedCategory;
                       Navigator.of(context).pop();
                       widget.onMoreDetails!(
-                          _type, _amountStr, cat?.id, _subcategoryId);
+                          _type, _amountNotifier.value, cat?.id, _subcategoryId);
                     },
                     behavior: HitTestBehavior.opaque,
                     child: Padding(
@@ -676,14 +652,17 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
               AppSpacing.screenPadding,
               AppSpacing.sm,
             ),
-            child: NumericKeypad(
-              value: _amountStr,
-              onValueChanged: (v) => setState(() => _amountStr = v),
-              onConfirm: _submit,
-              confirmColor: _typeColor,
-              currencySymbol: currency,
-              keyHeight: 44,
-              confirmHeight: 48,
+            child: ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, amountStr, _) => NumericKeypad(
+                value: amountStr,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                onConfirm: _submit,
+                confirmColor: _typeColor,
+                currencySymbol: currency,
+                keyHeight: 44,
+                confirmHeight: 48,
+              ),
             ),
           ),
         ],

@@ -11,6 +11,8 @@ import '../../../../shared/widgets/app_bottom_nav.dart';
 import '../../../home/presentation/pages/home_page.dart';
 import '../../../home/presentation/pages/add_transaction_page.dart';
 import '../../../home/presentation/pages/quick_add_sheet.dart';
+import '../../../home/presentation/pages/category_picker_sheet.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/pages/wallet_page.dart';
 import '../../../coach/presentation/pages/vexa_coach_page.dart';
 import '../../../budget/presentation/pages/budget_page.dart';
@@ -349,7 +351,7 @@ class _MainShellState extends ConsumerState<MainShell>
                     parent: _fabCtrl,
                     curve: Curves.easeOut,
                   ),
-                  child: _QuickAddFab(onTap: () => _openQuickAdd(context)),
+                  child: _QuickAddFab(onTap: () { _openQuickAdd(context); }),
                 ),
               ),
             ),
@@ -359,36 +361,88 @@ class _MainShellState extends ConsumerState<MainShell>
     );
   }
 
-  void _openQuickAdd(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      builder: (_) => QuickAddSheet(
-        onTransfer: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const _TransferSheet(),
+  Future<void> _openQuickAdd(BuildContext context) async {
+    final lastAccountId = await LocalPrefsService.getString('last_account_id');
+    if (!context.mounted) return;
+
+    TransactionType currentType = TransactionType.expense;
+    String? categoryId;
+    String? subcategoryId;
+    String? pendingAmount;
+
+    while (context.mounted) {
+      // Step 1: Category picker
+      final catResult = await showModalBottomSheet<CategorySelection>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        enableDrag: false,
+        builder: (_) => CategoryPickerSheet(
+          initialType: currentType,
+          selectedCategoryId: categoryId,
+          selectedSubcategoryId: subcategoryId,
         ),
-        onGoal: () => _showAddGoal(context),
-        onSubscription: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => const AddSubscriptionSheet(),
-        ),
-        onMoreDetails: (type, amount, categoryId, subcategoryId) =>
-            showTransactionSheet(
-          context,
-          defaultType: type,
-          initialAmount: amount,
+      );
+      if (!context.mounted) return;
+
+      if (catResult != null) {
+        categoryId = catResult.category.id;
+        subcategoryId = catResult.subcategory?.id;
+        currentType = catResult.category.type == WalletCategoryType.income
+            ? TransactionType.income
+            : TransactionType.expense;
+      } else {
+        categoryId = null;
+        subcategoryId = null;
+      }
+
+      // Step 2: QuickAddSheet
+      final outcome = await showModalBottomSheet<QuickAddOutcome>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        useSafeArea: true,
+        builder: (_) => QuickAddSheet(
+          initialType: currentType,
           initialCategoryId: categoryId,
           initialSubcategoryId: subcategoryId,
+          initialAmount: pendingAmount,
+          initialAccountId: lastAccountId,
+          onTransfer: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const _TransferSheet(),
+          ),
+          onGoal: () => _showAddGoal(context),
+          onSubscription: () => showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (_) => const AddSubscriptionSheet(),
+          ),
+          onMoreDetails: (type, amount, catId, subId) {
+            showTransactionSheet(
+              context,
+              defaultType: type,
+              initialAmount: amount,
+              initialCategoryId: catId,
+              initialSubcategoryId: subId,
+            );
+          },
         ),
-      ),
-    );
+      );
+      if (!context.mounted) return;
+
+      if (outcome is QuickAddNeedsCategory) {
+        pendingAmount = outcome.amount;
+        categoryId = null;
+        subcategoryId = null;
+        continue;
+      }
+      break;
+    }
   }
 
   void _showAddGoal(BuildContext context) {
@@ -407,14 +461,19 @@ class _MainShellState extends ConsumerState<MainShell>
 
 // ── Global helper to show AddTransactionSheet consistently ────────────────────
 
-void showTransactionSheet(
+Future<void> showTransactionSheet(
   BuildContext context, {
   Transaction? existing,
   TransactionType defaultType = TransactionType.expense,
   String? initialAmount,
   String? initialCategoryId,
   String? initialSubcategoryId,
-}) {
+}) async {
+  String? lastAccountId;
+  if (existing == null) {
+    lastAccountId = await LocalPrefsService.getString('last_account_id');
+    if (!context.mounted) return;
+  }
   showModalBottomSheet(
     context: context,
     isScrollControlled: true,
@@ -423,6 +482,7 @@ void showTransactionSheet(
     builder: (_) => AddTransactionSheet(
       existing: existing,
       defaultType: defaultType,
+      defaultAccountId: lastAccountId,
       initialAmount: initialAmount,
       initialCategoryId: initialCategoryId,
       initialSubcategoryId: initialSubcategoryId,

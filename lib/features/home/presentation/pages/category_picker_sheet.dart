@@ -12,6 +12,7 @@ import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/providers/subcategories_provider.dart';
 import '../../../wallet/presentation/widgets/subcategory_form_sheet.dart';
 import '../../domain/models/transaction.dart';
+import '../../../../shared/widgets/drag_handle.dart';
 
 /// Resultado del selector: categoría + subcategoría opcional.
 class CategorySelection {
@@ -227,21 +228,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Drag handle ──────────────────────────────────────────────
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.md),
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: c.glassBorderStrong,
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.pillRadius,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              const DragHandle(),
 
               // ── Header ───────────────────────────────────────────────────
               Padding(
@@ -835,29 +822,15 @@ class _CategoryTile extends StatefulWidget {
   State<_CategoryTile> createState() => _CategoryTileState();
 }
 
-class _CategoryTileState extends State<_CategoryTile>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _press;
+class _CategoryTileState extends State<_CategoryTile> {
+  bool _pressed = false;
   Timer? _longPressTimer;
   bool _longPressFired = false;
   Offset? _pointerDownPos;
 
   @override
-  void initState() {
-    super.initState();
-    _press = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 80),
-      lowerBound: 0.93,
-      upperBound: 1.0,
-      value: 1.0,
-    );
-  }
-
-  @override
   void dispose() {
     _longPressTimer?.cancel();
-    _press.dispose();
     super.dispose();
   }
 
@@ -880,12 +853,12 @@ class _CategoryTileState extends State<_CategoryTile>
       onPointerDown: (e) {
         _longPressFired = false;
         _pointerDownPos = e.position;
-        _press.reverse();
+        setState(() => _pressed = true);
         _longPressTimer?.cancel();
         _longPressTimer = Timer(const Duration(milliseconds: 400), () {
           if (!mounted) return;
           _longPressFired = true;
-          _press.forward();
+          setState(() => _pressed = false);
           HapticFeedback.mediumImpact();
           widget.onLongPressStart(_TileLongPressDetails(_globalRect()));
         });
@@ -894,16 +867,15 @@ class _CategoryTileState extends State<_CategoryTile>
         if (_longPressFired) {
           widget.onLongPressMove(e.position);
         } else if (_pointerDownPos != null) {
-          // Cancelar si el dedo se movió más de 8 px (kTouchSlop)
           if ((e.position - _pointerDownPos!).distance > 8.0) {
             _longPressTimer?.cancel();
-            _press.forward();
+            setState(() => _pressed = false);
           }
         }
       },
       onPointerUp: (e) {
         _longPressTimer?.cancel();
-        _press.forward();
+        setState(() => _pressed = false);
         final wasLongPress = _longPressFired;
         _longPressFired = false;
         _pointerDownPos = null;
@@ -918,11 +890,12 @@ class _CategoryTileState extends State<_CategoryTile>
         final wasLongPress = _longPressFired;
         _longPressFired = false;
         _pointerDownPos = null;
-        _press.forward();
+        setState(() => _pressed = false);
         if (wasLongPress) widget.onLongPressEnd();
       },
-      child: ScaleTransition(
-        scale: _press,
+      child: AnimatedScale(
+        scale: _pressed ? 0.93 : 1.0,
+        duration: const Duration(milliseconds: 80),
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 150),
           opacity: widget.dimmed ? 0.35 : 1.0,

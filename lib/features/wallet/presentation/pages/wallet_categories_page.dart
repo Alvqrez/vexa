@@ -44,6 +44,9 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
     with TickerProviderStateMixin {
   late AnimationController _stagger;
   late TabController _tabCtrl;
+  late final List<CurvedAnimation> _fadeAnims;
+  late final List<CurvedAnimation> _slideParents;
+  late final List<Animation<Offset>> _slideAnims;
 
   @override
   void initState() {
@@ -53,33 +56,47 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
       duration: const Duration(milliseconds: 900),
     )..forward();
     _tabCtrl = TabController(length: 2, vsync: this);
+
+    _fadeAnims = List.generate(3, (i) {
+      final start = (i / 3 * 0.5).clamp(0.0, 1.0);
+      final end = (start + 0.5).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _stagger,
+        curve: Interval(start, end, curve: AppCurves.gentle),
+      );
+    });
+    _slideParents = List.generate(3, (i) {
+      final start = (i / 3 * 0.5).clamp(0.0, 1.0);
+      final end = (start + 0.5).clamp(0.0, 1.0);
+      return CurvedAnimation(
+        parent: _stagger,
+        curve: Interval(start, end, curve: AppCurves.spring),
+      );
+    });
+    _slideAnims = List.generate(
+      3,
+      (i) => Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+          .animate(_slideParents[i]),
+    );
   }
 
   @override
   void dispose() {
     _stagger.dispose();
     _tabCtrl.dispose();
+    for (final a in _fadeAnims) {
+      a.dispose();
+    }
+    for (final a in _slideParents) {
+      a.dispose();
+    }
     super.dispose();
   }
 
   Widget _reveal(int i, Widget child) {
-    final start = (i / 3 * 0.5).clamp(0.0, 1.0);
-    final end = (start + 0.5).clamp(0.0, 1.0);
     return FadeTransition(
-      opacity: CurvedAnimation(
-        parent: _stagger,
-        curve: Interval(start, end, curve: AppCurves.gentle),
-      ),
-      child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
-            .animate(
-              CurvedAnimation(
-                parent: _stagger,
-                curve: Interval(start, end, curve: AppCurves.spring),
-              ),
-            ),
-        child: child,
-      ),
+      opacity: _fadeAnims[i],
+      child: SlideTransition(position: _slideAnims[i], child: child),
     );
   }
 

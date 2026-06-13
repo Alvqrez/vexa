@@ -108,9 +108,10 @@ class SubcategoriesNotifier extends StateNotifier<List<Subcategory>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
+    if (_isLoaded) return;
+    _isLoaded = true;
     try {
       final records = await _isar.isarSubcategorys.where().findAll();
-      if (_isLoaded) return;
       if (records.isEmpty) {
         final seeded = await LocalPrefsService.getBool(_kSeedFlag);
         if (!seeded) {
@@ -121,7 +122,6 @@ class SubcategoriesNotifier extends StateNotifier<List<Subcategory>> {
         state = records.map(_isarToSub).toList()
           ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       }
-      _isLoaded = true;
     } catch (e) {
       debugPrint('SubcategoriesNotifier._load failed: $e');
       _isLoaded = false;
@@ -156,11 +156,6 @@ class SubcategoriesNotifier extends StateNotifier<List<Subcategory>> {
     );
   }
 
-  Future<void> _persistAll() => _isar.writeTxn(() async {
-    await _isar.isarSubcategorys.clear();
-    await _isar.isarSubcategorys.putAll(state.map(_subToIsar).toList());
-  });
-
   Future<void> add(Subcategory sub) async {
     _isLoaded = true;
     state = [...state, sub];
@@ -194,7 +189,9 @@ class SubcategoriesNotifier extends StateNotifier<List<Subcategory>> {
       for (final s in state)
         if (s.id == updated.id) updated else s,
     ];
-    await _persistAll();
+    await _isar.writeTxn(
+      () => _isar.isarSubcategorys.putBySubId(_subToIsar(updated)),
+    );
   }
 
   Future<void> delete(String id) async {
@@ -228,7 +225,10 @@ class SubcategoriesNotifier extends StateNotifier<List<Subcategory>> {
       for (final (i, s) in filtered.indexed) s.copyWith(sortOrder: i),
     ];
     state = [...state.where((s) => s.categoryId != categoryId), ...reordered];
-    await _persistAll();
+    await _isar.writeTxn(
+      () => _isar.isarSubcategorys
+          .putAllBySubId(reordered.map(_subToIsar).toList()),
+    );
   }
 }
 

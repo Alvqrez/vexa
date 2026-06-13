@@ -116,22 +116,22 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarWalletCategorys.where().findAll();
     if (_isLoaded) return;
-    if (records.isEmpty) {
-      await _isar.writeTxn(() => _isar.isarWalletCategorys
-          .putAll(state.map(_catToIsar).toList()));
-    } else {
-      state = records.map(_isarToCat).toList();
-    }
     _isLoaded = true;
+    try {
+      final records = await _isar.isarWalletCategorys.where().findAll();
+      if (records.isEmpty) {
+        await _isar.writeTxn(() => _isar.isarWalletCategorys
+            .putAll(state.map(_catToIsar).toList()));
+      } else {
+        state = records.map(_isarToCat).toList();
+      }
+    } catch (e) {
+      debugPrint('WalletCategoriesNotifier._load failed: $e');
+      _isLoaded = false;
+      rethrow;
+    }
   }
-
-  Future<void> _persistAll() => _isar.writeTxn(() async {
-        await _isar.isarWalletCategorys.clear();
-        await _isar.isarWalletCategorys
-            .putAll(state.map(_catToIsar).toList());
-      });
 
   Future<void> add(WalletCategory category) async {
     _isLoaded = true;
@@ -144,7 +144,9 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
     state = [
       for (final c in state) if (c.id == updated.id) updated else c,
     ];
-    await _persistAll();
+    await _isar.writeTxn(
+      () => _isar.isarWalletCategorys.putByCategoryId(_catToIsar(updated)),
+    );
   }
 
   Future<void> delete(String id) async {
@@ -173,7 +175,10 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
       ...state.where((c) => c.type != type),
       ...reordered,
     ];
-    await _persistAll();
+    await _isar.writeTxn(
+      () => _isar.isarWalletCategorys
+          .putAllByCategoryId(reordered.map(_catToIsar).toList()),
+    );
   }
 }
 

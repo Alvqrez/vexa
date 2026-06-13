@@ -332,13 +332,6 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
     });
   }
 
-  // Full replace: clear all records, re-insert current state.
-  // Avoids unique-constraint failures from auto-increment IDs.
-  Future<void> _persistAll() => _isar.writeTxn(() async {
-        await _isar.isarTransactions.clear();
-        await _isar.isarTransactions
-            .putAll(state.map(_txToIsar).toList());
-      });
 
   static final _initial = [
     Transaction(
@@ -442,22 +435,50 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
         if (t.id == updated.id) updated else t,
     ];
     try {
-      if (original.accountId != null) {
-        final reverse =
-            original.isIncome ? -original.amount : original.amount;
-        await _ref
-            .read(accountsProvider.notifier)
-            .adjustBalance(original.accountId!, reverse);
+      if (original.accountId == updated.accountId) {
+        if (original.accountId != null) {
+          final origEffect =
+              original.isIncome ? original.amount : -original.amount;
+          final updEffect =
+              updated.isIncome ? updated.amount : -updated.amount;
+          final delta = updEffect - origEffect;
+          if (delta != 0) {
+            await _ref
+                .read(accountsProvider.notifier)
+                .adjustBalance(original.accountId!, delta);
+          }
+        }
+      } else {
+        if (original.accountId != null) {
+          final origEffect =
+              original.isIncome ? original.amount : -original.amount;
+          await _ref
+              .read(accountsProvider.notifier)
+              .adjustBalance(original.accountId!, -origEffect);
+        }
+        if (updated.accountId != null) {
+          final updEffect =
+              updated.isIncome ? updated.amount : -updated.amount;
+          try {
+            await _ref
+                .read(accountsProvider.notifier)
+                .adjustBalance(updated.accountId!, updEffect);
+          } catch (e) {
+            if (original.accountId != null) {
+              final origEffect =
+                  original.isIncome ? original.amount : -original.amount;
+              await _ref
+                  .read(accountsProvider.notifier)
+                  .adjustBalance(original.accountId!, origEffect);
+            }
+            rethrow;
+          }
+        }
       }
-      if (updated.accountId != null) {
-        final delta = updated.isIncome ? updated.amount : -updated.amount;
-        await _ref
-            .read(accountsProvider.notifier)
-            .adjustBalance(updated.accountId!, delta);
-      }
-      await _persistAll();
+      await _isar.writeTxn(
+        () => _isar.isarTransactions.putByTxId(_txToIsar(updated)),
+      );
     } catch (e) {
-      // Rollback optimistic state update on failure.
       state = prevState;
       debugPrint('TransactionsNotifier.update: failed, rolled back: $e');
       rethrow;
@@ -515,7 +536,7 @@ final filteredTransactionsProvider = Provider<List<Transaction>>((ref) {
   if (selected != null && selectedSub != null) {
     filtered = filtered.where((t) => t.subcategoryId == selectedSub).toList();
   }
-  return [...filtered]..sort((a, b) => b.date.compareTo(a.date));
+  return filtered;
 });
 
 final totalBalanceProvider = Provider<double>((ref) {
@@ -749,6 +770,15 @@ final monthlySpendingTrendProvider =
   final now = DateTime.now();
   final transactions = ref.watch(transactionsProvider);
 
+  // Single O(n) pass to build month → spending map
+  final spendingMap = <(int, int), double>{};
+  for (final t in transactions) {
+    if (!t.isIncome) {
+      final key = (t.date.year, t.date.month);
+      spendingMap[key] = (spendingMap[key] ?? 0) + t.amount;
+    }
+  }
+
   return List.generate(6, (i) {
     final monthsAgo = 5 - i;
     var year = now.year;
@@ -757,13 +787,7 @@ final monthlySpendingTrendProvider =
       month += 12;
       year--;
     }
-    // Short month label: capitalise first letter
-    final raw = _monthAbbr(month);
-    final spending = transactions
-        .where((t) =>
-            !t.isIncome && t.date.month == month && t.date.year == year)
-        .fold(0.0, (sum, t) => sum + t.amount);
-    return (label: raw, value: spending);
+    return (label: _monthAbbr(month), value: spendingMap[(year, month)] ?? 0.0);
   });
 });
 

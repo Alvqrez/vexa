@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_typography.dart';
@@ -49,6 +50,7 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
 
   final _searchCtrl = TextEditingController();
   String _query = '';
+  Timer? _debounce;
 
   /// null = "Todos"; 'recientes' / 'favoritos' son pseudo-categorías.
   String? _activeCategory;
@@ -69,6 +71,7 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -221,7 +224,12 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
               ),
               child: TextField(
                 controller: _searchCtrl,
-                onChanged: (v) => setState(() => _query = v),
+                onChanged: (v) {
+                  _debounce?.cancel();
+                  _debounce = Timer(const Duration(milliseconds: 150), () {
+                    if (mounted) setState(() => _query = v);
+                  });
+                },
                 style: TextStyle(color: c.textPrimary, fontSize: 13.5),
                 decoration: InputDecoration(
                   hintText: 'Buscar: café, gasolina, gym…',
@@ -234,6 +242,7 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
                   suffixIcon: _query.isNotEmpty
                       ? GestureDetector(
                           onTap: () {
+                            _debounce?.cancel();
                             _searchCtrl.clear();
                             setState(() => _query = '');
                           },

@@ -22,6 +22,8 @@ import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/providers/subcategories_provider.dart';
 import '../../../wallet/presentation/widgets/subcategory_form_sheet.dart';
 import '../../../../shared/widgets/numeric_keypad.dart';
+import '../../../../shared/widgets/drag_handle.dart';
+import '../../../../core/utils/amount_formatter.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
   const AddTransactionSheet({
@@ -55,7 +57,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   String? _selectedAccountId;
   late DateTime _selectedDate;
 
-  String _amountStr = '';
+  final _amountNotifier = ValueNotifier<String>('');
 
   final _merchantCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
@@ -117,11 +119,11 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (e == null &&
         widget.initialAmount != null &&
         widget.initialAmount!.isNotEmpty) {
-      _amountStr = widget.initialAmount!;
+      _amountNotifier.value = widget.initialAmount!;
     }
 
     if (e != null) {
-      _amountStr = e.amount.toStringAsFixed(2);
+      _amountNotifier.value = e.amount.toStringAsFixed(2);
       _selectedAccountId = e.accountId;
       _noteCtrl.text = e.note ?? '';
       _imageNames.addAll(e.imagePaths);
@@ -136,22 +138,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       final wallet =
           accounts.where((a) => a.icon == AccountIcon.wallet).firstOrNull;
       _selectedAccountId = wallet?.id ?? accounts.firstOrNull?.id;
-      // Override with last-used account — read accounts fresh after the async
-      // gap to avoid using the snapshot captured in initState.
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final lastId = await LocalPrefsService.getString('last_account_id');
-        if (lastId != null && mounted) {
-          final currentAccounts = ref.read(accountsProvider);
-          if (currentAccounts.any((a) => a.id == lastId)) {
-            setState(() => _selectedAccountId = lastId);
-          }
-        }
-      });
     }
   }
 
   @override
   void dispose() {
+    _amountNotifier.dispose();
     _merchantCtrl.dispose();
     _noteCtrl.dispose();
     _noteFocusNode.dispose();
@@ -159,40 +151,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   double? get _parsedAmount {
-    if (_amountStr.isEmpty) return null;
-    return double.tryParse(_amountStr);
-  }
-
-  ({String integer, String decimal}) get _splitDisplay {
-    final raw = _amountStr;
-    if (raw.isEmpty) return (integer: '0', decimal: '.00');
-
-    String intPart;
-    String decPart;
-
-    if (raw.contains('.')) {
-      final idx = raw.indexOf('.');
-      intPart = raw.substring(0, idx).isEmpty ? '0' : raw.substring(0, idx);
-      final d = raw.substring(idx + 1);
-      if (d.isEmpty) {
-        decPart = '.';
-      } else if (d.length == 1) {
-        decPart = '.${d}0';
-      } else {
-        decPart = '.$d';
-      }
-    } else {
-      intPart = raw;
-      decPart = '.00';
-    }
-
-    final buf = StringBuffer();
-    for (int i = 0; i < intPart.length; i++) {
-      if (i > 0 && (intPart.length - i) % 3 == 0) buf.write(',');
-      buf.write(intPart[i]);
-    }
-
-    return (integer: buf.toString(), decimal: decPart);
+    final raw = _amountNotifier.value;
+    if (raw.isEmpty) return null;
+    return double.tryParse(raw);
   }
 
   Future<void> _openDatePicker() async {
@@ -540,7 +501,6 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final selectedAccount =
         accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
-    final split = _splitDisplay;
 
     return Container(
       decoration: BoxDecoration(
@@ -554,7 +514,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Drag handle ──────────────────────────────────────────────────
-          const _DragHandle(),
+          const DragHandle(),
 
           // ── Header ───────────────────────────────────────────────────────
           Padding(
@@ -678,56 +638,62 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerRight,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Text(
-                              currency,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: _typeColor.withValues(alpha: 0.65),
-                                height: 1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 2),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _amountNotifier,
+                    builder: (_, amountStr, _) {
+                      final split = splitAmount(amountStr);
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                split.integer,
-                                style: TextStyle(
-                                  fontSize: 44,
-                                  fontWeight: FontWeight.w800,
-                                  color: _typeColor,
-                                  letterSpacing: -1.5,
-                                  height: 1,
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  currency,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: _typeColor.withValues(alpha: 0.65),
+                                    height: 1,
+                                  ),
                                 ),
                               ),
-                              Text(
-                                split.decimal,
-                                style: TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  color: _typeColor.withValues(alpha: 0.45),
-                                  letterSpacing: -0.5,
-                                  height: 1.35,
-                                ),
+                              const SizedBox(width: 2),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    split.integer,
+                                    style: TextStyle(
+                                      fontSize: 44,
+                                      fontWeight: FontWeight.w800,
+                                      color: _typeColor,
+                                      letterSpacing: -1.5,
+                                      height: 1,
+                                    ),
+                                  ),
+                                  Text(
+                                    split.decimal,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color: _typeColor.withValues(alpha: 0.45),
+                                      letterSpacing: -0.5,
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -924,42 +890,21 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
               AppSpacing.screenPadding, 8,
               AppSpacing.screenPadding, AppSpacing.sm,
             ),
-            child: NumericKeypad(
-              value: _amountStr,
-              onValueChanged: (v) => setState(() => _amountStr = v),
-              onConfirm: () async => await _submit(),
-              confirmColor: _typeColor,
-              currencySymbol: currency,
-              keyHeight: 42,
-              confirmHeight: 46,
+            child: ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, amountStr, _) => NumericKeypad(
+                value: amountStr,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                onConfirm: () async => await _submit(),
+                confirmColor: _typeColor,
+                currencySymbol: currency,
+                keyHeight: 42,
+                confirmHeight: 46,
+              ),
             ),
           ),
         ],
       )),
-    );
-  }
-}
-
-// ── Drag handle ───────────────────────────────────────────────────────────────
-
-class _DragHandle extends StatelessWidget {
-  const _DragHandle();
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: AppSpacing.md),
-        child: Container(
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-            color: c.glassBorderStrong,
-            borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1410,7 +1355,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _DragHandle(),
+            const DragHandle(),
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.screenPadding,
@@ -1627,7 +1572,7 @@ class _AccountSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _DragHandle(),
+          const DragHandle(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.screenPadding,
