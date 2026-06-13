@@ -14,6 +14,7 @@ import '../../../../core/utils/export_utils.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../splash/presentation/pages/splash_page.dart';
@@ -201,6 +202,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       final isar = ref.read(isarProvider);
       await isar.writeTxn(() async {
         await isar.isarWalletCategorys.clear();
+        await isar.isarSubcategorys.clear();
         await isar.isarSubscriptions.clear();
         await isar.isarFinancialGoals.clear();
         await isar.isarBudgetItems.clear();
@@ -369,7 +371,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                                 final txns = ref.read(transactionsProvider);
                                 final accs = ref.read(accountsProvider);
                                 final cats = ref.read(walletCategoriesProvider);
-                                final count = await ExportUtils.copyToClipboard(txns, accounts: accs, categories: cats);
+                                final subs = ref.read(subcategoriesProvider);
+                                final count = await ExportUtils.copyToClipboard(
+                                    txns,
+                                    accounts: accs,
+                                    categories: cats,
+                                    subcategories: subs);
                                 if (!context.mounted) return;
                                 final sc = context.colors;
                                 ScaffoldMessenger.of(context).showSnackBar(

@@ -94,6 +94,7 @@ IsarTransaction _txToIsar(Transaction t) => IsarTransaction()
   ..amount = t.amount
   ..typeStr = t.type.name
   ..categoryStr = t.category
+  ..subcategoryId = t.subcategoryId
   ..date = t.date
   ..accountId = t.accountId
   ..note = t.note
@@ -109,6 +110,7 @@ Transaction _isarToTx(IsarTransaction it) => Transaction(
         orElse: () => TransactionType.expense,
       ),
       category: _kLegacyToWcId[it.categoryStr] ?? it.categoryStr,
+      subcategoryId: it.subcategoryId,
       date: it.date,
       accountId: it.accountId,
       note: it.note,
@@ -501,11 +503,18 @@ final transactionsProvider =
 
 final selectedCategoryProvider = StateProvider<String?>((ref) => null);
 
+/// Filtro de subcategoría activo (solo aplica junto a [selectedCategoryProvider]).
+final selectedSubcategoryProvider = StateProvider<String?>((ref) => null);
+
 final filteredTransactionsProvider = Provider<List<Transaction>>((ref) {
   final all = ref.watch(transactionsProvider);
   final selected = ref.watch(selectedCategoryProvider);
-  final filtered =
+  final selectedSub = ref.watch(selectedSubcategoryProvider);
+  var filtered =
       selected == null ? all : all.where((t) => t.category == selected).toList();
+  if (selected != null && selectedSub != null) {
+    filtered = filtered.where((t) => t.subcategoryId == selectedSub).toList();
+  }
   return [...filtered]..sort((a, b) => b.date.compareTo(a.date));
 });
 
@@ -516,13 +525,20 @@ final totalBalanceProvider = Provider<double>((ref) {
 });
 
 /// Single-pass provider: income, expenses AND category breakdown in one O(n).
-/// All three derived providers watch this to avoid redundant list scans.
+/// All derived providers watch this to avoid redundant list scans.
+/// [subBreakdown] agrupa gasto por categoría → subcategoría ('' = sin subcategoría).
 final _monthlyStatsProvider = Provider<
-    ({double income, double expenses, Map<String, double> breakdown})>((ref) {
+    ({
+      double income,
+      double expenses,
+      Map<String, double> breakdown,
+      Map<String, Map<String, double>> subBreakdown,
+    })>((ref) {
   final now = DateTime.now();
   double income = 0;
   double expenses = 0;
   final breakdown = <String, double>{};
+  final subBreakdown = <String, Map<String, double>>{};
   for (final t in ref.watch(transactionsProvider)) {
     if (t.date.month == now.month && t.date.year == now.year) {
       if (t.isIncome) {
@@ -530,10 +546,18 @@ final _monthlyStatsProvider = Provider<
       } else {
         expenses += t.amount;
         breakdown[t.category] = (breakdown[t.category] ?? 0) + t.amount;
+        final subs = subBreakdown.putIfAbsent(t.category, () => {});
+        final subKey = t.subcategoryId ?? '';
+        subs[subKey] = (subs[subKey] ?? 0) + t.amount;
       }
     }
   }
-  return (income: income, expenses: expenses, breakdown: breakdown);
+  return (
+    income: income,
+    expenses: expenses,
+    breakdown: breakdown,
+    subBreakdown: subBreakdown,
+  );
 });
 
 final monthlyIncomeProvider = Provider<double>(
@@ -620,12 +644,19 @@ final selectedAnalysisMonthProvider = StateProvider<DateTime>((ref) {
 });
 
 /// Single-pass provider for analysis tab: income, expenses, category breakdown.
+/// [subBreakdown] agrupa gasto por categoría → subcategoría ('' = sin subcategoría).
 final _analysisStatsProvider = Provider<
-    ({double income, double expenses, Map<String, double> breakdown})>((ref) {
+    ({
+      double income,
+      double expenses,
+      Map<String, double> breakdown,
+      Map<String, Map<String, double>> subBreakdown,
+    })>((ref) {
   final m = ref.watch(selectedAnalysisMonthProvider);
   double income = 0;
   double expenses = 0;
   final breakdown = <String, double>{};
+  final subBreakdown = <String, Map<String, double>>{};
   for (final t in ref.watch(transactionsProvider)) {
     if (t.date.month != m.month || t.date.year != m.year) continue;
     if (t.isIncome) {
@@ -633,9 +664,17 @@ final _analysisStatsProvider = Provider<
     } else {
       expenses += t.amount;
       breakdown[t.category] = (breakdown[t.category] ?? 0) + t.amount;
+      final subs = subBreakdown.putIfAbsent(t.category, () => {});
+      final subKey = t.subcategoryId ?? '';
+      subs[subKey] = (subs[subKey] ?? 0) + t.amount;
     }
   }
-  return (income: income, expenses: expenses, breakdown: breakdown);
+  return (
+    income: income,
+    expenses: expenses,
+    breakdown: breakdown,
+    subBreakdown: subBreakdown,
+  );
 });
 
 final analysisIncomeProvider = Provider<double>(
@@ -648,6 +687,13 @@ final analysisExpensesProvider = Provider<double>(
 
 final analysisCategoryBreakdownProvider = Provider<Map<String, double>>(
   (ref) => ref.watch(_analysisStatsProvider).breakdown,
+);
+
+/// Desglose por subcategoría del mes de análisis:
+/// categoryId → (subcategoryId → gasto). La clave '' agrupa "sin subcategoría".
+final analysisSubcategoryBreakdownProvider =
+    Provider<Map<String, Map<String, double>>>(
+  (ref) => ref.watch(_analysisStatsProvider).subBreakdown,
 );
 
 final analysisTopCategoryProvider = Provider<WalletCategory?>((ref) {
@@ -663,6 +709,30 @@ final analysisTopCategoryProvider = Provider<WalletCategory?>((ref) {
 final categoryBreakdownProvider = Provider<Map<String, double>>(
   (ref) => ref.watch(_monthlyStatsProvider).breakdown,
 );
+
+/// Desglose por subcategoría del mes en curso:
+/// categoryId → (subcategoryId → gasto). La clave '' agrupa "sin subcategoría".
+final subcategoryBreakdownProvider =
+    Provider<Map<String, Map<String, double>>>(
+  (ref) => ref.watch(_monthlyStatsProvider).subBreakdown,
+);
+
+/// Top subcategorías del mes en curso (solo gastos), ordenadas de mayor a menor.
+final topSubcategoriesProvider =
+    Provider<List<({String categoryId, String subcategoryId, double amount})>>(
+        (ref) {
+  final subBreakdown = ref.watch(_monthlyStatsProvider).subBreakdown;
+  final result =
+      <({String categoryId, String subcategoryId, double amount})>[];
+  subBreakdown.forEach((catId, subs) {
+    subs.forEach((subId, amount) {
+      if (subId.isEmpty) return; // omitir "sin subcategoría"
+      result.add((categoryId: catId, subcategoryId: subId, amount: amount));
+    });
+  });
+  result.sort((a, b) => b.amount.compareTo(a.amount));
+  return result;
+});
 
 final topCategoryProvider = Provider<WalletCategory?>((ref) {
   final breakdown = ref.watch(categoryBreakdownProvider);

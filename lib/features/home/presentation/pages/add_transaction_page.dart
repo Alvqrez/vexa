@@ -17,7 +17,10 @@ import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
+import '../../../wallet/presentation/widgets/subcategory_form_sheet.dart';
 import '../../../../shared/widgets/numeric_keypad.dart';
 
 class AddTransactionSheet extends ConsumerStatefulWidget {
@@ -28,6 +31,7 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
     this.defaultAccountId,
     this.initialAmount,
     this.initialCategoryId,
+    this.initialSubcategoryId,
   });
 
   final Transaction? existing;
@@ -37,6 +41,7 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
   /// Carry-over state from the quick-add sheet ("Más detalles").
   final String? initialAmount;
   final String? initialCategoryId;
+  final String? initialSubcategoryId;
 
   @override
   ConsumerState<AddTransactionSheet> createState() =>
@@ -46,6 +51,7 @@ class AddTransactionSheet extends ConsumerStatefulWidget {
 class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   late TransactionType _type;
   late WalletCategory _category;
+  Subcategory? _subcategory;
   String? _selectedAccountId;
   late DateTime _selectedDate;
 
@@ -98,6 +104,13 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ? resolveCategory(widget.initialCategoryId!, cats)
             : cats.firstWhere((c) => c.type == catType,
                 orElse: () => cats.first);
+
+    // Subcategoría: del existing o del carry-over; validar que pertenezca
+    // a la categoría activa (puede haber sido eliminada o cambiada).
+    final subId = e?.subcategoryId ?? widget.initialSubcategoryId;
+    final sub = resolveSubcategory(subId, ref.read(subcategoriesProvider));
+    _subcategory =
+        sub != null && sub.categoryId == _category.id ? sub : null;
 
     _selectedDate = e?.date ?? DateTime.now();
 
@@ -225,7 +238,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
 
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
     final merchantText = _merchantCtrl.text.trim();
-    final merchant = merchantText.isEmpty ? _category.name : merchantText;
+    final merchant = merchantText.isEmpty
+        ? (_subcategory?.name ?? _category.name)
+        : merchantText;
 
     // Capturar valores de contexto antes del async gap
     final currency = ref.read(currencySymbolProvider);
@@ -245,6 +260,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         amount: amount,
         type: _type,
         category: _category.id,
+        subcategoryId: _subcategory?.id,
+        clearSubcategory: _subcategory == null,
         date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
@@ -259,6 +276,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
         amount: amount,
         type: _type,
         category: _category.id,
+        subcategoryId: _subcategory?.id,
         date: _selectedDate,
         accountId: _selectedAccountId,
         note: note,
@@ -337,21 +355,36 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     );
   }
 
-  void _openCategorySheet() {
+  Future<void> _openCategorySheet() async {
     HapticFeedback.selectionClick();
-    showModalBottomSheet<void>(
+    final result = await showModalBottomSheet<_CategorySheetResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _CategorySheet(
         selected: _category,
+        selectedSubcategory: _subcategory,
         type: _type,
-        onChanged: (wc) {
-          setState(() => _category = wc);
-          Navigator.of(context).pop();
-        },
       ),
     );
+    if (result == null || !mounted) return;
+    if (result.createSubcategoryFor != null) {
+      // Creación rápida sin salir del flujo.
+      final created = await SubcategoryFormSheet.show(
+        context,
+        category: result.createSubcategoryFor!,
+      );
+      if (!mounted) return;
+      setState(() {
+        _category = result.createSubcategoryFor!;
+        if (created != null) _subcategory = created;
+      });
+      return;
+    }
+    setState(() {
+      _category = result.category;
+      _subcategory = result.subcategory;
+    });
   }
 
   void _openAccountSheet() {
@@ -613,9 +646,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     _CompactChip(
-                      icon: _category.icon,
-                      label: _category.name,
-                      color: _category.color,
+                      icon: _subcategory?.icon ?? _category.icon,
+                      label: _subcategory != null
+                          ? '${_category.name} · ${_subcategory!.name}'
+                          : _category.name,
+                      color: _subcategory?.effectiveColor(_category.color) ??
+                          _category.color,
                       surface: _category.surface,
                       onTap: _openCategorySheet,
                     ),
@@ -1223,6 +1259,7 @@ class _SheetItem extends StatelessWidget {
     required this.surface,
     required this.isSelected,
     required this.onTap,
+    this.trailing,
   });
 
   final IconData icon;
@@ -1231,6 +1268,7 @@ class _SheetItem extends StatelessWidget {
   final Color surface;
   final bool isSelected;
   final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -1278,6 +1316,7 @@ class _SheetItem extends StatelessWidget {
             ),
             if (isSelected)
               Icon(Icons.check_circle_rounded, size: 20, color: color),
+            if (trailing != null) trailing!,
           ],
         ),
       ),
@@ -1287,21 +1326,63 @@ class _SheetItem extends StatelessWidget {
 
 // ── Category bottom sheet ─────────────────────────────────────────────────────
 
-class _CategorySheet extends ConsumerWidget {
+/// Resultado del sheet de categoría: selección directa o petición de crear
+/// una subcategoría para [createSubcategoryFor] (flujo de creación rápida).
+class _CategorySheetResult {
+  const _CategorySheetResult(this.category,
+      {this.subcategory, this.createSubcategoryFor});
+  final WalletCategory category;
+  final Subcategory? subcategory;
+  final WalletCategory? createSubcategoryFor;
+}
+
+class _CategorySheet extends ConsumerStatefulWidget {
   const _CategorySheet({
     required this.selected,
     required this.type,
-    required this.onChanged,
+    this.selectedSubcategory,
   });
 
   final WalletCategory selected;
+  final Subcategory? selectedSubcategory;
   final TransactionType type;
-  final ValueChanged<WalletCategory> onChanged;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_CategorySheet> createState() => _CategorySheetState();
+}
+
+class _CategorySheetState extends ConsumerState<_CategorySheet> {
+  /// Categoría con el panel de subcategorías expandido.
+  String? _expandedId;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si ya hay subcategoría seleccionada, mostrar su panel expandido.
+    if (widget.selectedSubcategory != null) {
+      _expandedId = widget.selected.id;
+    }
+  }
+
+  void _selectCategory(WalletCategory wc) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).pop(_CategorySheetResult(wc));
+  }
+
+  void _selectSub(WalletCategory wc, Subcategory sub) {
+    HapticFeedback.selectionClick();
+    Navigator.of(context).pop(_CategorySheetResult(wc, subcategory: sub));
+  }
+
+  void _toggleExpand(String catId) {
+    HapticFeedback.selectionClick();
+    setState(() => _expandedId = _expandedId == catId ? null : catId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final c = context.colors;
-    final catType = type == TransactionType.income
+    final catType = widget.type == TransactionType.income
         ? WalletCategoryType.income
         : WalletCategoryType.expense;
     final categories = ref
@@ -1309,6 +1390,7 @@ class _CategorySheet extends ConsumerWidget {
         .where((wc) => wc.type == catType)
         .toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final allSubs = ref.watch(subcategoriesProvider);
 
     return Container(
       decoration: BoxDecoration(
@@ -1320,40 +1402,196 @@ class _CategorySheet extends ConsumerWidget {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).padding.bottom + AppSpacing.md,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _DragHandle(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.screenPadding,
-              AppSpacing.sm,
-              AppSpacing.screenPadding,
-              AppSpacing.md,
-            ),
-            child: Text(
-              'Categoría',
-              style: TextStyle(
-                color: c.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.72,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding,
+                AppSpacing.sm,
+                AppSpacing.screenPadding,
+                AppSpacing.md,
+              ),
+              child: Text(
+                'Categoría',
+                style: TextStyle(
+                  color: c.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final wc in categories) ...[
+                    Builder(builder: (context) {
+                      final subs = allSubs
+                          .where((s) => s.categoryId == wc.id)
+                          .toList()
+                        ..sort(
+                            (a, b) => a.sortOrder.compareTo(b.sortOrder));
+                      final expanded = _expandedId == wc.id;
+                      return Column(
+                        children: [
+                          _SheetItem(
+                            icon: wc.icon,
+                            label: wc.name,
+                            color: wc.color,
+                            surface: wc.surface,
+                            isSelected: wc.id == widget.selected.id,
+                            trailing: subs.isEmpty
+                                ? null
+                                : GestureDetector(
+                                    onTap: () => _toggleExpand(wc.id),
+                                    behavior: HitTestBehavior.opaque,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(6),
+                                      child: AnimatedRotation(
+                                        turns: expanded ? 0.5 : 0,
+                                        duration: const Duration(
+                                            milliseconds: 200),
+                                        child: Icon(
+                                          Icons.expand_more_rounded,
+                                          size: 18,
+                                          color: c.textTertiary,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                            onTap: () => subs.isEmpty
+                                ? _selectCategory(wc)
+                                : _toggleExpand(wc.id),
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            alignment: Alignment.topCenter,
+                            child: !expanded
+                                ? const SizedBox(width: double.infinity)
+                                : Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        AppSpacing.screenPadding + 12,
+                                        2,
+                                        AppSpacing.screenPadding,
+                                        AppSpacing.sm),
+                                    child: Wrap(
+                                      spacing: 7,
+                                      runSpacing: 7,
+                                      children: [
+                                        _SubPickChip(
+                                          icon: wc.icon,
+                                          label: 'Solo ${wc.name}',
+                                          color: c.textSecondary,
+                                          selected: wc.id ==
+                                                  widget.selected.id &&
+                                              widget.selectedSubcategory ==
+                                                  null,
+                                          onTap: () => _selectCategory(wc),
+                                        ),
+                                        ...subs.map((s) => _SubPickChip(
+                                              icon: s.icon,
+                                              label: s.name,
+                                              color: s.effectiveColor(
+                                                  wc.color),
+                                              selected: widget
+                                                      .selectedSubcategory
+                                                      ?.id ==
+                                                  s.id,
+                                              onTap: () =>
+                                                  _selectSub(wc, s),
+                                            )),
+                                        _SubPickChip(
+                                          icon: Icons.add_rounded,
+                                          label: 'Nueva',
+                                          color: wc.color,
+                                          selected: false,
+                                          outlined: true,
+                                          onTap: () {
+                                            HapticFeedback.selectionClick();
+                                            Navigator.of(context).pop(
+                                              _CategorySheetResult(wc,
+                                                  createSubcategoryFor: wc),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Subcategory pick chip ─────────────────────────────────────────────────────
+
+class _SubPickChip extends StatelessWidget {
+  const _SubPickChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+    this.outlined = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final bool selected;
+  final bool outlined;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.14) : c.glass,
+          borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+          border: Border.all(
+            color: selected || outlined
+                ? color.withValues(alpha: 0.45)
+                : c.glassBorder,
+            width: selected ? 1 : 0.5,
           ),
-          ...categories.map((wc) => _SheetItem(
-                icon: wc.icon,
-                label: wc.name,
-                color: wc.color,
-                surface: wc.surface,
-                isSelected: wc.id == selected.id,
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onChanged(wc);
-                },
-              )),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: selected ? color : c.textSecondary),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : c.textSecondary,
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

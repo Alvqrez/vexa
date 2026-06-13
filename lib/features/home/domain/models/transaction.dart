@@ -7,6 +7,7 @@ class Transaction {
     required this.amount,
     required this.type,
     required this.category,
+    this.subcategoryId,
     required this.date,
     this.accountId,
     this.note,
@@ -20,6 +21,8 @@ class Transaction {
   final TransactionType type;
   /// WalletCategory.id (e.g. 'wc1'). Stored as-is in Isar.
   final String category;
+  /// Subcategory.id — null cuando la transacción no tiene subcategoría.
+  final String? subcategoryId;
   final DateTime date;
   final String? accountId;
   final String? note;
@@ -39,12 +42,14 @@ class Transaction {
     double? amount,
     TransactionType? type,
     String? category,
+    String? subcategoryId,
     DateTime? date,
     String? accountId,
     String? note,
     List<String>? tags,
     List<String>? imagePaths,
     bool clearNote = false,
+    bool clearSubcategory = false,
   }) {
     return Transaction(
       id: id,
@@ -52,6 +57,8 @@ class Transaction {
       amount: amount ?? this.amount,
       type: type ?? this.type,
       category: category ?? this.category,
+      subcategoryId:
+          clearSubcategory ? null : (subcategoryId ?? this.subcategoryId),
       date: date ?? this.date,
       accountId: accountId ?? this.accountId,
       note: clearNote ? null : (note ?? this.note),

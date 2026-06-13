@@ -13,7 +13,9 @@ import '../../domain/models/transfer_record.dart';
 import '../../domain/models/account.dart';
 import '../widgets/transaction_item.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 
 // ── Sort options ──────────────────────────────────────────────────────────────
 
@@ -52,6 +54,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
   final _focusNode = FocusNode();
 
   String? _catFilter;
+  String? _subFilter;
   _SortBy _sort = _SortBy.dateDesc;
   bool _showSearch = false;
   String _query = '';
@@ -80,20 +83,30 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     // Category filter
     if (_catFilter != null) {
       list = list.where((t) => t.category == _catFilter).toList();
+      // Subcategory filter (solo aplica con categoría activa)
+      if (_subFilter != null) {
+        list = list.where((t) => t.subcategoryId == _subFilter).toList();
+      }
     }
 
-    // Search: nombre, nota, categoría, etiquetas y monto
+    // Search: nombre, nota, categoría, subcategoría, etiquetas y monto
     if (_query.trim().isNotEmpty) {
       final q = _query.trim().toLowerCase();
       final qAmount = double.tryParse(q.replaceAll(',', '.'));
+      final allSubs = ref.read(subcategoriesProvider);
       list = list.where((t) {
         final catName = resolveCategory(t.category, walletCats).name.toLowerCase();
+        final subName = resolveSubcategory(t.subcategoryId, allSubs)
+                ?.name
+                .toLowerCase() ??
+            '';
         final amountMatch = qAmount != null &&
             ((t.amount - qAmount).abs() < 0.005 ||
                 t.amount.toStringAsFixed(2).startsWith(q) ||
                 t.amount.toStringAsFixed(0) == q);
         return t.merchant.toLowerCase().contains(q) ||
             catName.contains(q) ||
+            (subName.isNotEmpty && subName.contains(q)) ||
             t.tags.any((tag) => tag.toLowerCase().contains(q)) ||
             (t.note?.toLowerCase().contains(q) ?? false) ||
             amountMatch;
@@ -314,8 +327,10 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                               label: 'Todo',
                               selected: _catFilter == null,
                               color: AppColors.petroleum,
-                              onTap: () =>
-                                  setState(() => _catFilter = null),
+                              onTap: () => setState(() {
+                                _catFilter = null;
+                                _subFilter = null;
+                              }),
                             ),
                             const SizedBox(width: AppSpacing.sm),
                             ...walletCats.map((cat) => Padding(
@@ -325,13 +340,63 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                                     label: cat.name,
                                     selected: _catFilter == cat.id,
                                     color: cat.color,
-                                    onTap: () =>
-                                        setState(() => _catFilter = cat.id),
+                                    onTap: () => setState(() {
+                                      if (_catFilter != cat.id) {
+                                        _subFilter = null;
+                                      }
+                                      _catFilter = cat.id;
+                                    }),
                                   ),
                                 )),
                           ],
                         ),
                       ),
+                      // Subcategory filter chips (cuando hay categoría activa)
+                      Builder(builder: (context) {
+                        if (_catFilter == null) {
+                          return const SizedBox.shrink();
+                        }
+                        final subs = ref.watch(
+                            subcategoriesByCategoryProvider(_catFilter!));
+                        if (subs.isEmpty) return const SizedBox.shrink();
+                        final parent = walletCats
+                            .where((c2) => c2.id == _catFilter)
+                            .firstOrNull;
+                        final parentColor =
+                            parent?.color ?? AppColors.petroleum;
+                        return Padding(
+                          padding:
+                              const EdgeInsets.only(top: AppSpacing.sm),
+                          child: SizedBox(
+                            height: 30,
+                            child: ListView(
+                              scrollDirection: Axis.horizontal,
+                              children: [
+                                _FilterChip(
+                                  label: 'Todas',
+                                  selected: _subFilter == null,
+                                  color: parentColor,
+                                  onTap: () =>
+                                      setState(() => _subFilter = null),
+                                ),
+                                const SizedBox(width: AppSpacing.sm),
+                                ...subs.map((sub) => Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: AppSpacing.sm),
+                                      child: _FilterChip(
+                                        label: sub.name,
+                                        selected: _subFilter == sub.id,
+                                        color: sub
+                                            .effectiveColor(parentColor),
+                                        onTap: () => setState(
+                                            () => _subFilter = sub.id),
+                                      ),
+                                    )),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
                       const SizedBox(height: AppSpacing.md),
                       Divider(
                           height: 1,

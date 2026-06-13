@@ -932,6 +932,8 @@ class _MonthAnalysis extends ConsumerWidget {
         SizedBox(height: AppSpacing.xl),
         CoachCategoryBreakdown(),
         SizedBox(height: AppSpacing.xl),
+        // Incluye su propio espaciado inferior cuando hay datos.
+        CoachTopSubcategoriesList(),
         CoachTopSpendsList(),
       ],
     );

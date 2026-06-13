@@ -14,7 +14,9 @@ import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 import 'add_transaction_page.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 
 class TransactionDetailPage extends ConsumerWidget {
   const TransactionDetailPage({super.key, required this.transaction});
@@ -31,6 +33,8 @@ class TransactionDetailPage extends ConsumerWidget {
         : null;
     final cats = ref.watch(walletCategoriesProvider);
     final cat = resolveCategory(transaction.category, cats);
+    final sub = resolveSubcategory(
+        transaction.subcategoryId, ref.watch(subcategoriesProvider));
     final isIncome = transaction.isIncome;
     final amountColor = isIncome ? AppColors.positive : AppColors.negative;
 
@@ -158,6 +162,15 @@ class TransactionDetailPage extends ConsumerWidget {
                     value: cat.name,
                     valueColor: cat.color,
                   ),
+                  if (sub != null) ...[
+                    _Divider(),
+                    _DetailRow(
+                      icon: sub.icon,
+                      label: 'Subcategoría',
+                      value: sub.name,
+                      valueColor: sub.effectiveColor(cat.color),
+                    ),
+                  ],
                   _Divider(),
                   _DetailRow(
                     icon: Icons.calendar_today_rounded,

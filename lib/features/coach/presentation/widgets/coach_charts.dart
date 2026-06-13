@@ -12,7 +12,9 @@ import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 
 // Widgets de análisis financiero del Vexa Coach.
 // Migrados desde la antigua pestaña Análisis y reorganizados:
@@ -880,6 +882,8 @@ class CoachCategoryBreakdown extends ConsumerWidget {
       ..sort((a, b) => b.value.compareTo(a.value));
     final currency = ref.watch(currencySymbolProvider);
     final walletCats = ref.watch(walletCategoriesProvider);
+    final subBreakdown = ref.watch(analysisSubcategoryBreakdownProvider);
+    final allSubs = ref.watch(subcategoriesProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -901,6 +905,8 @@ class CoachCategoryBreakdown extends ConsumerWidget {
                   spent: entries[i].value,
                   total: total,
                   currency: currency,
+                  subSpending: subBreakdown[entries[i].key] ?? const {},
+                  allSubs: allSubs,
                 ),
                 if (i < entries.length - 1)
                   Padding(
@@ -922,15 +928,22 @@ class CoachCategoryBreakdown extends ConsumerWidget {
 }
 
 class _CatBar extends StatefulWidget {
-  const _CatBar(
-      {required this.category,
-      required this.spent,
-      required this.total,
-      required this.currency});
+  const _CatBar({
+    required this.category,
+    required this.spent,
+    required this.total,
+    required this.currency,
+    this.subSpending = const {},
+    this.allSubs = const [],
+  });
   final WalletCategory category;
   final double spent;
   final double total;
   final String currency;
+
+  /// subcategoryId ('' = sin subcategoría) → gasto en esta categoría.
+  final Map<String, double> subSpending;
+  final List<Subcategory> allSubs;
 
   @override
   State<_CatBar> createState() => _CatBarState();
@@ -940,6 +953,13 @@ class _CatBarState extends State<_CatBar>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
   late Animation<double> _anim;
+  bool _expanded = false;
+
+  /// Mostrar desglose si la categoría tiene subcategorías definidas
+  /// o si alguna transacción tiene subcategoría asignada este mes.
+  bool get _hasSubData =>
+      widget.subSpending.keys.any((k) => k.isNotEmpty) ||
+      widget.allSubs.any((s) => s.categoryId == widget.category.id);
 
   @override
   void initState() {
@@ -958,64 +978,321 @@ class _CatBarState extends State<_CatBar>
     super.dispose();
   }
 
+  /// Nombre/icono/color de un subId, tolerante a subcategorías eliminadas.
+  ({String name, IconData icon, Color color}) _resolveSub(String subId) {
+    if (subId.isEmpty) {
+      return (
+        name: 'Sin subcategoría',
+        icon: widget.category.icon,
+        color: widget.category.color.withValues(alpha: 0.6),
+      );
+    }
+    final sub = resolveSubcategory(subId, widget.allSubs);
+    if (sub == null) {
+      return (
+        name: 'Otras',
+        icon: Icons.category_rounded,
+        color: widget.category.color.withValues(alpha: 0.6),
+      );
+    }
+    return (
+      name: sub.name,
+      icon: sub.icon,
+      color: sub.effectiveColor(widget.category.color),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final ratio = widget.total > 0 ? widget.spent / widget.total : 0.0;
     final color = widget.category.color;
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: widget.category.surface,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Icon(widget.category.icon, size: 15, color: color),
-        ),
-        const SizedBox(width: AppSpacing.md),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+    final subEntries = widget.subSpending.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return GestureDetector(
+      onTap: _hasSubData
+          ? () {
+              HapticFeedback.selectionClick();
+              setState(() => _expanded = !_expanded);
+            }
+          : null,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(widget.category.name,
-                      style: AppTypography.labelM
-                          .copyWith(color: c.textSecondary)),
-                  Text(
-                      '${widget.currency}${widget.spent.toStringAsFixed(2)}',
-                      style: AppTypography.labelL
-                          .copyWith(color: c.textPrimary)),
-                ],
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: widget.category.surface,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(widget.category.icon, size: 15, color: color),
               ),
-              const SizedBox(height: 6),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  height: 4,
-                  color: color.withValues(alpha: 0.12),
-                  child: AnimatedBuilder(
-                    animation: _anim,
-                    builder: (_, child) => FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: ratio * _anim.value,
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(widget.category.name,
+                                style: AppTypography.labelM
+                                    .copyWith(color: c.textSecondary)),
+                            if (_hasSubData) ...[
+                              const SizedBox(width: 4),
+                              AnimatedRotation(
+                                turns: _expanded ? 0.5 : 0,
+                                duration:
+                                    const Duration(milliseconds: 200),
+                                child: Icon(Icons.expand_more_rounded,
+                                    size: 14, color: c.textTertiary),
+                              ),
+                            ],
+                          ],
+                        ),
+                        Text(
+                            '${widget.currency}${widget.spent.toStringAsFixed(2)}',
+                            style: AppTypography.labelL
+                                .copyWith(color: c.textPrimary)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
                       child: Container(
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(4),
+                        height: 4,
+                        color: color.withValues(alpha: 0.12),
+                        child: AnimatedBuilder(
+                          animation: _anim,
+                          builder: (_, child) => FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: ratio * _anim.value,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
           ),
+
+          // ── Desglose por subcategoría ─────────────────────────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 240),
+            curve: AppCurves.gentle,
+            alignment: Alignment.topCenter,
+            child: !_expanded
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    padding: const EdgeInsets.only(
+                        left: 44, top: AppSpacing.sm),
+                    child: Builder(
+                      builder: (_) {
+                        final withSub = subEntries
+                            .where((e) => e.key.isNotEmpty)
+                            .toList();
+                        if (withSub.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 7),
+                            child: Text(
+                              'Sin gastos por subcategoría este mes',
+                              style: AppTypography.labelS.copyWith(
+                                color: c.textTertiary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          );
+                        }
+                        return Column(
+                          children: withSub.map((e) {
+                            final info = _resolveSub(e.key);
+                            final subPct = widget.total > 0
+                                ? e.value / widget.total
+                                : 0.0;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 7),
+                              child: Row(
+                                children: [
+                                  Icon(info.icon, size: 12, color: info.color),
+                                  const SizedBox(width: 7),
+                                  Expanded(
+                                    child: Text(
+                                      info.name,
+                                      style: AppTypography.labelS
+                                          .copyWith(color: c.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(subPct * 100).toStringAsFixed(0)}%',
+                                    style: AppTypography.labelS
+                                        .copyWith(color: c.textTertiary),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${widget.currency}${e.value.toStringAsFixed(2)}',
+                                    style: AppTypography.labelS.copyWith(
+                                      color: c.textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Top subcategorías del mes ─────────────────────────────────────────────────
+
+class CoachTopSubcategoriesList extends ConsumerWidget {
+  const CoachTopSubcategoriesList({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subBreakdown = ref.watch(analysisSubcategoryBreakdownProvider);
+    final allSubs = ref.watch(subcategoriesProvider);
+    final walletCats = ref.watch(walletCategoriesProvider);
+    final currency = ref.watch(currencySymbolProvider);
+
+    // Aplanar: (cat, sub, monto), omitiendo "sin subcategoría" y huérfanas.
+    final flat = <({WalletCategory cat, Subcategory sub, double amount})>[];
+    subBreakdown.forEach((catId, subs) {
+      subs.forEach((subId, amount) {
+        if (subId.isEmpty) return;
+        final sub = resolveSubcategory(subId, allSubs);
+        if (sub == null) return;
+        flat.add((
+          cat: resolveCategory(catId, walletCats),
+          sub: sub,
+          amount: amount,
+        ));
+      });
+    });
+    if (flat.isEmpty) return const SizedBox.shrink();
+    flat.sort((a, b) => b.amount.compareTo(a.amount));
+    final top = flat.take(5).toList();
+    final maxAmount = top.first.amount;
+    final c = context.colors;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+      child: CoachSectionCard(
+      title: 'Top subcategorías',
+      badge: 'este mes',
+      badgeColor: AppColors.emerald,
+      child: Column(
+        children: [
+          for (final (i, item) in top.indexed)
+            Padding(
+              padding: EdgeInsets.only(
+                  bottom: i == top.length - 1 ? 0 : AppSpacing.md),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 18,
+                    child: Text(
+                      '${i + 1}',
+                      style: AppTypography.labelM.copyWith(
+                        color: c.textTertiary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: item.sub
+                          .effectiveColor(item.cat.color)
+                          .withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(item.sub.icon,
+                        size: 14,
+                        color: item.sub.effectiveColor(item.cat.color)),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.sub.name,
+                            style: AppTypography.labelM
+                                .copyWith(color: c.textPrimary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        Text(item.cat.name,
+                            style: AppTypography.labelS
+                                .copyWith(color: c.textTertiary)),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '$currency${item.amount.toStringAsFixed(2)}',
+                        style: AppTypography.labelM.copyWith(
+                          color: c.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      SizedBox(
+                        width: 56,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: Container(
+                            height: 3,
+                            color: item.sub
+                                .effectiveColor(item.cat.color)
+                                .withValues(alpha: 0.15),
+                            child: FractionallySizedBox(
+                              alignment: Alignment.centerLeft,
+                              widthFactor: maxAmount > 0
+                                  ? (item.amount / maxAmount)
+                                      .clamp(0.0, 1.0)
+                                  : 0,
+                              child: Container(
+                                color: item.sub
+                                    .effectiveColor(item.cat.color),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+        ],
         ),
-      ],
+      ),
     );
   }
 }

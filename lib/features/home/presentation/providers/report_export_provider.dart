@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'home_provider.dart';
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 
 class TransactionReportExporter {
   TransactionReportExporter(this._ref);
@@ -11,10 +15,12 @@ class TransactionReportExporter {
   String generateCSV() {
     final transactions = _ref.read(transactionsProvider);
     final accounts = _ref.read(accountsProvider);
+    final categories = _ref.read(walletCategoriesProvider);
+    final subcategories = _ref.read(subcategoriesProvider);
 
     // Header del CSV
     final buffer = StringBuffer();
-    buffer.writeln('Fecha,Descripción,Cuenta,Categoría,Tipo,Monto');
+    buffer.writeln('Fecha,Descripción,Cuenta,Categoría,Subcategoría,Tipo,Monto');
 
     // Agregar cada transacción
     for (final tx in transactions.asMap().entries.toList().reversed) {
@@ -27,9 +33,14 @@ class TransactionReportExporter {
 
       // Escapar comillas en los campos de texto
       final merchant = _escapeCsv(transaction.merchant);
-      final category = _escapeCsv(transaction.category);
+      final category =
+          _escapeCsv(resolveCategory(transaction.category, categories).name);
+      final subcategory = _escapeCsv(
+          resolveSubcategory(transaction.subcategoryId, subcategories)?.name ??
+              '');
 
-      buffer.writeln('$date,$merchant,$accountName,$category,$type,$amount');
+      buffer.writeln(
+          '$date,$merchant,$accountName,$category,$subcategory,$type,$amount');
     }
 
     return buffer.toString();
@@ -88,23 +99,26 @@ class TransactionReportExporter {
     return buffer.toString();
   }
 
-  /// Genera un reporte con resumen por categoría
+  /// Genera un reporte con resumen por categoría y subcategoría
   String generateCategoryReportCSV() {
     final transactions = _ref.read(transactionsProvider);
+    final categories = _ref.read(walletCategoriesProvider);
+    final subcategories = _ref.read(subcategoriesProvider);
 
-    // Agrupar por categoría
-    final categoryData = <String, (int count, double amount)>{};
+    // Agrupar por (categoría, subcategoría)
+    final categoryData = <(String, String?), (int count, double amount)>{};
 
     for (final tx in transactions) {
       if (tx.isIncome) continue; // Solo gastos
 
-      final current = categoryData[tx.category] ?? (0, 0.0);
-      categoryData[tx.category] = (current.$1 + 1, current.$2 + tx.amount);
+      final key = (tx.category, tx.subcategoryId);
+      final current = categoryData[key] ?? (0, 0.0);
+      categoryData[key] = (current.$1 + 1, current.$2 + tx.amount);
     }
 
     // Header
     final buffer = StringBuffer();
-    buffer.writeln('Categoría,Transacciones,Monto Total');
+    buffer.writeln('Categoría,Subcategoría,Transacciones,Monto Total');
 
     // Agregar categorías ordenadas por monto
     final sortedCategories = categoryData.entries.toList()
@@ -112,7 +126,11 @@ class TransactionReportExporter {
 
     for (final entry in sortedCategories) {
       final (count, amount) = entry.value;
-      buffer.writeln('${entry.key},$count,${amount.toStringAsFixed(2)}');
+      final catName =
+          _escapeCsv(resolveCategory(entry.key.$1, categories).name);
+      final subName = _escapeCsv(
+          resolveSubcategory(entry.key.$2, subcategories)?.name ?? '');
+      buffer.writeln('$catName,$subName,$count,${amount.toStringAsFixed(2)}');
     }
 
     return buffer.toString();

@@ -11,42 +11,8 @@ import '../../../../core/constants/app_curves.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/utils/id_gen.dart';
 import '../providers/budget_provider.dart';
-
-// ── Icon + Color options ──────────────────────────────────────────────────────
-
-const _kIconOptions = [
-  Icons.fork_right_rounded,
-  Icons.directions_car_rounded,
-  Icons.shopping_bag_rounded,
-  Icons.movie_rounded,
-  Icons.favorite_rounded,
-  Icons.home_rounded,
-  Icons.school_rounded,
-  Icons.flight_rounded,
-  Icons.sports_esports_rounded,
-  Icons.fitness_center_rounded,
-  Icons.local_cafe_rounded,
-  Icons.pets_rounded,
-  Icons.music_note_rounded,
-  Icons.health_and_safety_rounded,
-  Icons.savings_rounded,
-  Icons.category_rounded,
-];
-
-const _kColorOptions = [
-  AppColors.catFood,
-  AppColors.catTransport,
-  AppColors.catShopping,
-  AppColors.catEntertainment,
-  AppColors.catHealth,
-  AppColors.emerald,
-  AppColors.petroleum,
-  AppColors.negative,
-  AppColors.warning,
-  Color(0xFFE91E63),
-  Color(0xFF9C27B0),
-  AppColors.catOther,
-];
+import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/presentation/providers/wallet_provider.dart';
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -97,11 +63,17 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
   }
 
   void _showAddSheet() {
+    final existingCategoryIds = ref
+        .read(budgetProvider)
+        .where((b) => b.category != null)
+        .map((b) => b.category!)
+        .toSet();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _BudgetFormSheet(
+      builder: (_) => _CategoryPickerSheet(
+        existingCategoryIds: existingCategoryIds,
         onSave: (item) async {
           await ref.read(budgetProvider.notifier).add(item);
         },
@@ -1140,36 +1112,31 @@ class _AddBudgetButton extends StatelessWidget {
   }
 }
 
-// ── Budget form sheet (add + edit) ────────────────────────────────────────────
+// ── Category picker sheet ─────────────────────────────────────────────────────
 
-class _BudgetFormSheet extends StatefulWidget {
-  const _BudgetFormSheet({required this.onSave});
+class _CategoryPickerSheet extends ConsumerStatefulWidget {
+  const _CategoryPickerSheet({
+    required this.onSave,
+    required this.existingCategoryIds,
+  });
   final Future<void> Function(BudgetItem) onSave;
+  final Set<String> existingCategoryIds;
 
   @override
-  State<_BudgetFormSheet> createState() => _BudgetFormSheetState();
+  ConsumerState<_CategoryPickerSheet> createState() =>
+      _CategoryPickerSheetState();
 }
 
-class _BudgetFormSheetState extends State<_BudgetFormSheet>
+class _CategoryPickerSheetState extends ConsumerState<_CategoryPickerSheet>
     with SingleTickerProviderStateMixin {
-  late final TextEditingController _nameCtrl;
-  late final TextEditingController _limitCtrl;
-  final FocusNode _limitFocusNode = FocusNode();
-  late IconData _icon;
-  late Color _color;
-  bool _iconGridExpanded = false;
-  bool _budgetExpanded = false;
+  WalletCategory? _selected;
+  final _limitCtrl = TextEditingController();
+  bool _limitExpanded = false;
   late AnimationController _scaleCtrl;
 
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController();
-    _limitCtrl = TextEditingController();
-    final idx = math.Random().nextInt(_kIconOptions.length);
-    _icon = _kIconOptions[idx];
-    _color = _kColorOptions[idx % _kColorOptions.length];
-    _nameCtrl.addListener(() => setState(() {}));
     _scaleCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 100),
@@ -1181,40 +1148,44 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
     _limitCtrl.dispose();
-    _limitFocusNode.dispose();
     _scaleCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    final name = _nameCtrl.text.trim();
-    if (name.isEmpty) {
-      HapticFeedback.heavyImpact();
-      return;
-    }
-    final limit = _budgetExpanded
+    final cat = _selected;
+    if (cat == null) return;
+    final limit = _limitExpanded
         ? (double.tryParse(_limitCtrl.text.replaceAll(',', '.')) ?? 0.0)
         : 0.0;
     await widget.onSave(BudgetItem(
       id: generateId(),
-      name: name,
-      icon: _icon,
-      color: _color,
+      name: cat.name,
+      icon: cat.icon,
+      color: cat.color,
+      category: cat.id,
       limit: limit,
     ));
     HapticFeedback.mediumImpact();
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
+    if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
-    final previewName = _nameCtrl.text.trim();
+    final categories = ref.watch(walletCategoriesProvider);
+
+    final expense = categories
+        .where((cat) => cat.type == WalletCategoryType.expense)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final income = categories
+        .where((cat) => cat.type == WalletCategoryType.income)
+        .toList()
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final all = [...expense, ...income];
 
     return Container(
       decoration: BoxDecoration(
@@ -1223,401 +1194,301 @@ class _BudgetFormSheetState extends State<_BudgetFormSheet>
         color: c.surface,
       ),
       padding: EdgeInsets.only(bottom: bottom),
-      child: SingleChildScrollView(child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // ── Drag handle ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.md),
-            child: Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: c.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Drag handle
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.md),
+              child: Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: c.textTertiary.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
             ),
-          ),
-          // ── Header ────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenPadding, 8, AppSpacing.screenPadding, 0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const SizedBox(width: 30),
-                    GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: c.glassMedium,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.close_rounded,
-                            size: 16, color: c.textSecondary),
-                      ),
-                    ),
-                  ],
-                ),
-                Text(
-                  'Nueva categoría',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: c.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // ── Content ───────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 12,
-                AppSpacing.screenPadding, AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // a) Vista previa
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _color.withValues(alpha: 0.08),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
-                    border: Border.all(
-                        color: _color.withValues(alpha: 0.20), width: 0.8),
-                  ),
-                  child: Row(
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 8, AppSpacing.screenPadding, 0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: _color.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(_icon, size: 16, color: _color),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          previewName.isEmpty
-                              ? 'Nombre de categoría'
-                              : previewName,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: previewName.isEmpty
-                                ? c.textTertiary
-                                : _color,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // b) Name + Icon field
-                Container(
-                  decoration: BoxDecoration(
-                    color: c.card,
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
-                    border: Border.all(
-                        color: c.glassBorder, width: 0.5),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nameCtrl,
-                          autofocus: true,
-                          style: TextStyle(
-                              fontSize: 14, color: c.textPrimary),
-                          decoration: InputDecoration(
-                            hintText: 'ej. Gimnasio, Transporte…',
-                            hintStyle: TextStyle(
-                                fontSize: 14, color: c.textTertiary),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 12),
-                          ),
-                        ),
-                      ),
+                      const SizedBox(width: 30),
                       GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() =>
-                              _iconGridExpanded = !_iconGridExpanded);
-                        },
+                        onTap: () => Navigator.of(context).pop(),
                         child: Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
+                          width: 30,
+                          height: 30,
                           decoration: BoxDecoration(
-                            color: _color.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(
-                                AppSpacing.pillRadius),
-                            border: Border.all(
-                                color: _color.withValues(alpha: 0.30),
-                                width: 0.8),
+                            color: c.glassMedium,
+                            shape: BoxShape.circle,
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(_icon, size: 14, color: _color),
-                              const SizedBox(width: 3),
-                              Icon(Icons.expand_more_rounded,
-                                  size: 12,
-                                  color: _color.withValues(alpha: 0.7)),
-                            ],
-                          ),
+                          child: Icon(Icons.close_rounded,
+                              size: 16, color: c.textSecondary),
                         ),
                       ),
                     ],
                   ),
-                ),
-                // c) Icon grid (animated)
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  child: _iconGridExpanded
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Wrap(
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: _kIconOptions.map((ic) {
-                              final isSel = ic == _icon;
-                              return GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  final newIdx = _kIconOptions.indexOf(ic);
-                                  setState(() {
-                                    _icon = ic;
-                                    _color = _kColorOptions[
-                                        newIdx % _kColorOptions.length];
-                                    _iconGridExpanded = false;
-                                  });
-                                },
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: isSel
-                                        ? _color.withValues(alpha: 0.18)
-                                        : c.card,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isSel
-                                          ? _color.withValues(alpha: 0.5)
-                                          : c.glassBorder,
-                                      width: isSel ? 1.5 : 0.5,
-                                    ),
-                                  ),
-                                  child: Icon(ic,
-                                      size: 18,
-                                      color: isSel
-                                          ? _color
-                                          : c.textTertiary),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                // d) Colors (compact horizontal row — always visible)
-                SizedBox(
-                  height: 32,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _kColorOptions.length,
-                    separatorBuilder: (_, _) => const SizedBox(width: 8),
-                    itemBuilder: (_, i) {
-                      final col = _kColorOptions[i];
-                      final isSel = col.toARGB32() == _color.toARGB32();
-                      return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.selectionClick();
-                          setState(() => _color = col);
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 150),
-                          width: 28,
-                          height: 28,
-                          decoration: BoxDecoration(
-                            color: col,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSel ? Colors.white : Colors.transparent,
-                              width: 2,
-                            ),
-                            boxShadow: isSel
-                                ? [
-                                    BoxShadow(
-                                        color: col.withValues(alpha: 0.5),
-                                        blurRadius: 8,
-                                        spreadRadius: -2)
-                                  ]
-                                : null,
-                          ),
-                          child: isSel
-                              ? const Icon(Icons.check_rounded,
-                                  size: 12, color: Colors.white)
-                              : null,
-                        ),
-                      );
-                    },
+                  Text(
+                    'Seleccionar categoría',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: c.textSecondary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                // e) Budget toggle (animated)
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                  child: _budgetExpanded
-                      ? Container(
+                ],
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.screenPadding, 12,
+                  AppSpacing.screenPadding, AppSpacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category list
+                  ...all.map((cat) {
+                    final alreadyAdded =
+                        widget.existingCategoryIds.contains(cat.id);
+                    final isSelected = _selected?.id == cat.id;
+                    return GestureDetector(
+                      onTap: alreadyAdded
+                          ? null
+                          : () {
+                              HapticFeedback.selectionClick();
+                              setState(() {
+                                _selected = isSelected ? null : cat;
+                                if (!isSelected) _limitExpanded = false;
+                              });
+                            },
+                      child: Opacity(
+                        opacity: alreadyAdded ? 0.38 : 1.0,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          margin:
+                              const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.md,
+                              vertical: AppSpacing.md),
                           decoration: BoxDecoration(
-                            color: c.card,
+                            color: isSelected
+                                ? cat.color.withValues(alpha: 0.1)
+                                : c.card,
                             borderRadius:
                                 BorderRadius.circular(AppSpacing.cardRadius),
                             border: Border.all(
-                                color: c.glassBorder, width: 0.5),
+                              color: isSelected
+                                  ? cat.color.withValues(alpha: 0.4)
+                                  : c.glassBorder,
+                              width: isSelected ? 1.5 : 0.5,
+                            ),
                           ),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.only(left: 12),
-                                child: Icon(Icons.attach_money_rounded,
-                                    size: 15,
-                                    color: c.textTertiary),
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: cat.color.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(cat.icon,
+                                    size: 15, color: cat.color),
                               ),
+                              const SizedBox(width: AppSpacing.md),
                               Expanded(
-                                child: TextField(
-                                  controller: _limitCtrl,
-                                  focusNode: _limitFocusNode,
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: c.textPrimary),
-                                  decoration: InputDecoration(
-                                    hintText: 'ej. 200',
-                                    hintStyle: TextStyle(
-                                        fontSize: 14,
-                                        color: c.textTertiary),
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 12),
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(cat.name,
+                                        style: AppTypography.labelL
+                                            .copyWith(color: c.textPrimary)),
+                                    Text(
+                                      alreadyAdded
+                                          ? 'Ya en presupuesto'
+                                          : cat.type.label,
+                                      style: AppTypography.labelS
+                                          .copyWith(color: c.textTertiary),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              GestureDetector(
-                                onTap: () =>
-                                    setState(() => _budgetExpanded = false),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 10),
-                                  child: Icon(Icons.close_rounded,
-                                      size: 15,
-                                      color: c.textTertiary),
-                                ),
-                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle_rounded,
+                                    size: 18, color: cat.color),
                             ],
                           ),
-                        )
-                      : GestureDetector(
-                          onTap: () =>
-                              setState(() => _budgetExpanded = true),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.add_rounded,
-                                    size: 13, color: c.textTertiary),
-                                const SizedBox(width: 3),
-                                Text(
-                                  '+ Presupuesto mensual',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: c.textTertiary,
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Limit field — only visible when a category is selected
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 200),
+                    curve: Curves.easeOut,
+                    child: _selected == null
+                        ? const SizedBox.shrink()
+                        : _limitExpanded
+                            ? Container(
+                                decoration: BoxDecoration(
+                                  color: c.card,
+                                  borderRadius: BorderRadius.circular(
+                                      AppSpacing.cardRadius),
+                                  border: Border.all(
+                                      color: c.glassBorder, width: 0.5),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(left: 12),
+                                      child: Icon(Icons.attach_money_rounded,
+                                          size: 15, color: c.textTertiary),
+                                    ),
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _limitCtrl,
+                                        autofocus: true,
+                                        keyboardType: const TextInputType
+                                            .numberWithOptions(decimal: true),
+                                        style: TextStyle(
+                                            fontSize: 14,
+                                            color: c.textPrimary),
+                                        decoration: InputDecoration(
+                                          hintText: 'ej. 200',
+                                          hintStyle: TextStyle(
+                                              fontSize: 14,
+                                              color: c.textTertiary),
+                                          border: InputBorder.none,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  horizontal: 8,
+                                                  vertical: 12),
+                                        ),
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: () => setState(
+                                          () => _limitExpanded = false),
+                                      child: Padding(
+                                        padding:
+                                            const EdgeInsets.only(right: 10),
+                                        child: Icon(Icons.close_rounded,
+                                            size: 15, color: c.textTertiary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : GestureDetector(
+                                onTap: () =>
+                                    setState(() => _limitExpanded = true),
+                                child: Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 4),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.add_rounded,
+                                          size: 13, color: c.textTertiary),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '+ Límite mensual',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: c.textTertiary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
+                              ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Save button — disabled until a category is picked
+                  ScaleTransition(
+                    scale: _scaleCtrl,
+                    child: GestureDetector(
+                      onTapDown:
+                          _selected != null ? (_) => _scaleCtrl.reverse() : null,
+                      onTapUp: _selected != null
+                          ? (_) {
+                              _scaleCtrl.forward();
+                              _submit();
+                            }
+                          : null,
+                      onTapCancel:
+                          _selected != null ? () => _scaleCtrl.forward() : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        height: 46,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: _selected != null
+                              ? const LinearGradient(colors: [
+                                  AppColors.emerald,
+                                  AppColors.emeraldDim
+                                ])
+                              : null,
+                          color: _selected == null ? c.glass : null,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          border: _selected == null
+                              ? Border.all(color: c.glassBorder, width: 0.5)
+                              : null,
+                          boxShadow: _selected != null
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        AppColors.emerald.withValues(alpha: 0.28),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ]
+                              : null,
                         ),
-                ),
-                // f) Save button
-                const SizedBox(height: 8),
-                ScaleTransition(
-                  scale: _scaleCtrl,
-                  child: GestureDetector(
-                    onTapDown: (_) => _scaleCtrl.reverse(),
-                    onTapUp: (_) {
-                      _scaleCtrl.forward();
-                      _submit();
-                    },
-                    onTapCancel: () => _scaleCtrl.forward(),
-                    child: Container(
-                      height: 46,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppColors.emerald, AppColors.emeraldDim],
-                        ),
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.cardRadius),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.emerald.withValues(alpha: 0.28),
-                            blurRadius: 16,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.check_rounded,
-                              color: Colors.white, size: 18),
-                          SizedBox(width: 6),
-                          Text(
-                            'Guardar',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_rounded,
+                                color: _selected != null
+                                    ? Colors.white
+                                    : c.textTertiary,
+                                size: 18),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Guardar',
+                              style: TextStyle(
+                                color: _selected != null
+                                    ? Colors.white
+                                    : c.textTertiary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -28,14 +28,22 @@ class CategoriesRow extends ConsumerWidget {
             return _CategoryChip(
               category: null,
               isActive: selected == null,
-              onTap: () => ref.read(selectedCategoryProvider.notifier).state = null,
+              onTap: () {
+                ref.read(selectedCategoryProvider.notifier).state = null;
+                ref.read(selectedSubcategoryProvider.notifier).state = null;
+              },
             );
           }
           final cat = expenseCats[i - 1];
           return _CategoryChip(
             category: cat,
             isActive: selected == cat.id,
-            onTap: () => ref.read(selectedCategoryProvider.notifier).state = cat.id,
+            onTap: () {
+              if (ref.read(selectedCategoryProvider) != cat.id) {
+                ref.read(selectedSubcategoryProvider.notifier).state = null;
+              }
+              ref.read(selectedCategoryProvider.notifier).state = cat.id;
+            },
           );
         },
       ),

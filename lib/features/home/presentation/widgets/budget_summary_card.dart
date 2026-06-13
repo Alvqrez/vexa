@@ -4,8 +4,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
+import '../providers/home_provider.dart';
 import '../../../budget/presentation/providers/budget_provider.dart';
-import '../../../budget/presentation/pages/budget_page.dart';
 
 class BudgetSummaryCard extends ConsumerWidget {
   const BudgetSummaryCard({super.key});
@@ -34,9 +34,7 @@ class BudgetSummaryCard extends ConsumerWidget {
             : AppColors.positive;
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const BudgetPage()),
-      ),
+      onTap: () => ref.read(selectedNavIndexProvider.notifier).state = 3,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(

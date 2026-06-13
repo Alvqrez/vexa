@@ -7,32 +7,14 @@ import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../shared/widgets/success_creation_overlay.dart';
+import '../../../../shared/widgets/icon_picker_sheet.dart';
+import '../../../../core/icons/vexa_icons.dart';
 import '../../domain/models/wallet_category.dart';
+import '../../domain/models/subcategory.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/subcategories_provider.dart';
+import '../widgets/subcategory_form_sheet.dart';
 import '../../../../core/utils/id_gen.dart';
-
-const _kIconOptions = [
-  Icons.fork_right_rounded,
-  Icons.directions_car_rounded,
-  Icons.shopping_bag_rounded,
-  Icons.movie_rounded,
-  Icons.favorite_rounded,
-  Icons.home_rounded,
-  Icons.school_rounded,
-  Icons.flight_rounded,
-  Icons.sports_esports_rounded,
-  Icons.fitness_center_rounded,
-  Icons.local_cafe_rounded,
-  Icons.pets_rounded,
-  Icons.music_note_rounded,
-  Icons.health_and_safety_rounded,
-  Icons.savings_rounded,
-  Icons.category_rounded,
-  Icons.work_rounded,
-  Icons.laptop_rounded,
-  Icons.business_center_rounded,
-  Icons.attach_money_rounded,
-];
 
 const _kColorOptions = [
   AppColors.catFood,
@@ -151,7 +133,7 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
           style: AppTypography.headingS.copyWith(color: context.colors.textPrimary),
         ),
         content: Text(
-          '¿Eliminar "${cat.name}"?',
+          '¿Eliminar "${cat.name}"? Sus subcategorías también se eliminarán.',
           style: AppTypography.bodyM.copyWith(color: context.colors.textSecondary),
         ),
         actions: [
@@ -417,9 +399,9 @@ class _CategoryList extends ConsumerWidget {
   }
 }
 
-// ── Category tile ─────────────────────────────────────────────────────────────
+// ── Category tile (desplegable con subcategorías) ─────────────────────────────
 
-class _CategoryTile extends StatelessWidget {
+class _CategoryTile extends ConsumerStatefulWidget {
   const _CategoryTile({
     required this.category,
     required this.onEdit,
@@ -430,98 +412,375 @@ class _CategoryTile extends StatelessWidget {
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onEdit();
-      },
-      child: Container(
-        padding: const EdgeInsets.all(2.5),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
-          color: Colors.white.withValues(alpha: 0.02),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05),
-            width: 0.5,
-          ),
+  ConsumerState<_CategoryTile> createState() => _CategoryTileState();
+}
+
+class _CategoryTileState extends ConsumerState<_CategoryTile> {
+  bool _expanded = false;
+
+  void _toggle() {
+    HapticFeedback.selectionClick();
+    setState(() => _expanded = !_expanded);
+  }
+
+  void _showAddSubcategory() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => SubcategoryFormSheet(category: widget.category),
+    );
+  }
+
+  void _showEditSubcategory(Subcategory sub) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          SubcategoryFormSheet(category: widget.category, existing: sub),
+    );
+  }
+
+  void _confirmDeleteSubcategory(Subcategory sub) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: dialogCtx.colors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
         ),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
+        title: Text(
+          'Eliminar subcategoría',
+          style: AppTypography.headingS
+              .copyWith(color: dialogCtx.colors.textPrimary),
+        ),
+        content: Text(
+          '¿Eliminar "${sub.name}"? Las transacciones existentes conservarán su categoría.',
+          style: AppTypography.bodyM
+              .copyWith(color: dialogCtx.colors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'Cancelar',
+              style: AppTypography.labelM
+                  .copyWith(color: dialogCtx.colors.textTertiary),
+            ),
           ),
-          decoration: BoxDecoration(
-            color: context.colors.card,
-            borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+          TextButton(
+            onPressed: () async {
+              await ref
+                  .read(subcategoriesProvider.notifier)
+                  .delete(sub.id);
+              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+            },
+            child: Text(
+              'Eliminar',
+              style: AppTypography.labelM.copyWith(color: AppColors.negative),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: category.surface,
-                  borderRadius: BorderRadius.circular(12),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final category = widget.category;
+    final subs = ref.watch(subcategoriesByCategoryProvider(category.id));
+
+    return Container(
+      padding: const EdgeInsets.all(2.5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius + 2.5),
+        color: Colors.white.withValues(alpha: 0.02),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.05),
+          width: 0.5,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: context.colors.card,
+          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        ),
+        child: Column(
+          children: [
+            // ── Header ────────────────────────────────────────────────
+            GestureDetector(
+              onTap: _toggle,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
                 ),
-                child: Icon(category.icon, size: 18, color: category.color),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Row(
                   children: [
-                    Text(
-                      category.name,
-                      style: AppTypography.labelL.copyWith(
-                        color: context.colors.textPrimary,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: category.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child:
+                          Icon(category.icon, size: 18, color: category.color),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            category.name,
+                            style: AppTypography.labelL.copyWith(
+                              color: context.colors.textPrimary,
+                            ),
+                          ),
+                          Text(
+                            subs.isEmpty
+                                ? category.type.label
+                                : '${category.type.label} · ${subs.length} subcategoría${subs.length == 1 ? '' : 's'}',
+                            style: AppTypography.labelS.copyWith(
+                              color: context.colors.textTertiary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Text(
-                      category.type.label,
-                      style: AppTypography.labelS.copyWith(
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (_) => _CategoryActionSheet(
+                            category: category,
+                            onEdit: widget.onEdit,
+                            onDelete: widget.onDelete,
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: context.colors.glass,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Icon(
+                          Icons.more_vert_rounded,
+                          size: 14,
+                          color: context.colors.textSecondary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    AnimatedRotation(
+                      turns: _expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 220),
+                      curve: AppCurves.gentle,
+                      child: Icon(
+                        Icons.expand_more_rounded,
+                        size: 20,
                         color: context.colors.textTertiary,
                       ),
                     ),
                   ],
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => _CategoryActionSheet(
-                      category: category,
-                      onEdit: onEdit,
-                      onDelete: onDelete,
+            ),
+
+            // ── Subcategorías (desplegable) ───────────────────────────
+            AnimatedSize(
+              duration: const Duration(milliseconds: 240),
+              curve: AppCurves.gentle,
+              alignment: Alignment.topCenter,
+              child: !_expanded
+                  ? const SizedBox(width: double.infinity)
+                  : Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        0,
+                        AppSpacing.lg,
+                        AppSpacing.md,
+                      ),
+                      child: Column(
+                        children: [
+                          Divider(
+                            height: 1,
+                            thickness: 0.5,
+                            color: context.colors.glassBorder,
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          if (subs.isNotEmpty)
+                            ReorderableListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              buildDefaultDragHandles: false,
+                              onReorderItem: (oldIndex, newIndex) {
+                                HapticFeedback.mediumImpact();
+                                ref
+                                    .read(subcategoriesProvider.notifier)
+                                    .reorder(category.id, oldIndex, newIndex);
+                              },
+                              itemCount: subs.length,
+                              itemBuilder: (context, i) {
+                                final sub = subs[i];
+                                return _SubcategoryRow(
+                                  key: ValueKey(sub.id),
+                                  index: i,
+                                  subcategory: sub,
+                                  parentColor: category.color,
+                                  onEdit: () => _showEditSubcategory(sub),
+                                  onDelete: () =>
+                                      _confirmDeleteSubcategory(sub),
+                                );
+                              },
+                            ),
+                          _AddSubcategoryButton(
+                            color: category.color,
+                            onTap: _showAddSubcategory,
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: context.colors.glass,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(
-                    Icons.more_vert_rounded,
-                    size: 14,
-                    color: context.colors.textSecondary,
-                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Subcategory row ───────────────────────────────────────────────────────────
+
+class _SubcategoryRow extends StatelessWidget {
+  const _SubcategoryRow({
+    super.key,
+    required this.index,
+    required this.subcategory,
+    required this.parentColor,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final int index;
+  final Subcategory subcategory;
+  final Color parentColor;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = subcategory.effectiveColor(parentColor);
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onEdit();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(
+          children: [
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(subcategory.icon, size: 15, color: color),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                subcategory.name,
+                style: AppTypography.labelM.copyWith(
+                  color: context.colors.textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onDelete();
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.delete_outline_rounded,
+                  size: 15,
+                  color: context.colors.textTertiary,
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              Icon(
-                Icons.drag_handle_rounded,
-                size: 18,
-                color: context.colors.textTertiary,
+            ),
+            ReorderableDragStartListener(
+              index: index,
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Icon(
+                  Icons.drag_indicator_rounded,
+                  size: 16,
+                  color: context.colors.textTertiary,
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Add subcategory button ────────────────────────────────────────────────────
+
+class _AddSubcategoryButton extends StatelessWidget {
+  const _AddSubcategoryButton({required this.color, required this.onTap});
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            const SizedBox(width: AppSpacing.sm),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: color.withValues(alpha: 0.30),
+                  width: 0.8,
+                ),
+              ),
+              child: Icon(Icons.add_rounded, size: 16, color: color),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Text(
+              'Nueva subcategoría',
+              style: AppTypography.labelM.copyWith(color: color),
+            ),
+          ],
         ),
       ),
     );
@@ -598,13 +857,30 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
   late Color _color;
   late WalletCategoryType _type;
 
+  /// true cuando el usuario eligió un icono manualmente; desactiva sugerencias.
+  bool _iconPickedManually = false;
+
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.existing?.name ?? '');
-    _icon = widget.existing?.icon ?? _kIconOptions.first;
+    _icon = widget.existing?.icon ?? Icons.category_rounded;
     _color = widget.existing?.color ?? _kColorOptions.first;
     _type = widget.existing?.type ?? widget.type;
+    _iconPickedManually = widget.existing != null;
+    _nameCtrl.addListener(_maybeSuggestIcon);
+  }
+
+  /// Sugerencia automática de icono mientras se escribe el nombre.
+  void _maybeSuggestIcon() {
+    if (_iconPickedManually) {
+      setState(() {}); // refresca la vista previa con el nuevo nombre
+      return;
+    }
+    final suggestion = suggestIconFor(_nameCtrl.text);
+    setState(() {
+      if (suggestion != null) _icon = suggestion;
+    });
   }
 
   @override
@@ -638,60 +914,18 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
     Navigator.pop(context);
   }
 
-  void _showIconPicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setModalState) => Container(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.xxl,
-            AppSpacing.md,
-            AppSpacing.xxl,
-            AppSpacing.xxl,
-          ),
-          decoration: BoxDecoration(
-            color: ctx.colors.card,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppSpacing.cardRadiusL),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                  decoration: BoxDecoration(
-                    color: ctx.colors.textTertiary.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Text(
-                'Elige un icono',
-                style: AppTypography.headingS.copyWith(
-                  color: ctx.colors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              _IconPickerGrid(
-                icons: _kIconOptions,
-                selected: _icon,
-                color: _color,
-                onChanged: (ic) {
-                  setState(() => _icon = ic);
-                  Navigator.pop(ctx);
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
+  Future<void> _showIconPicker() async {
+    final picked = await IconPickerSheet.show(
+      context,
+      selected: _icon,
+      color: _color,
     );
+    if (picked != null && mounted) {
+      setState(() {
+        _icon = picked;
+        _iconPickedManually = true;
+      });
+    }
   }
 
   @override
@@ -965,58 +1199,6 @@ class _FormTextField extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _IconPickerGrid extends StatelessWidget {
-  const _IconPickerGrid({
-    required this.icons,
-    required this.selected,
-    required this.color,
-    required this.onChanged,
-  });
-  final List<IconData> icons;
-  final IconData selected;
-  final Color color;
-  final ValueChanged<IconData> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: icons.map((ic) {
-        final isSel = ic == selected;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(ic);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: isSel
-                  ? color.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: isSel
-                    ? color.withValues(alpha: 0.5)
-                    : Colors.white.withValues(alpha: 0.06),
-                width: isSel ? 1.5 : 1,
-              ),
-            ),
-            child: Icon(
-              ic,
-              size: 20,
-              color: isSel ? color : context.colors.textTertiary,
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

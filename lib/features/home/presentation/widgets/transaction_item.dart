@@ -11,7 +11,9 @@ import '../pages/transaction_detail_page.dart';
 import '../pages/add_transaction_page.dart';
 import '../providers/home_provider.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
+import '../../../wallet/domain/models/subcategory.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
+import '../../../wallet/presentation/providers/subcategories_provider.dart';
 
 class TransactionItem extends ConsumerStatefulWidget {
   const TransactionItem({
@@ -182,6 +184,8 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     final t = widget.transaction;
     final cats = ref.watch(walletCategoriesProvider);
     final cat = resolveCategory(t.category, cats);
+    final sub =
+        resolveSubcategory(t.subcategoryId, ref.watch(subcategoriesProvider));
     final isIncome = t.isIncome;
     final currency = ref.watch(currencySymbolProvider);
 
@@ -237,7 +241,11 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                       color: cat.surface,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Icon(cat.icon, color: cat.color, size: 20),
+                    child: Icon(
+                      sub?.icon ?? cat.icon,
+                      color: sub?.effectiveColor(cat.color) ?? cat.color,
+                      size: 20,
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.md),
@@ -246,7 +254,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        t.merchant,
+                        sub != null ? cat.name : t.merchant,
                         style: AppTypography.bodyM.copyWith(
                           color: c.textPrimary,
                           fontWeight: FontWeight.w500,
@@ -257,6 +265,27 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                       const SizedBox(height: 3),
                       Row(
                         children: [
+                          if (sub != null) ...[
+                            Flexible(
+                              child: Text(
+                                sub.name,
+                                style: AppTypography.labelS.copyWith(
+                                  color: sub.effectiveColor(cat.color),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 3, height: 3,
+                              decoration: BoxDecoration(
+                                color: c.textTertiary,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           if (account != null) ...[
                             Text(
                               account.name,

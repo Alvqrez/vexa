@@ -52,18 +52,23 @@ const IsarTransactionSchema = CollectionSchema(
       name: r'note',
       type: IsarType.string,
     ),
-    r'tags': PropertySchema(
+    r'subcategoryId': PropertySchema(
       id: 7,
+      name: r'subcategoryId',
+      type: IsarType.string,
+    ),
+    r'tags': PropertySchema(
+      id: 8,
       name: r'tags',
       type: IsarType.stringList,
     ),
     r'txId': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'txId',
       type: IsarType.string,
     ),
     r'typeStr': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'typeStr',
       type: IsarType.string,
     )
@@ -123,6 +128,12 @@ int _isarTransactionEstimateSize(
       bytesCount += 3 + value.length * 3;
     }
   }
+  {
+    final value = object.subcategoryId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.tags.length * 3;
   {
     for (var i = 0; i < object.tags.length; i++) {
@@ -148,9 +159,10 @@ void _isarTransactionSerialize(
   writer.writeStringList(offsets[4], object.imagePaths);
   writer.writeString(offsets[5], object.merchant);
   writer.writeString(offsets[6], object.note);
-  writer.writeStringList(offsets[7], object.tags);
-  writer.writeString(offsets[8], object.txId);
-  writer.writeString(offsets[9], object.typeStr);
+  writer.writeString(offsets[7], object.subcategoryId);
+  writer.writeStringList(offsets[8], object.tags);
+  writer.writeString(offsets[9], object.txId);
+  writer.writeString(offsets[10], object.typeStr);
 }
 
 IsarTransaction _isarTransactionDeserialize(
@@ -168,9 +180,10 @@ IsarTransaction _isarTransactionDeserialize(
   object.imagePaths = reader.readStringList(offsets[4]) ?? [];
   object.merchant = reader.readString(offsets[5]);
   object.note = reader.readStringOrNull(offsets[6]);
-  object.tags = reader.readStringList(offsets[7]) ?? [];
-  object.txId = reader.readString(offsets[8]);
-  object.typeStr = reader.readString(offsets[9]);
+  object.subcategoryId = reader.readStringOrNull(offsets[7]);
+  object.tags = reader.readStringList(offsets[8]) ?? [];
+  object.txId = reader.readString(offsets[9]);
+  object.typeStr = reader.readString(offsets[10]);
   return object;
 }
 
@@ -196,10 +209,12 @@ P _isarTransactionDeserializeProp<P>(
     case 6:
       return (reader.readStringOrNull(offset)) as P;
     case 7:
-      return (reader.readStringList(offset) ?? []) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 8:
-      return (reader.readString(offset)) as P;
+      return (reader.readStringList(offset) ?? []) as P;
     case 9:
+      return (reader.readString(offset)) as P;
+    case 10:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -1385,6 +1400,160 @@ extension IsarTransactionQueryFilter
   }
 
   QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'subcategoryId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'subcategoryId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'subcategoryId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'subcategoryId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'subcategoryId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'subcategoryId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
+      subcategoryIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'subcategoryId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterFilterCondition>
       tagsElementEqualTo(
     String value, {
     bool caseSensitive = true,
@@ -1971,6 +2140,20 @@ extension IsarTransactionQuerySortBy
     });
   }
 
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy>
+      sortBySubcategoryId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subcategoryId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy>
+      sortBySubcategoryIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subcategoryId', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy> sortByTxId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'txId', Sort.asc);
@@ -2093,6 +2276,20 @@ extension IsarTransactionQuerySortThenBy
     });
   }
 
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy>
+      thenBySubcategoryId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subcategoryId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy>
+      thenBySubcategoryIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'subcategoryId', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarTransaction, IsarTransaction, QAfterSortBy> thenByTxId() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'txId', Sort.asc);
@@ -2169,6 +2366,14 @@ extension IsarTransactionQueryWhereDistinct
     });
   }
 
+  QueryBuilder<IsarTransaction, IsarTransaction, QDistinct>
+      distinctBySubcategoryId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'subcategoryId',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<IsarTransaction, IsarTransaction, QDistinct> distinctByTags() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'tags');
@@ -2239,6 +2444,13 @@ extension IsarTransactionQueryProperty
   QueryBuilder<IsarTransaction, String?, QQueryOperations> noteProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'note');
+    });
+  }
+
+  QueryBuilder<IsarTransaction, String?, QQueryOperations>
+      subcategoryIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'subcategoryId');
     });
   }
 

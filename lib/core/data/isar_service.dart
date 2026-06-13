@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'isar/isar_transaction.dart';
 import 'isar/isar_account.dart';
 import 'isar/isar_wallet_category.dart';
+import 'isar/isar_subcategory.dart';
 import 'isar/isar_subscription.dart';
 import 'isar/isar_financial_goal.dart';
 import 'isar/isar_budget_item.dart';
@@ -11,6 +12,7 @@ import 'isar/isar_loan.dart';
 export 'isar/isar_transaction.dart';
 export 'isar/isar_account.dart';
 export 'isar/isar_wallet_category.dart';
+export 'isar/isar_subcategory.dart';
 export 'isar/isar_subscription.dart';
 export 'isar/isar_financial_goal.dart';
 export 'isar/isar_budget_item.dart';
@@ -23,6 +25,7 @@ Future<Isar> openIsar() async {
       IsarTransactionSchema,
       IsarAccountSchema,
       IsarWalletCategorySchema,
+      IsarSubcategorySchema,
       IsarSubscriptionSchema,
       IsarFinancialGoalSchema,
       IsarBudgetItemSchema,

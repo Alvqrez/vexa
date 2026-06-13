@@ -379,11 +379,13 @@ class _MainShellState extends ConsumerState<MainShell>
           backgroundColor: Colors.transparent,
           builder: (_) => const AddSubscriptionSheet(),
         ),
-        onMoreDetails: (type, amount, categoryId) => showTransactionSheet(
+        onMoreDetails: (type, amount, categoryId, subcategoryId) =>
+            showTransactionSheet(
           context,
           defaultType: type,
           initialAmount: amount,
           initialCategoryId: categoryId,
+          initialSubcategoryId: subcategoryId,
         ),
       ),
     );
@@ -411,6 +413,7 @@ void showTransactionSheet(
   TransactionType defaultType = TransactionType.expense,
   String? initialAmount,
   String? initialCategoryId,
+  String? initialSubcategoryId,
 }) {
   showModalBottomSheet(
     context: context,
@@ -422,6 +425,7 @@ void showTransactionSheet(
       defaultType: defaultType,
       initialAmount: initialAmount,
       initialCategoryId: initialCategoryId,
+      initialSubcategoryId: initialSubcategoryId,
     ),
   );
 }

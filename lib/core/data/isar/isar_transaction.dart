@@ -11,6 +11,7 @@ class IsarTransaction {
   late double amount;
   late String typeStr;      // 'income' | 'expense'
   late String categoryStr;  // TransactionCategory.name
+  String? subcategoryId;    // Subcategory.id — null para transacciones sin subcategoría
   late DateTime date;
   String? accountId;
   String? note;
