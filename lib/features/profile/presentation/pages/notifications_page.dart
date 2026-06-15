@@ -58,6 +58,8 @@ class _NotificationsPageState extends ConsumerState<NotificationsPage>
   }
 
   Future<void> _save(String key, bool value) async {
+    // Request iOS permissions when the user enables any notification type.
+    if (value) await NotificationService.requestPermissions();
     await LocalPrefsService.setBool(key, value);
     if (key == 'notif_prediction') {
       ref.read(notifPrefsProvider.notifier).reload();

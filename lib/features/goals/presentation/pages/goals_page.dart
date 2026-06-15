@@ -465,10 +465,28 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
   Future<void> _submit() async {
     final title = _titleCtrl.text.trim();
     final targetText = _targetCtrl.text.trim();
-    if (title.isEmpty || targetText.isEmpty) return;
-
+    if (title.isEmpty) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe un nombre para la meta')),
+      );
+      return;
+    }
+    if (targetText.isEmpty) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe el monto objetivo')),
+      );
+      return;
+    }
     final target = double.tryParse(targetText);
-    if (target == null || target <= 0) return;
+    if (target == null || target <= 0) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El monto debe ser mayor a cero')),
+      );
+      return;
+    }
 
     final goal = FinancialGoal(
       id: generateId(),
@@ -477,7 +495,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
       color: _colors[_selectedColor],
       current: 0,
       target: target,
-      deadline: DateTime.now().add(const Duration(days: 180)),
+      deadline: DateTime.now().add(const Duration(days: 90)),
     );
 
     HapticFeedback.mediumImpact();
@@ -962,8 +980,18 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
     final title = _titleCtrl.text.trim();
     final target = double.tryParse(_targetCtrl.text.trim());
     final current = double.tryParse(_currentCtrl.text.trim());
-    if (title.isEmpty || target == null || target <= 0) {
+    if (title.isEmpty) {
       HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe un nombre para la meta')),
+      );
+      return;
+    }
+    if (target == null || target <= 0) {
+      HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El monto objetivo debe ser mayor a cero')),
+      );
       return;
     }
     final safeCurrent = (current ?? widget.goal.current).clamp(0.0, target);

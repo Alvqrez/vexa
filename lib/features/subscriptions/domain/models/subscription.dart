@@ -47,6 +47,7 @@ class Subscription {
     required this.frequency,
     this.isActive = true,
     this.note,
+    this.accountId,
   });
 
   final String id;
@@ -60,6 +61,7 @@ class Subscription {
   final SubscriptionFrequency frequency;
   final bool isActive;
   final String? note;
+  final String? accountId;
 
   double get monthlyEquivalent => amount * frequency.monthlyFactor;
 
@@ -105,6 +107,8 @@ class Subscription {
     bool? isActive,
     String? note,
     bool clearNote = false,
+    String? accountId,
+    bool clearAccountId = false,
   }) {
     return Subscription(
       id: id,
@@ -117,6 +121,7 @@ class Subscription {
       frequency: frequency ?? this.frequency,
       isActive: isActive ?? this.isActive,
       note: clearNote ? null : (note ?? this.note),
+      accountId: clearAccountId ? null : (accountId ?? this.accountId),
     );
   }
 }

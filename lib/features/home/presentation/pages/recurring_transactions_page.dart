@@ -6,7 +6,10 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/utils/amount_formatter.dart';
 import '../../../../core/utils/id_gen.dart';
+import '../../../../shared/widgets/drag_handle.dart';
+import '../../../../shared/widgets/numeric_keypad.dart';
 import '../../domain/models/recurring_transaction.dart';
 import '../../domain/models/transaction.dart';
 import '../../domain/models/account.dart';
@@ -463,13 +466,15 @@ class _RecurringFormSheet extends ConsumerStatefulWidget {
 
 class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _amountCtrl;
+  late final ValueNotifier<String> _amountNotifier;
   late TransactionType _type;
   late WalletCategory _cat;
   late RecurrenceFrequency _freq;
   late int _times;
   late final Set<int> _weekDays;
   String? _accountId;
+  bool _nameError = false;
+  bool _isSubmitting = false;
 
   static const _dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
@@ -478,8 +483,8 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     super.initState();
     final e = widget.existing;
     _nameCtrl = TextEditingController(text: e?.merchant ?? '');
-    _amountCtrl = TextEditingController(
-        text: e != null ? e.amount.toStringAsFixed(2) : '');
+    _amountNotifier = ValueNotifier<String>(
+        e != null ? e.amount.toStringAsFixed(2) : '');
     _type = e != null
         ? TransactionType.values.firstWhere((t) => t.name == e.type,
             orElse: () => TransactionType.expense)
@@ -501,50 +506,297 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _amountCtrl.dispose();
+    _amountNotifier.dispose();
     super.dispose();
   }
 
+  Color get _typeColor =>
+      _type == TransactionType.income ? AppColors.positive : AppColors.negative;
+
+  void _showCategorySheet(List<WalletCategory> cats) {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    final bottom = MediaQuery.of(context).padding.bottom;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.75),
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(bottom: bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 8),
+              child: Text('Categoría',
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ...cats.map((cat) {
+                      final sel = cat.id == _cat.id;
+                      return GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          setState(() => _cat = cat);
+                          Navigator.pop(context);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.screenPadding, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: sel
+                                ? cat.color.withValues(alpha: 0.12)
+                                : Colors.transparent,
+                            borderRadius:
+                                BorderRadius.circular(AppSpacing.cardRadius),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(cat.icon, size: 18, color: cat.color),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                  child: Text(cat.name,
+                                      style: AppTypography.labelL
+                                          .copyWith(color: c.textPrimary))),
+                              if (sel)
+                                Icon(Icons.check_circle_rounded,
+                                    size: 18, color: cat.color),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFrequencySheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 8),
+              child: Text('Frecuencia',
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            ...RecurrenceFrequency.values.map((f) {
+              final sel = f == _freq;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _freq = f);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.emeraldSurface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.repeat_rounded,
+                          size: 18,
+                          color: sel ? AppColors.emerald : c.textTertiary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(f.label,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        const Icon(Icons.check_circle_rounded,
+                            size: 18, color: AppColors.emerald),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountSheet() {
+    if (widget.accounts.isEmpty) return;
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+            top: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Text('Cuenta',
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ...widget.accounts.map((a) {
+              final sel = a.id == _accountId;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _accountId = a.id);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? a.color.withValues(alpha: 0.10)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                    border: Border.all(
+                      color: sel
+                          ? a.color.withValues(alpha: 0.30)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(a.icon.iconData, size: 18, color: a.color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(a.name,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        Icon(Icons.check_circle_rounded,
+                            size: 18, color: a.color),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     final name = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
-    if (name.isEmpty || amount == null || amount <= 0) {
+    final amount = double.tryParse(_amountNotifier.value.replaceAll(',', '.'));
+    final nameInvalid = name.isEmpty;
+    final amountInvalid = amount == null || amount <= 0;
+    if (nameInvalid || amountInvalid) {
       HapticFeedback.heavyImpact();
+      setState(() => _nameError = nameInvalid);
+      if (mounted) {
+        final c = context.colors;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(
+              nameInvalid
+                  ? 'Ingresa un concepto.'
+                  : 'Ingresa un monto válido mayor a cero.',
+              style: AppTypography.labelM.copyWith(color: c.textPrimary)),
+          backgroundColor: c.card,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+        ));
+      }
       return;
     }
-
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    List<int>? weekDaysValue;
-    if (_freq == RecurrenceFrequency.weekly ||
-        _freq == RecurrenceFrequency.daily) {
-      if (_weekDays.isNotEmpty) {
-        final sorted = _weekDays.toList()..sort();
-        weekDaysValue = sorted;
+    setState(() { _isSubmitting = true; _nameError = false; });
+    try {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      List<int>? weekDaysValue;
+      if (_freq == RecurrenceFrequency.weekly ||
+          _freq == RecurrenceFrequency.daily) {
+        if (_weekDays.isNotEmpty) {
+          final sorted = _weekDays.toList()..sort();
+          weekDaysValue = sorted;
+        }
       }
-    }
-
-    final r = RecurringTransaction(
-      id: widget.existing?.id ?? generateId(),
-      merchant: name,
-      amount: amount,
-      type: _type.name,
-      category: _cat.id,
-      accountId: _accountId,
-      frequency: _freq,
-      nextDate: widget.existing?.nextDate ?? today,
-      timesPerOccurrence: _times,
-      weekDays: weekDaysValue,
-    );
-
-    if (widget.existing != null) {
-      await ref.read(recurringListProvider.notifier).update(r);
-    } else {
-      await ref.read(recurringListProvider.notifier).add(r);
-    }
-    HapticFeedback.mediumImpact();
-    if (mounted) {
-      Navigator.of(context).pop();
+      final r = RecurringTransaction(
+        id: widget.existing?.id ?? generateId(),
+        merchant: name,
+        amount: amount,
+        type: _type.name,
+        category: _cat.id,
+        accountId: _accountId,
+        frequency: _freq,
+        nextDate: widget.existing?.nextDate ?? today,
+        timesPerOccurrence: _times,
+        weekDays: weekDaysValue,
+      );
+      if (widget.existing != null) {
+        await ref.read(recurringListProvider.notifier).update(r);
+      } else {
+        await ref.read(recurringListProvider.notifier).add(r);
+      }
+      HapticFeedback.mediumImpact();
+      if (mounted) Navigator.of(context).pop();
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -554,11 +806,14 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     final showDays = _freq == RecurrenceFrequency.daily ||
         _freq == RecurrenceFrequency.weekly;
     final isEdit = widget.existing != null;
-
     final c = context.colors;
+    final cats = ref.watch(walletCategoriesProvider);
+    final currency = ref.watch(currencySymbolProvider);
+    final account =
+        widget.accounts.where((a) => a.id == _accountId).firstOrNull;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, bottom),
       decoration: BoxDecoration(
         color: c.card,
         borderRadius: const BorderRadius.vertical(
@@ -569,223 +824,199 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: c.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            const DragHandle(),
             Text(isEdit ? 'Editar recurrente' : 'Nueva recurrente',
-                style: AppTypography.headingS
-                    .copyWith(color: c.textPrimary)),
-            const SizedBox(height: AppSpacing.xxl),
+                style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 12),
 
-            _Label('Concepto'),
-            const SizedBox(height: AppSpacing.sm),
+            // Concepto
             _Field(
-                controller: _nameCtrl,
-                hint: 'ej. Transporte, Gimnasio…',
-                icon: Icons.label_outline_rounded,
-                autofocus: !isEdit),
-            const SizedBox(height: AppSpacing.xl),
+              controller: _nameCtrl,
+              hint: 'ej. Transporte, Gimnasio…',
+              icon: Icons.label_outline_rounded,
+              autofocus: !isEdit,
+              hasError: _nameError,
+            ),
+            const SizedBox(height: 10),
 
-            _Label('Monto por vez'),
-            const SizedBox(height: AppSpacing.sm),
-            _Field(
-                controller: _amountCtrl,
-                hint: '0.00',
-                icon: Icons.attach_money_rounded,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true)),
-            const SizedBox(height: AppSpacing.xl),
-
-            _Label('Tipo'),
-            const SizedBox(height: AppSpacing.sm),
+            // Tipo (ingreso / gasto)
             Row(
               children: TransactionType.values.map((t) {
                 final sel = t == _type;
                 final color = t == TransactionType.income
                     ? AppColors.positive
                     : AppColors.negative;
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _type = t);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: sel
-                            ? color.withValues(alpha: 0.12)
-                            : c.glass,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.pillRadius),
-                        border: Border.all(
-                          color: sel
-                              ? color.withValues(alpha: 0.4)
-                              : c.glassBorder,
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                        right: t == TransactionType.income ? 4 : 0),
+                    child: GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _type = t);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        decoration: BoxDecoration(
+                          color: sel ? color.withValues(alpha: 0.12) : c.glass,
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
+                          border: Border.all(
+                            color: sel
+                                ? color.withValues(alpha: 0.4)
+                                : c.glassBorder,
+                          ),
                         ),
-                      ),
-                      child: Text(
+                        child: Text(
                           t == TransactionType.income ? 'Ingreso' : 'Gasto',
-                          style: AppTypography.labelM.copyWith(
+                          textAlign: TextAlign.center,
+                          style: AppTypography.labelS.copyWith(
                             color: sel ? color : c.textTertiary,
                             fontWeight:
                                 sel ? FontWeight.w600 : FontWeight.w400,
-                          )),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _Label('Categoría'),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
-              children: ref.watch(walletCategoriesProvider).map((c) {
-                final sel = c.id == _cat.id;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _cat = c);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? c.color.withValues(alpha: 0.12)
-                          : context.colors.glass,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
-                      border: Border.all(
-                        color: sel
-                            ? c.color.withValues(alpha: 0.4)
-                            : context.colors.glassBorder,
+                          ),
+                        ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(c.icon,
-                            size: 12,
-                            color: sel ? c.color : context.colors.textTertiary),
-                        const SizedBox(width: 5),
-                        Text(c.name,
-                            style: AppTypography.labelS.copyWith(
-                              color: sel ? c.color : context.colors.textTertiary,
-                              fontWeight:
-                                  sel ? FontWeight.w600 : FontWeight.w400,
-                            )),
-                      ],
-                    ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 12),
 
-            _Label('Frecuencia'),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              children: RecurrenceFrequency.values.map((f) {
-                final sel = f == _freq;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _freq = f);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? AppColors.emeraldSurface
-                          : c.glass,
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
-                      border: Border.all(
-                        color: sel
-                            ? AppColors.emerald.withValues(alpha: 0.4)
-                            : c.glassBorder,
-                      ),
-                    ),
-                    child: Text(f.label,
-                        style: AppTypography.labelM.copyWith(
-                          color:
-                              sel ? AppColors.emerald : c.textTertiary,
-                          fontWeight:
-                              sel ? FontWeight.w600 : FontWeight.w400,
-                        )),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _Label('¿Cuántas veces?'),
-            const SizedBox(height: AppSpacing.sm),
+            // Chips (izq) | Monto (der)
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: () {
-                    if (_times > 1) setState(() => _times--);
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _RecChip(
+                        icon: _cat.icon,
+                        label: _cat.name,
+                        color: _cat.color,
+                        onTap: () => _showCategorySheet(cats),
+                      ),
+                      const SizedBox(height: 6),
+                      _RecChip(
+                        icon: Icons.repeat_rounded,
+                        label: _freq.label,
+                        color: AppColors.emerald,
+                        onTap: _showFrequencySheet,
+                      ),
+                      if (widget.accounts.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        _RecChip(
+                          icon: account?.icon.iconData ??
+                              Icons.account_balance_wallet_rounded,
+                          label: account?.name ?? 'Sin cuenta',
+                          color: account?.color ?? c.textTertiary,
+                          onTap: _showAccountSheet,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ValueListenableBuilder<String>(
+                  valueListenable: _amountNotifier,
+                  builder: (_, raw, _) {
+                    final split = splitAmount(raw.isEmpty ? '0' : raw);
+                    return Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(currency,
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: _typeColor.withValues(alpha: 0.65),
+                                      height: 1)),
+                            ),
+                            const SizedBox(width: 2),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(split.integer,
+                                    style: TextStyle(
+                                        fontSize: 46,
+                                        fontWeight: FontWeight.w800,
+                                        color: _typeColor,
+                                        letterSpacing: -1.5,
+                                        height: 1)),
+                                Text(split.decimal,
+                                    style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: _typeColor.withValues(alpha: 0.45),
+                                        letterSpacing: -0.5,
+                                        height: 1)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
-                  child: Container(
-                    width: 38, height: 38,
-                    decoration: BoxDecoration(
-                      color: c.glass,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: c.glassBorder, width: 0.5),
-                    ),
-                    child: Icon(Icons.remove_rounded,
-                        size: 18, color: c.textSecondary),
-                  ),
                 ),
-                const SizedBox(width: AppSpacing.lg),
-                Text('$_times',
-                    style: AppTypography.headingS
-                        .copyWith(color: c.textPrimary)),
-                const SizedBox(width: AppSpacing.lg),
-                GestureDetector(
-                  onTap: () => setState(() => _times++),
-                  child: Container(
-                    width: 38, height: 38,
-                    decoration: BoxDecoration(
-                      color: c.glass,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: c.glassBorder, width: 0.5),
-                    ),
-                    child: Icon(Icons.add_rounded,
-                        size: 18, color: c.textSecondary),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Text(
-                    'por ${_freq == RecurrenceFrequency.daily ? 'día' : 'semana'}',
-                    style: AppTypography.labelM
-                        .copyWith(color: c.textTertiary)),
               ],
             ),
 
             if (showDays) ...[
-              const SizedBox(height: AppSpacing.xl),
-              _Label('Días de la semana'),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: 12),
+              // Veces por día/semana
+              Row(
+                children: [
+                  _Label('Veces por ${_freq == RecurrenceFrequency.daily ? 'día' : 'semana'}'),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () {
+                      if (_times > 1) setState(() => _times--);
+                    },
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: c.glass,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: c.glassBorder, width: 0.5),
+                      ),
+                      child: Icon(Icons.remove_rounded,
+                          size: 16, color: c.textSecondary),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Text('$_times',
+                        style: AppTypography.headingS
+                            .copyWith(color: c.textPrimary)),
+                  ),
+                  GestureDetector(
+                    onTap: () => setState(() => _times++),
+                    child: Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: c.glass,
+                        borderRadius: BorderRadius.circular(9),
+                        border: Border.all(color: c.glassBorder, width: 0.5),
+                      ),
+                      child: Icon(Icons.add_rounded,
+                          size: 16, color: c.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              _Label('Días'),
+              const SizedBox(height: 6),
               Row(
                 children: List.generate(7, (i) {
                   final day = i + 1;
@@ -805,11 +1036,9 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 160),
                         margin: const EdgeInsets.symmetric(horizontal: 2),
-                        height: 38,
+                        height: 34,
                         decoration: BoxDecoration(
-                          color: sel
-                              ? AppColors.emeraldSurface
-                              : c.glass,
+                          color: sel ? AppColors.emeraldSurface : c.glass,
                           borderRadius: BorderRadius.circular(9),
                           border: Border.all(
                             color: sel
@@ -818,16 +1047,12 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                           ),
                         ),
                         child: Center(
-                          child: Text(
-                            _dayLabels[i],
-                            style: AppTypography.labelM.copyWith(
-                              color: sel
-                                  ? AppColors.emerald
-                                  : c.textTertiary,
-                              fontWeight:
-                                  sel ? FontWeight.w700 : FontWeight.w400,
-                            ),
-                          ),
+                          child: Text(_dayLabels[i],
+                              style: AppTypography.labelM.copyWith(
+                                color: sel ? AppColors.emerald : c.textTertiary,
+                                fontWeight:
+                                    sel ? FontWeight.w700 : FontWeight.w400,
+                              )),
                         ),
                       ),
                     ),
@@ -836,87 +1061,65 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
               ),
             ],
 
-            if (widget.accounts.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl),
-              _Label('Cuenta'),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: widget.accounts.map((a) {
-                  final sel = a.id == _accountId;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() => _accountId = a.id);
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: sel
-                            ? a.color.withValues(alpha: 0.12)
-                            : c.glass,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.pillRadius),
-                        border: Border.all(
-                          color: sel
-                              ? a.color.withValues(alpha: 0.4)
-                              : c.glassBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(a.icon.iconData,
-                              size: 13,
-                              color: sel ? a.color : c.textTertiary),
-                          const SizedBox(width: 5),
-                          Text(a.name,
-                              style: AppTypography.labelM.copyWith(
-                                color:
-                                    sel ? a.color : c.textTertiary,
-                                fontWeight:
-                                    sel ? FontWeight.w600 : FontWeight.w400,
-                              )),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+            const SizedBox(height: 8),
 
-            const SizedBox(height: AppSpacing.xxl),
-
-            GestureDetector(
-              onTap: _submit,
-              child: Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                      colors: [AppColors.emerald, AppColors.emeraldDim]),
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.cardRadius),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.emerald.withValues(alpha: 0.30),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Text(isEdit ? 'Guardar cambios' : 'Agregar',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textInverse,
-                      fontWeight: FontWeight.w700,
-                    )),
+            ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, raw, _) => NumericKeypad(
+                value: raw,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                confirmColor: _typeColor,
+                onConfirm: _submit,
+                keyHeight: 44,
+                confirmHeight: 48,
               ),
             ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecChip extends StatelessWidget {
+  const _RecChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.22), width: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500, color: color)),
+            ),
+            const SizedBox(width: 3),
+            Icon(Icons.expand_more_rounded,
+                size: 13, color: color.withValues(alpha: 0.7)),
           ],
         ),
       ),
@@ -939,27 +1142,30 @@ class _Field extends StatelessWidget {
     required this.hint,
     required this.icon,
     this.autofocus = false,
-    this.keyboardType,
+    this.hasError = false,
   });
   final TextEditingController controller;
   final String hint;
   final IconData icon;
   final bool autofocus;
-  final TextInputType? keyboardType;
+  final bool hasError;
 
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: c.glass,
+        color: hasError ? AppColors.negative.withValues(alpha: 0.06) : c.glass,
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: c.glassBorder, width: 0.5),
+        border: Border.all(
+          color: hasError ? AppColors.negative.withValues(alpha: 0.5) : c.glassBorder,
+          width: hasError ? 1.0 : 0.5,
+        ),
       ),
       child: TextField(
         controller: controller,
         autofocus: autofocus,
-        keyboardType: keyboardType,
+
         style: TextStyle(color: c.textPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hint,

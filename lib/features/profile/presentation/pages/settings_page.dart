@@ -15,6 +15,11 @@ import '../../../home/presentation/providers/home_provider.dart';
 import '../../../gamification/presentation/providers/gamification_provider.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 import '../../../wallet/presentation/providers/subcategories_provider.dart';
+import '../../../goals/presentation/providers/goals_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
+import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../loans/presentation/providers/loans_provider.dart';
+import '../../../../core/services/local_auth_service.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import '../../../splash/presentation/pages/splash_page.dart';
@@ -32,9 +37,6 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
   bool _haptics = true;
   bool _analytics = false;
-  String _language = 'Español';
-
-  static const _languages = ['Español', 'English', 'Português', 'Français'];
 
   @override
   void initState() {
@@ -49,12 +51,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
   Future<void> _loadPrefs() async {
     final haptics = await LocalPrefsService.getBool('settings_haptics', defaultValue: true);
     final analytics = await LocalPrefsService.getBool('settings_analytics', defaultValue: false);
-    final lang = await LocalPrefsService.getString('settings_language') ?? 'Español';
     if (!mounted) return;
     setState(() {
       _haptics = haptics;
       _analytics = analytics;
-      _language = lang;
     });
   }
 
@@ -83,19 +83,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
   }
 
-  void _showLanguagePicker() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _LanguagePicker(
-        selected: _language,
-        languages: _languages,
-        onSelect: (lang) {
-          HapticFeedback.selectionClick();
-          setState(() => _language = lang);
-          LocalPrefsService.setString('settings_language', lang);
-          Navigator.pop(context);
-        },
+  void _showComingSoon() {
+    final c = context.colors;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Selección de idioma disponible próximamente.',
+          style: AppTypography.labelM.copyWith(color: c.textPrimary),
+        ),
+        backgroundColor: c.card,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
       ),
     );
   }
@@ -114,7 +113,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
               style: AppTypography.headingS
                   .copyWith(color: cc.textPrimary)),
           content: Text(
-            'Se eliminarán todas tus transacciones y se restaurarán las cuentas a sus valores iniciales. Esta acción no se puede deshacer.',
+            'Se eliminarán todas tus transacciones, metas, presupuestos y suscripciones, y se restaurarán las cuentas a sus valores iniciales. Esta acción no se puede deshacer.',
             style: AppTypography.bodyM
                 .copyWith(color: cc.textSecondary),
           ),
@@ -141,6 +140,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
     await ref.read(transactionsProvider.notifier).reset();
     await ref.read(streakProvider.notifier).reset();
+    await ref.read(goalsProvider.notifier).reset();
+    await ref.read(budgetProvider.notifier).reset();
+    await ref.read(subscriptionsProvider.notifier).reset();
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -194,13 +196,22 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     HapticFeedback.heavyImpact();
 
     try {
-      // Reset in-memory state
+      // Reset in-memory state for notifiers that have reset()
       await ref.read(transactionsProvider.notifier).reset();
       await ref.read(streakProvider.notifier).reset();
+      await ref.read(goalsProvider.notifier).reset();
+      await ref.read(budgetProvider.notifier).reset();
+      await ref.read(subscriptionsProvider.notifier).reset();
+      // Invalidate providers that lack reset() — forces fresh instance on next use
+      ref.invalidate(loansProvider);
+      ref.invalidate(walletCategoriesProvider);
+      ref.invalidate(subcategoriesProvider);
 
-      // Clear ALL remaining Isar collections
+      // Clear ALL Isar collections atomically
       final isar = ref.read(isarProvider);
       await isar.writeTxn(() async {
+        await isar.isarTransactions.clear();
+        await isar.isarLoans.clear();
         await isar.isarWalletCategorys.clear();
         await isar.isarSubcategorys.clear();
         await isar.isarSubscriptions.clear();
@@ -211,6 +222,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
 
       // Wipe all local prefs (clears onboarding_done, transactions_seeded, currency, etc.)
       await LocalPrefsService.clear();
+      // Wipe auth credentials so the login screen shows registration, not sign-in
+      await LocalAuthService.wipeAll();
 
       // Delete profile photo file so it doesn't get auto-restored
       try {
@@ -220,7 +233,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
       } catch (_) {}
 
       // Clear profile notifier state (keeps photo from reappearing in-session)
-      ref.read(userProfileProvider.notifier).clearProfile();
+      await ref.read(userProfileProvider.notifier).clearProfile();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -286,8 +299,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               icon: Icons.language_rounded,
                               color: AppColors.catTransport,
                               title: 'Idioma',
-                              trailing: _language,
-                              onTap: _showLanguagePicker,
+                              trailing: 'Próximamente',
+                              onTap: _showComingSoon,
                             ),
                           ],
                         ),
@@ -664,88 +677,6 @@ class _ActionItem extends StatelessWidget {
                 size: 18, color: c.textTertiary),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ── Language picker sheet ─────────────────────────────────────────────────────
-
-class _LanguagePicker extends StatelessWidget {
-  const _LanguagePicker({
-    required this.selected,
-    required this.languages,
-    required this.onSelect,
-  });
-  final String selected;
-  final List<String> languages;
-  final ValueChanged<String> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-          AppSpacing.screenPadding, 0, AppSpacing.screenPadding, 32),
-      decoration: BoxDecoration(
-        color: c.cardElevated,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadiusL),
-        border: Border.all(color: c.glassBorderStrong, width: 0.5),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: AppSpacing.md),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: c.glassMedium,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            child: Text('Idioma',
-                style: AppTypography.headingS
-                    .copyWith(color: c.textPrimary)),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Divider(
-                height: 1, thickness: 0.5, color: c.glassBorder),
-          ),
-          for (final lang in languages)
-            GestureDetector(
-              onTap: () => onSelect(lang),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xl, vertical: AppSpacing.lg),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(lang,
-                          style: AppTypography.labelL
-                              .copyWith(color: c.textPrimary)),
-                    ),
-                    if (lang == selected)
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: const BoxDecoration(
-                          color: AppColors.emerald,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_rounded,
-                            size: 13, color: AppColors.textInverse),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: AppSpacing.md),
-        ],
       ),
     );
   }

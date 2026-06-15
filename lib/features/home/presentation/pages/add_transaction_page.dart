@@ -64,6 +64,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   final _noteFocusNode = FocusNode();
   bool _noteExpanded = false;
   bool _isRecurring = false;
+  bool _isSubmitting = false;
   RecurrenceFrequency _recurrenceFreq = RecurrenceFrequency.monthly;
 
   /// Nombres de archivo de fotos adjuntas (recibos/tickets).
@@ -185,6 +186,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     final amount = _parsedAmount;
     if (amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
@@ -196,6 +198,8 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _showError('Selecciona una cuenta');
       return;
     }
+    _isSubmitting = true;
+    try {
 
     final note = _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim();
     final merchantText = _merchantCtrl.text.trim();
@@ -300,6 +304,9 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
             ),
           ),
         );
+    }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -406,6 +413,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     HapticFeedback.selectionClick();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) {
         final sc = sheetCtx.colors;

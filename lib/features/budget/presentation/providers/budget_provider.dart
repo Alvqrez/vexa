@@ -44,12 +44,20 @@ class BudgetItem {
   final String? category;
   final double limit;
 
-  BudgetItem copyWith({double? limit}) => BudgetItem(
+  BudgetItem copyWith({
+    String? name,
+    IconData? icon,
+    Color? color,
+    String? category,
+    bool clearCategory = false,
+    double? limit,
+  }) =>
+      BudgetItem(
         id: id,
-        name: name,
-        icon: icon,
-        color: color,
-        category: category,
+        name: name ?? this.name,
+        icon: icon ?? this.icon,
+        color: color ?? this.color,
+        category: clearCategory ? null : (category ?? this.category),
         limit: limit ?? this.limit,
       );
 }
@@ -127,6 +135,22 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
     _isLoaded = true;
     state = state.where((b) => b.id != id).toList();
     await _isar.writeTxn(() => _isar.isarBudgetItems.deleteByBudgetId(id));
+  }
+
+  Future<void> clearCategory(String categoryId) async {
+    _isLoaded = true;
+    if (!state.any((b) => b.category == categoryId)) return;
+    state = [
+      for (final b in state)
+        if (b.category == categoryId) b.copyWith(clearCategory: true) else b,
+    ];
+    await _persistAll();
+  }
+
+  Future<void> reset() async {
+    _isLoaded = true;
+    state = const [];
+    await _isar.writeTxn(() => _isar.isarBudgetItems.clear());
   }
 }
 

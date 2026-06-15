@@ -16,4 +16,5 @@ class IsarSubscription {
   late String frequencyStr;   // SubscriptionFrequency.name
   late bool isActive;
   String? note;
+  String? accountId;
 }

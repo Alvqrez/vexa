@@ -65,7 +65,7 @@ class FinancialProjectionWidget extends ConsumerWidget {
             children: [
               Expanded(
                 child: _StatCard(
-                  label: 'Ingreso promedio',
+                  label: 'Ingreso (30 días)',
                   value: '$currency${projection.averageMonthlyIncome.toStringAsFixed(0)}',
                   color: AppColors.positive,
                 ),
@@ -73,7 +73,7 @@ class FinancialProjectionWidget extends ConsumerWidget {
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: _StatCard(
-                  label: 'Gasto promedio',
+                  label: 'Gasto (30 días)',
                   value: '$currency${projection.averageMonthlyExpense.toStringAsFixed(0)}',
                   color: AppColors.negative,
                 ),

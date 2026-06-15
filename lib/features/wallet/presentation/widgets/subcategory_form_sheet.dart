@@ -127,6 +127,9 @@ class _SubcategoryFormSheetState extends ConsumerState<SubcategoryFormSheet> {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
       HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Escribe un nombre para la subcategoría')),
+      );
       return;
     }
     final notifier = ref.read(subcategoriesProvider.notifier);

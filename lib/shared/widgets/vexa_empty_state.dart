@@ -68,61 +68,63 @@ class _VexaEmptyStateState extends State<VexaEmptyState>
     final c = context.colors;
     final color = widget.iconColor ?? c.textTertiary;
 
-    return FadeTransition(
-      opacity: _fade,
-      child: SlideTransition(
-        position: _slide,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.huge,
-            vertical: AppSpacing.xxxl,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Animated icon container
-              ScaleTransition(
-                scale: _iconScale,
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: color.withValues(alpha: 0.14),
-                      width: 0.5,
+    return SizedBox(
+      width: double.infinity,
+      child: FadeTransition(
+        opacity: _fade,
+        child: SlideTransition(
+          position: _slide,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.huge,
+              vertical: AppSpacing.xxxl,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ScaleTransition(
+                  scale: _iconScale,
+                  child: Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: color.withValues(alpha: 0.14),
+                        width: 0.5,
+                      ),
                     ),
+                    child: Icon(widget.icon, size: 32, color: color),
                   ),
-                  child: Icon(widget.icon, size: 32, color: color),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                widget.title,
-                textAlign: TextAlign.center,
-                style: AppTypography.headingS.copyWith(
-                  color: c.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                widget.body,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyM.copyWith(
-                  color: c.textTertiary,
-                  height: 1.55,
-                ),
-              ),
-              if (widget.actionLabel != null && widget.onAction != null) ...[
                 const SizedBox(height: AppSpacing.xl),
-                _ActionButton(
-                  label: widget.actionLabel!,
-                  onTap: widget.onAction!,
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.headingS.copyWith(
+                    color: c.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  widget.body,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyM.copyWith(
+                    color: c.textTertiary,
+                    height: 1.55,
+                  ),
+                ),
+                if (widget.actionLabel != null && widget.onAction != null) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  _ActionButton(
+                    label: widget.actionLabel!,
+                    onTap: widget.onAction!,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

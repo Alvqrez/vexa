@@ -121,10 +121,11 @@ Transaction _isarToTx(IsarTransaction it) => Transaction(
 // ── Notifiers ─────────────────────────────────────────────────────────────────
 
 class AccountsNotifier extends StateNotifier<List<Account>> {
-  AccountsNotifier(this._isar) : super(const []) {
+  AccountsNotifier(this._ref, this._isar) : super(const []) {
     _load();
   }
 
+  final Ref _ref;
   final Isar _isar;
   bool _isLoaded = false;
 
@@ -176,9 +177,16 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
       // Mark the savings account in prefs
       await LocalPrefsService.setBool('account_savings_savings_default', true);
     }
-    // Load isSavings flags from prefs (avoids Isar schema change)
+    // Load isSavings flags from prefs (avoids Isar schema change).
+    // Fallback: if no flag stored but account carries AccountIcon.savings,
+    // treat it as savings and persist the flag so future loads are consistent.
     final withFlags = await Future.wait(accounts.map((a) async {
-      final isSavings = await LocalPrefsService.getBool('account_savings_${a.id}');
+      final storedFlag =
+          await LocalPrefsService.getBool('account_savings_${a.id}');
+      final isSavings = storedFlag || a.icon == AccountIcon.savings;
+      if (isSavings && !storedFlag) {
+        await LocalPrefsService.setBool('account_savings_${a.id}', true);
+      }
       return isSavings ? a.copyWith(isSavings: true) : a;
     }));
     state = withFlags;
@@ -222,6 +230,20 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     await _persistAll();
   }
 
+  Future<void> transfer(String fromId, String toId, double amount) async {
+    _isLoaded = true;
+    state = [
+      for (final a in state)
+        if (a.id == fromId)
+          a.copyWith(balance: a.balance - amount)
+        else if (a.id == toId)
+          a.copyWith(balance: a.balance + amount)
+        else
+          a,
+    ];
+    await _persistAll();
+  }
+
   Future<void> reorder(int oldIndex, int newIndex) async {
     _isLoaded = true;
     final list = [...state];
@@ -252,6 +274,8 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
     _isLoaded = true;
     state = state.where((a) => a.id != accountId).toList();
     await _persistAll();
+    // Cascade: remove orphaned transactions that referenced this account.
+    await _ref.read(transactionsProvider.notifier).deleteByAccountId(accountId);
   }
 
   Future<void> markAsSavings(String accountId, bool isSavings) async {
@@ -292,7 +316,7 @@ class AccountsNotifier extends StateNotifier<List<Account>> {
 
 final accountsProvider =
     StateNotifierProvider<AccountsNotifier, List<Account>>(
-  (ref) => AccountsNotifier(ref.watch(isarProvider)),
+  (ref) => AccountsNotifier(ref, ref.watch(isarProvider)),
 );
 
 // ── Transactions notifier ─────────────────────────────────────────────────────
@@ -487,14 +511,24 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
 
   Future<void> delete(Transaction t) async {
     _isLoaded = true;
+    try {
+      await _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
+    } catch (e) {
+      debugPrint('TransactionsNotifier.delete: Isar delete failed, state unchanged: $e');
+      rethrow;
+    }
+    // Isar confirmed — now safe to update state and balance.
     state = state.where((tx) => tx.id != t.id).toList();
     if (t.accountId != null) {
       final reverse = t.isIncome ? -t.amount : t.amount;
-      await _ref
-          .read(accountsProvider.notifier)
-          .adjustBalance(t.accountId!, reverse);
+      try {
+        await _ref
+            .read(accountsProvider.notifier)
+            .adjustBalance(t.accountId!, reverse);
+      } catch (e) {
+        debugPrint('TransactionsNotifier.delete: balance adjustment failed: $e');
+      }
     }
-    await _isar.writeTxn(() => _isar.isarTransactions.deleteByTxId(t.id));
     // Limpieza de fotos adjuntas. No se borran al instante: el snackbar de
     // "Deshacer" puede re-insertar la transacción con sus mismas imágenes.
     if (t.imagePaths.isNotEmpty) {
@@ -505,6 +539,18 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
         }
       });
     }
+  }
+
+  Future<void> deleteByAccountId(String accountId) async {
+    _isLoaded = true;
+    final toDelete = state.where((t) => t.accountId == accountId).toList();
+    if (toDelete.isEmpty) return;
+    state = state.where((t) => t.accountId != accountId).toList();
+    await _isar.writeTxn(() async {
+      for (final t in toDelete) {
+        await _isar.isarTransactions.deleteByTxId(t.id);
+      }
+    });
   }
 
   Future<void> reset() async {

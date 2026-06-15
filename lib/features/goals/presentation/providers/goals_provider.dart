@@ -84,6 +84,12 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
     state = state.where((g) => g.id != id).toList();
     await _isar.writeTxn(() => _isar.isarFinancialGoals.deleteByGoalId(id));
   }
+
+  Future<void> reset() async {
+    _isLoaded = true;
+    state = const [];
+    await _isar.writeTxn(() => _isar.isarFinancialGoals.clear());
+  }
 }
 
 final goalsProvider =

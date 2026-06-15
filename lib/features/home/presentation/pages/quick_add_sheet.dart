@@ -83,6 +83,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   String? _categoryId;
   String? _subcategoryId;
   String? _accountId;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
@@ -234,10 +235,14 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   }
 
   Future<void> _submit() async {
+    if (_isSubmitting) return;
     final amountStr = _amountNotifier.value;
     final amount = double.tryParse(amountStr);
     if (amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ingresa un monto mayor a cero')),
+      );
       return;
     }
     final cat = _selectedCategory;
@@ -247,38 +252,139 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
       return;
     }
 
-    // Capture navigator before async gaps.
-    final navigator = Navigator.of(context);
+    _isSubmitting = true;
+    try {
+      // Capture navigator before async gaps.
+      final navigator = Navigator.of(context);
 
-    // Validar que la subcategoría siga existiendo y pertenezca a la categoría.
-    final sub = resolveSubcategory(
-        _subcategoryId, ref.read(subcategoriesProvider));
-    final validSub = sub != null && sub.categoryId == cat.id ? sub : null;
+      // Validar que la subcategoría siga existiendo y pertenezca a la categoría.
+      final sub = resolveSubcategory(
+          _subcategoryId, ref.read(subcategoriesProvider));
+      final validSub = sub != null && sub.categoryId == cat.id ? sub : null;
 
-    final transaction = Transaction(
-      id: generateId(),
-      merchant: validSub?.name ?? cat.name,
-      amount: amount,
-      type: _type,
-      category: cat.id,
-      subcategoryId: validSub?.id,
-      date: DateTime.now(),
-      accountId: _accountId,
-    );
-    await ref.read(transactionsProvider.notifier).add(transaction);
-    await ref.read(streakProvider.notifier).recordTransaction();
+      final transaction = Transaction(
+        id: generateId(),
+        merchant: validSub?.name ?? cat.name,
+        amount: amount,
+        type: _type,
+        category: cat.id,
+        subcategoryId: validSub?.id,
+        date: DateTime.now(),
+        accountId: _accountId,
+      );
+      await ref.read(transactionsProvider.notifier).add(transaction);
+      await ref.read(streakProvider.notifier).recordTransaction();
 
-    if (_accountId != null) {
-      await LocalPrefsService.setString('last_account_id', _accountId!);
+      if (_accountId != null) {
+        await LocalPrefsService.setString('last_account_id', _accountId!);
+      }
+
+      HapticFeedback.mediumImpact();
+      if (!mounted) return;
+      // Mark this transaction for flash animation in the list.
+      ref.read(newTransactionIdsProvider.notifier).state = {transaction.id};
+      navigator.pop(const QuickAddSaved());
+      // Pulse the FAB as haptic-visual confirmation.
+      ref.read(fabPulseProvider.notifier).state++;
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
+  }
 
-    HapticFeedback.mediumImpact();
-    if (!mounted) return;
-    // Mark this transaction for flash animation in the list.
-    ref.read(newTransactionIdsProvider.notifier).state = {transaction.id};
-    navigator.pop(const QuickAddSaved());
-    // Pulse the FAB as haptic-visual confirmation.
-    ref.read(fabPulseProvider.notifier).state++;
+  void _openCategorySheet() {
+    HapticFeedback.selectionClick();
+    final cats = _categoriesFor(_type);
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+              child: Text('Categoría',
+                  style: TextStyle(
+                    color: c.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  )),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: cats.map((cat) {
+                  final sel = cat.id == _categoryId;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() {
+                        if (_categoryId != cat.id) _subcategoryId = null;
+                        _categoryId = cat.id;
+                      });
+                      Navigator.pop(context);
+                    },
+                    onLongPress: () {
+                      Navigator.pop(context);
+                      _showSubcategorySheetFor(cat);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 13, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: sel ? cat.surface : c.glass,
+                        borderRadius:
+                            BorderRadius.circular(AppSpacing.pillRadius),
+                        border: Border.all(
+                          color: sel
+                              ? cat.color.withValues(alpha: 0.45)
+                              : c.glassBorder,
+                          width: sel ? 1 : 0.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(cat.icon,
+                              size: 14,
+                              color: sel ? cat.color : c.textTertiary),
+                          const SizedBox(width: 5),
+                          Text(cat.name,
+                              style: TextStyle(
+                                color: sel ? cat.color : c.textSecondary,
+                                fontSize: 13,
+                                fontWeight:
+                                    sel ? FontWeight.w700 : FontWeight.w500,
+                              )),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
   }
 
   void _openAccountPicker() {
@@ -287,6 +393,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => Container(
         decoration: BoxDecoration(
@@ -367,9 +474,12 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     final accounts = ref.watch(accountsProvider);
     // watch para que los chips reaccionen a cambios de categorías
     ref.watch(walletCategoriesProvider);
-    final cats = _categoriesFor(_type);
     final selected = _selectedCategory;
     final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+    final activeSub = selected != null
+        ? resolveSubcategory(_subcategoryId, ref.watch(subcategoriesProvider))
+        : null;
+    final showSub = activeSub != null && activeSub.categoryId == selected?.id;
 
     return Container(
       decoration: BoxDecoration(
@@ -435,211 +545,139 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
             ),
           ),
 
-          // ── Monto ──────────────────────────────────────────────────────
-          ValueListenableBuilder<String>(
-            valueListenable: _amountNotifier,
-            builder: (_, amountStr, _) {
-              final split = splitAmount(amountStr);
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.screenPadding, 14, AppSpacing.screenPadding, 0),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          currency,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: _typeColor.withValues(alpha: 0.65),
-                            height: 1,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        split.integer,
-                        style: TextStyle(
-                          fontSize: 46,
-                          fontWeight: FontWeight.w800,
-                          color: _typeColor,
-                          letterSpacing: -1.5,
-                          height: 1,
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 16),
-                        child: Text(
-                          split.decimal,
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: _typeColor.withValues(alpha: 0.45),
-                            letterSpacing: -0.5,
-                            height: 1,
+          // ── Chips izquierda + Monto derecha ────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.screenPadding, 14, AppSpacing.screenPadding, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _QChip(
+                      icon: showSub
+                          ? activeSub.icon
+                          : (selected?.icon ?? Icons.category_rounded),
+                      label: showSub
+                          ? activeSub.name
+                          : (selected?.name ?? 'Categoría'),
+                      color: showSub
+                          ? (activeSub.color ?? selected!.color)
+                          : (selected?.color ?? c.textTertiary),
+                      surface: showSub
+                          ? (activeSub.color ?? selected!.color)
+                              .withValues(alpha: 0.12)
+                          : (selected != null ? selected.surface : c.glass),
+                      onTap: _openCategorySheet,
+                      onLongPress: selected != null
+                          ? () => _showSubcategorySheetFor(selected)
+                          : null,
+                    ),
+                    const SizedBox(height: 8),
+                    _QChip(
+                      icon: account?.icon.iconData ??
+                          Icons.account_balance_wallet_rounded,
+                      label: account?.name ?? 'Sin cuenta',
+                      color: account?.color ?? c.textTertiary,
+                      surface: (account?.color ?? c.textTertiary)
+                          .withValues(alpha: 0.10),
+                      onTap: _openAccountPicker,
+                    ),
+                    if (widget.onMoreDetails != null) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          final cat = _selectedCategory;
+                          Navigator.of(context).pop();
+                          widget.onMoreDetails!(_type, _amountNotifier.value,
+                              cat?.id, _subcategoryId);
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded,
+                                  size: 12, color: c.textTertiary),
+                              const SizedBox(width: 3),
+                              Text('Más detalles',
+                                  style: TextStyle(
+                                    color: c.textTertiary,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  )),
+                            ],
                           ),
                         ),
                       ),
                     ],
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _amountNotifier,
+                    builder: (_, amountStr, _) {
+                      final split = splitAmount(amountStr);
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(
+                                  currency,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: _typeColor.withValues(alpha: 0.65),
+                                    height: 1,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    split.integer,
+                                    style: TextStyle(
+                                      fontSize: 46,
+                                      fontWeight: FontWeight.w800,
+                                      color: _typeColor,
+                                      letterSpacing: -1.5,
+                                      height: 1,
+                                    ),
+                                  ),
+                                  Text(
+                                    split.decimal,
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color:
+                                          _typeColor.withValues(alpha: 0.45),
+                                      letterSpacing: -0.5,
+                                      height: 1,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              );
-            },
-          ),
-
-          // ── Categorías (chips horizontales) ────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(top: 14),
-            child: SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPadding),
-                itemCount: cats.length,
-                separatorBuilder: (_, i) => const SizedBox(width: 7),
-                itemBuilder: (_, i) {
-                  final cat = cats[i];
-                  final sel = cat.id == selected?.id;
-                  // Subcategoría activa (solo si pertenece al chip seleccionado)
-                  final activeSub = sel
-                      ? resolveSubcategory(
-                          _subcategoryId, ref.watch(subcategoriesProvider))
-                      : null;
-                  final showSub =
-                      activeSub != null && activeSub.categoryId == cat.id;
-                  return GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      setState(() {
-                        if (_categoryId != cat.id) _subcategoryId = null;
-                        _categoryId = cat.id;
-                      });
-                    },
-                    onLongPress: () => _showSubcategorySheetFor(cat),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 13, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: sel ? cat.surface : c.glass,
-                        borderRadius:
-                            BorderRadius.circular(AppSpacing.pillRadius),
-                        border: Border.all(
-                          color: sel
-                              ? cat.color.withValues(alpha: 0.45)
-                              : c.glassBorder,
-                          width: sel ? 1 : 0.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(showSub ? activeSub.icon : cat.icon,
-                              size: 14,
-                              color: sel ? cat.color : c.textTertiary),
-                          const SizedBox(width: 5),
-                          Text(
-                            showSub
-                                ? '${cat.name} · ${activeSub.name}'
-                                : cat.name,
-                            style: TextStyle(
-                              color: sel ? cat.color : c.textSecondary,
-                              fontSize: 12.5,
-                              fontWeight:
-                                  sel ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-
-          // ── Cuenta + Más detalles ──────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.screenPadding, 10, AppSpacing.screenPadding, 0),
-            child: Row(
-              children: [
-                GestureDetector(
-                  onTap: _openAccountPicker,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 11, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: (account?.color ?? c.textTertiary)
-                          .withValues(alpha: 0.10),
-                      borderRadius:
-                          BorderRadius.circular(AppSpacing.pillRadius),
-                      border: Border.all(
-                        color: (account?.color ?? c.textTertiary)
-                            .withValues(alpha: 0.30),
-                        width: 0.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          account?.icon.iconData ??
-                              Icons.account_balance_wallet_rounded,
-                          size: 13,
-                          color: account?.color ?? c.textTertiary,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          account?.name ?? 'Sin cuenta',
-                          style: TextStyle(
-                            color: account?.color ?? c.textTertiary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        Icon(Icons.expand_more_rounded,
-                            size: 13,
-                            color: (account?.color ?? c.textTertiary)
-                                .withValues(alpha: 0.7)),
-                      ],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (widget.onMoreDetails != null)
-                  GestureDetector(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      final cat = _selectedCategory;
-                      Navigator.of(context).pop();
-                      widget.onMoreDetails!(
-                          _type, _amountNotifier.value, cat?.id, _subcategoryId);
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(Icons.tune_rounded,
-                              size: 13, color: c.textTertiary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Más detalles',
-                            style: TextStyle(
-                              color: c.textTertiary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -801,6 +839,59 @@ class _SubChip extends StatelessWidget {
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Compact chip para la fila izquierda ──────────────────────────────────────
+
+class _QChip extends StatelessWidget {
+  const _QChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.surface,
+    required this.onTap,
+    this.onLongPress,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color surface;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      onLongPress: onLongPress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(width: 3),
+            Icon(Icons.expand_more_rounded,
+                size: 13, color: color.withValues(alpha: 0.70)),
           ],
         ),
       ),

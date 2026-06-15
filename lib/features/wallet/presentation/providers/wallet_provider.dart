@@ -6,6 +6,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
 import 'subcategories_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
 
 // ── Isar converters ───────────────────────────────────────────────────────────
 
@@ -153,8 +154,9 @@ class WalletCategoriesNotifier extends StateNotifier<List<WalletCategory>> {
     _isLoaded = true;
     state = state.where((c) => c.id != id).toList();
     await _isar.writeTxn(() => _isar.isarWalletCategorys.deleteByCategoryId(id));
-    // Cascade: las subcategorías huérfanas se eliminan junto al padre.
+    // Cascade: subcategorías huérfanas y referencias de presupuesto se limpian.
     await _ref.read(subcategoriesProvider.notifier).deleteByCategory(id);
+    await _ref.read(budgetProvider.notifier).clearCategory(id);
   }
 
   Future<void> reorder(int oldIndex, int newIndex, WalletCategoryType type) async {

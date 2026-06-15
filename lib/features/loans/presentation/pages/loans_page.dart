@@ -9,7 +9,11 @@ import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../core/utils/id_gen.dart';
+import '../../../../core/utils/amount_formatter.dart';
 import '../../../../core/data/local_prefs_service.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../../../../shared/widgets/numeric_keypad.dart';
+import '../../../../shared/widgets/drag_handle.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../domain/models/loan.dart';
 import '../providers/loans_provider.dart';
@@ -776,11 +780,13 @@ class _LoanMenu extends ConsumerWidget {
         HapticFeedback.selectionClick();
         showModalBottomSheet(
           context: context,
+          isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => _LoanActionSheet(
             loan: loan,
             onEdit: () {
               Navigator.pop(context);
+              if (!context.mounted) return;
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -790,6 +796,7 @@ class _LoanMenu extends ConsumerWidget {
             },
             onPay: () {
               Navigator.pop(context);
+              if (!context.mounted) return;
               if (!loan.isSettled) {
                 showModalBottomSheet(
                   context: context,
@@ -1171,7 +1178,7 @@ class _LoanFormSheet extends ConsumerStatefulWidget {
 
 class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _amountCtrl;
+  late final ValueNotifier<String> _amountNotifier;
   late LoanType _type;
   late IconData _icon;
   late Color _color;
@@ -1209,8 +1216,8 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
     super.initState();
     final e = widget.existing;
     _nameCtrl = TextEditingController(text: e?.name ?? '');
-    _amountCtrl = TextEditingController(
-        text: e != null ? e.amount.toStringAsFixed(2) : '');
+    _amountNotifier =
+        ValueNotifier<String>(e != null ? e.amount.toStringAsFixed(2) : '');
     _type = e?.type ?? LoanType.lentByMe;
     _icon = e?.icon ?? _iconOptions.first;
     _color = e?.color ?? _colorOptions.first;
@@ -1221,7 +1228,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _amountCtrl.dispose();
+    _amountNotifier.dispose();
     super.dispose();
   }
 
@@ -1235,7 +1242,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
 
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    final amount = double.tryParse(_amountNotifier.value);
     if (name.isEmpty || amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
@@ -1275,55 +1282,197 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
     }
   }
 
+  void _showIconSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+              child: Text('Ícono',
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1,
+                ),
+                itemCount: _iconOptions.length,
+                itemBuilder: (_, i) {
+                  final ic = _iconOptions[i];
+                  final sel = ic == _icon;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _icon = ic);
+                      Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: sel ? _color.withValues(alpha: 0.18) : c.glass,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: sel
+                              ? _color.withValues(alpha: 0.5)
+                              : c.glassBorder,
+                          width: sel ? 1.5 : 0.5,
+                        ),
+                      ),
+                      child: Icon(ic,
+                          size: 22, color: sel ? _color : c.textTertiary),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showColorSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+              child: Text('Color',
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _colorOptions.map((col) {
+                  final sel = col.toARGB32() == _color.toARGB32();
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _color = col);
+                      Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: col,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color:
+                              sel ? Colors.white : Colors.transparent,
+                          width: 2.5,
+                        ),
+                        boxShadow: sel
+                            ? [
+                                BoxShadow(
+                                    color: col.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: -2)
+                              ]
+                            : null,
+                      ),
+                      child: sel
+                          ? const Icon(Icons.check_rounded,
+                              size: 18, color: Colors.white)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final isEdit = widget.existing != null;
+    final currency = ref.watch(currencySymbolProvider);
+    final accounts = ref.watch(accountsProvider);
+    final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+    final typeColor =
+        _type == LoanType.lentByMe ? AppColors.positive : AppColors.negative;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, bottom),
       decoration: BoxDecoration(
         color: c.card,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(AppSpacing.cardRadiusL)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: c.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            const DragHandle(),
             Text(isEdit ? 'Editar préstamo' : 'Nuevo préstamo',
-                style: AppTypography.headingS
-                    .copyWith(color: c.textPrimary)),
-            const SizedBox(height: AppSpacing.xxl),
+                style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 12),
 
-            // Type selector
-            Text('Tipo',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
+            // Tipo (Yo presté / Pedí prestado)
             Row(
               children: LoanType.values.map((t) {
                 final active = t == _type;
-                final tColor =
-                    t == LoanType.lentByMe ? AppColors.positive : AppColors.negative;
+                final tColor = t == LoanType.lentByMe
+                    ? AppColors.positive
+                    : AppColors.negative;
                 return Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(
-                        right: t == LoanType.lentByMe ? AppSpacing.sm : 0),
+                    padding:
+                        EdgeInsets.only(right: t == LoanType.lentByMe ? 6 : 0),
                     child: GestureDetector(
                       onTap: () {
                         HapticFeedback.selectionClick();
@@ -1331,35 +1480,33 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 160),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: active
                               ? tColor.withValues(alpha: 0.12)
                               : c.glass,
-                          borderRadius: BorderRadius.circular(
-                              AppSpacing.cardRadius),
+                          borderRadius:
+                              BorderRadius.circular(AppSpacing.cardRadius),
                           border: Border.all(
                             color: active
                                 ? tColor.withValues(alpha: 0.4)
                                 : c.glassBorder,
                           ),
                         ),
-                        child: Column(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               t == LoanType.lentByMe
                                   ? Icons.arrow_upward_rounded
                                   : Icons.arrow_downward_rounded,
-                              size: 18,
+                              size: 14,
                               color: active ? tColor : c.textTertiary,
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(width: 6),
                             Text(t.label,
                                 style: AppTypography.labelM.copyWith(
-                                  color: active
-                                      ? tColor
-                                      : c.textTertiary,
+                                  color: active ? tColor : c.textTertiary,
                                   fontWeight: active
                                       ? FontWeight.w600
                                       : FontWeight.w400,
@@ -1372,163 +1519,196 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 10),
 
-            // Name
-            Text('Nombre / Contacto',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
+            // Nombre con ícono (izq, toca → selector) + color (der, toca → selector)
+            Container(
+              decoration: BoxDecoration(
+                color: c.glass,
+                borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                border: Border.all(color: c.glassBorder, width: 0.5),
+              ),
+              child: TextField(
                 controller: _nameCtrl,
-                hint: 'ej. Juan, María García…',
-                icon: Icons.person_outline_rounded,
-                autofocus: true),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Amount
-            Text('Monto total',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
-                controller: _amountCtrl,
-                hint: 'ej. 500.00',
-                icon: Icons.attach_money_rounded,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true)),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Due date
-            Text('Fecha límite (opcional)',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
-            GestureDetector(
-              onTap: () async {
-                HapticFeedback.selectionClick();
-                final now = DateTime.now();
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _dueDate ??
-                      now.add(const Duration(days: 30)),
-                  firstDate: now,
-                  lastDate: DateTime(now.year + 10),
-                  builder: (ctx, child) => Theme(
-                    data: Theme.of(ctx).copyWith(
-                      colorScheme: ColorScheme.dark(
-                        primary: const Color(0xFF6366F1),
-                        onPrimary: Colors.white,
-                        surface: ctx.colors.card,
-                        onSurface: ctx.colors.textPrimary,
+                autofocus: !isEdit,
+                style: AppTypography.bodyM.copyWith(color: c.textPrimary),
+                decoration: InputDecoration(
+                  hintText: 'ej. Juan, María…',
+                  hintStyle:
+                      AppTypography.bodyM.copyWith(color: c.textTertiary),
+                  prefixIcon: GestureDetector(
+                    onTap: _showIconSheet,
+                    child: Padding(
+                      padding: const EdgeInsets.all(10),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        decoration: BoxDecoration(
+                          color: _color.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(_icon, size: 16, color: _color),
                       ),
                     ),
-                    child: child!,
                   ),
-                );
-                if (picked != null) setState(() => _dueDate = picked);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg, vertical: AppSpacing.md),
-                decoration: BoxDecoration(
-                  color: c.glass,
-                  borderRadius:
-                      BorderRadius.circular(AppSpacing.cardRadius),
-                  border: Border.all(
-                      color: c.glassBorder, width: 0.5),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_rounded,
-                        size: 16, color: c.textTertiary),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text(
-                        _dueDate != null
-                            ? _formatDate(_dueDate!)
-                            : 'Sin fecha límite',
-                        style: AppTypography.labelL.copyWith(
-                            color: _dueDate != null
-                                ? c.textPrimary
-                                : c.textTertiary),
+                  prefixIconConstraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  suffixIcon: GestureDetector(
+                    onTap: _showColorSheet,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: _color,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                                color: _color.withValues(alpha: 0.4),
+                                blurRadius: 6)
+                          ],
+                        ),
                       ),
                     ),
-                    if (_dueDate != null)
-                      GestureDetector(
-                        onTap: () => setState(() => _dueDate = null),
-                        child: Icon(Icons.close_rounded,
-                            size: 14, color: c.textTertiary),
-                      )
-                    else
-                      Icon(Icons.chevron_right_rounded,
-                          size: 16, color: c.textTertiary),
-                  ],
+                  ),
+                  suffixIconConstraints:
+                      const BoxConstraints(minWidth: 48, minHeight: 48),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 12),
 
-            // Account
-            _AccountPicker(
-              selectedId: _accountId,
-              onChanged: (id) => setState(() => _accountId = id),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Icon
-            Text('Icono',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
-            _IconPicker(
-                icons: _iconOptions,
-                selected: _icon,
-                color: _color,
-                onChanged: (ic) => setState(() => _icon = ic)),
-            const SizedBox(height: AppSpacing.xl),
-
-            // Color
-            Text('Color',
-                style: AppTypography.labelM
-                    .copyWith(color: c.textTertiary)),
-            const SizedBox(height: AppSpacing.sm),
-            _ColorPicker(
-                colors: _colorOptions,
-                selected: _color,
-                onChanged: (col) => setState(() => _color = col)),
-            const SizedBox(height: AppSpacing.xxl),
-
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: _submit,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6366F1), Color(0xFF8183F4)],
+            // Chips izquierda + Monto derecha
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _LoanChip(
+                      icon: Icons.calendar_today_rounded,
+                      label: _dueDate != null
+                          ? _formatDate(_dueDate!)
+                          : 'Sin fecha límite',
+                      color: _dueDate != null ? c.textPrimary : c.textTertiary,
+                      surface: c.glass,
+                      onTap: () async {
+                        HapticFeedback.selectionClick();
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate:
+                              _dueDate ?? now.add(const Duration(days: 30)),
+                          firstDate: now,
+                          lastDate: DateTime(now.year + 10),
+                          builder: (ctx, child) => Theme(
+                            data: Theme.of(ctx).copyWith(
+                              colorScheme: ColorScheme.dark(
+                                primary: const Color(0xFF6366F1),
+                                onPrimary: Colors.white,
+                                surface: ctx.colors.card,
+                                onSurface: ctx.colors.textPrimary,
+                              ),
+                            ),
+                            child: child!,
+                          ),
+                        );
+                        if (picked != null) setState(() => _dueDate = picked);
+                      },
+                      trailing: _dueDate != null
+                          ? GestureDetector(
+                              onTap: () => setState(() => _dueDate = null),
+                              child: Icon(Icons.close_rounded,
+                                  size: 12, color: c.textTertiary),
+                            )
+                          : null,
                     ),
-                    borderRadius:
-                        BorderRadius.circular(AppSpacing.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    isEdit ? 'Guardar cambios' : 'Agregar préstamo',
-                    style: AppTypography.labelL.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 8),
+                    _LoanChip(
+                      icon: Icons.account_balance_wallet_rounded,
+                      label: account?.name ?? 'Sin cuenta',
+                      color: account?.color ?? c.textTertiary,
+                      surface: (account?.color ?? c.textTertiary)
+                          .withValues(alpha: 0.10),
+                      onTap: () => _openAccountSheet(accounts),
                     ),
-                    textAlign: TextAlign.center,
+                  ],
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ValueListenableBuilder<String>(
+                    valueListenable: _amountNotifier,
+                    builder: (_, amountStr, _) {
+                      final split = splitAmount(amountStr);
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Text(currency,
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: typeColor.withValues(alpha: 0.65),
+                                      height: 1,
+                                    )),
+                              ),
+                              const SizedBox(width: 2),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(split.integer,
+                                      style: TextStyle(
+                                        fontSize: 46,
+                                        fontWeight: FontWeight.w800,
+                                        color: typeColor,
+                                        letterSpacing: -1.5,
+                                        height: 1,
+                                      )),
+                                  Text(split.decimal,
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color:
+                                            typeColor.withValues(alpha: 0.45),
+                                        letterSpacing: -0.5,
+                                        height: 1,
+                                      )),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Teclado numérico
+            ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, amountStr, _) => NumericKeypad(
+                value: amountStr,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                onConfirm: _submit,
+                confirmColor: const Color(0xFF6366F1),
+                currencySymbol: currency,
+                keyHeight: 44,
+                confirmHeight: 48,
               ),
             ),
           ],
@@ -1536,147 +1716,171 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
       ),
     );
   }
-}
 
-// ── Shared sheet widgets ──────────────────────────────────────────────────────
-
-class _SheetTextField extends StatelessWidget {
-  const _SheetTextField({
-    required this.controller,
-    required this.hint,
-    required this.icon,
-    this.keyboardType,
-    this.autofocus = false,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final TextInputType? keyboardType;
-  final bool autofocus;
-
-  @override
-  Widget build(BuildContext context) {
+  void _openAccountSheet(List<dynamic> accounts) {
+    HapticFeedback.selectionClick();
     final c = context.colors;
-    return Container(
-      decoration: BoxDecoration(
-        color: c.glass,
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(color: c.glassBorder, width: 0.5),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        autofocus: autofocus,
-        style: AppTypography.bodyM.copyWith(color: c.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(color: c.textTertiary),
-          prefixIcon: Icon(icon, size: 18, color: c.textTertiary),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+            top: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Text('Cuenta',
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GestureDetector(
+              onTap: () {
+                setState(() => _accountId = null);
+                Navigator.pop(context);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: _accountId == null
+                      ? c.textTertiary.withValues(alpha: 0.10)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.block_rounded, size: 18, color: c.textTertiary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text('Sin cuenta',
+                            style: AppTypography.labelL
+                                .copyWith(color: c.textPrimary))),
+                    if (_accountId == null)
+                      Icon(Icons.check_circle_rounded,
+                          size: 18, color: c.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+            ...accounts.map((a) {
+              final sel = a.id == _accountId;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _accountId = a.id);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? (a.color as Color).withValues(alpha: 0.10)
+                        : Colors.transparent,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                    border: Border.all(
+                      color: sel
+                          ? (a.color as Color).withValues(alpha: 0.30)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet_rounded,
+                          size: 18, color: a.color as Color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(a.name as String,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        Icon(Icons.check_circle_rounded,
+                            size: 18, color: a.color as Color),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );
   }
 }
 
-class _IconPicker extends StatelessWidget {
-  const _IconPicker({
-    required this.icons,
-    required this.selected,
+// ── Compact chip para la fila de metadatos ────────────────────────────────────
+
+class _LoanChip extends StatelessWidget {
+  const _LoanChip({
+    required this.icon,
+    required this.label,
     required this.color,
-    required this.onChanged,
+    required this.surface,
+    required this.onTap,
+    this.trailing,
   });
-  final List<IconData> icons;
-  final IconData selected;
+  final IconData icon;
+  final String label;
   final Color color;
-  final ValueChanged<IconData> onChanged;
+  final Color surface;
+  final VoidCallback onTap;
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: icons.map((ic) {
-        final isSel = ic == selected;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(ic);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: isSel
-                  ? color.withValues(alpha: 0.18)
-                  : c.glass,
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: isSel
-                    ? color.withValues(alpha: 0.5)
-                    : c.glassBorder,
-                width: isSel ? 1.5 : 1,
-              ),
-            ),
-            child: Icon(ic,
-                size: 20, color: isSel ? color : c.textTertiary),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _ColorPicker extends StatelessWidget {
-  const _ColorPicker({
-    required this.colors,
-    required this.selected,
-    required this.onChanged,
-  });
-  final List<Color> colors;
-  final Color selected;
-  final ValueChanged<Color> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: colors.map((col) {
-        final isSel = col.toARGB32() == selected.toARGB32();
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(col);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: col,
-              shape: BoxShape.circle,
-              border: Border.all(
-                  color: isSel ? Colors.white : Colors.transparent, width: 2.5),
-              boxShadow: isSel
-                  ? [
-                      BoxShadow(
-                          color: col.withValues(alpha: 0.5),
-                          blurRadius: 10,
-                          spreadRadius: -2)
-                    ]
-                  : null,
-            ),
-            child: isSel
-                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-                : null,
-          ),
-        );
-      }).toList(),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: surface,
+          borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            if (trailing != null) ...[
+              const SizedBox(width: 4),
+              trailing!,
+            ] else ...[
+              const SizedBox(width: 3),
+              Icon(Icons.expand_more_rounded,
+                  size: 13, color: color.withValues(alpha: 0.70)),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

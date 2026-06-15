@@ -132,21 +132,26 @@ final vexaScoreDeltaProvider = FutureProvider<double?>((ref) async {
   final lastWeek = _weekKey(now.subtract(const Duration(days: 7)));
   final prevValue = (history[lastWeek] as num?)?.toDouble();
 
-  // Registrar (sobrescribir) el score de la semana actual
-  history[thisWeek] = double.parse(score.toStringAsFixed(1));
+  final roundedScore = double.parse(score.toStringAsFixed(1));
+  final alreadyStored = (history[thisWeek] as num?)?.toDouble();
 
-  // Conservar solo las últimas 26 semanas
-  if (history.length > 26) {
-    final keys = history.keys.toList()..sort();
-    while (keys.length > 26) {
-      history.remove(keys.removeAt(0));
+  // Only persist when the score actually changed — avoids a disk write on every rebuild.
+  if (alreadyStored != roundedScore) {
+    history[thisWeek] = roundedScore;
+
+    // Conservar solo las últimas 26 semanas
+    if (history.length > 26) {
+      final keys = history.keys.toList()..sort();
+      while (keys.length > 26) {
+        history.remove(keys.removeAt(0));
+      }
     }
-  }
 
-  try {
-    await LocalPrefsService.setString(storageKey, jsonEncode(history));
-  } catch (e) {
-    debugPrint('vexaScoreDeltaProvider: error saving history: $e');
+    try {
+      await LocalPrefsService.setString(storageKey, jsonEncode(history));
+    } catch (e) {
+      debugPrint('vexaScoreDeltaProvider: error saving history: $e');
+    }
   }
 
   return prevValue == null ? null : score - prevValue;

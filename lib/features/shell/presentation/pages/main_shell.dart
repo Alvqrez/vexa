@@ -27,6 +27,7 @@ import '../../../../core/services/notification_service.dart';
 import '../../../home/domain/models/account.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../home/domain/models/recurring_transaction.dart';
+import '../../../home/presentation/pages/recurring_transactions_page.dart';
 import '../../../home/domain/models/transfer_record.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 
@@ -164,6 +165,7 @@ class _MainShellState extends ConsumerState<MainShell>
       bool changed = false;
       final updated = <RecurringTransaction>[];
       int failCount = 0;
+      int cappedCount = 0;
 
       for (var r in all) {
         if (!r.isActive) {
@@ -176,15 +178,18 @@ class _MainShellState extends ConsumerState<MainShell>
           while (!current.nextDate.isAfter(today) &&
               backfillCount < _kMaxBackfillPerRule) {
             backfillCount++;
+
             final dayAllowed = current.weekDays == null ||
+                current.weekDays!.isEmpty ||
                 current.weekDays!.contains(current.nextDate.weekday);
             if (dayAllowed) {
               final baseType = TransactionType.values.firstWhere(
                   (v) => v.name == current.type,
                   orElse: () => TransactionType.expense);
               for (var i = 0; i < current.timesPerOccurrence; i++) {
+                final nd = current.nextDate;
                 final txId =
-                    '${current.id}_${current.nextDate.millisecondsSinceEpoch}_$i';
+                    '${current.id}_${nd.year}${nd.month.toString().padLeft(2, '0')}${nd.day.toString().padLeft(2, '0')}_$i';
                 // Skip if already processed (e.g. app crashed before saveAll).
                 if (existingIds.contains(txId)) continue;
                 existingIds.add(txId);
@@ -206,19 +211,31 @@ class _MainShellState extends ConsumerState<MainShell>
             current = current.copyWith(nextDate: nextD);
             changed = true;
           }
+          // Si el while salió por límite y aún quedan fechas pendientes, contar.
+          if (backfillCount >= _kMaxBackfillPerRule &&
+              !current.nextDate.isAfter(today)) {
+            cappedCount++;
+          }
         } catch (_) {
           failCount++;
         }
         updated.add(current);
       }
 
-      if (changed) await RecurringTransaction.saveAll(updated);
+      if (changed) {
+        await RecurringTransaction.saveAll(updated);
+        // Sync in-memory provider so RecurringTransactionsPage shows updated nextDates.
+        ref.read(recurringListProvider.notifier).refresh();
+      }
 
-      if (failCount > 0 && mounted) {
+      if ((failCount > 0 || cappedCount > 0) && mounted) {
         final c = context.colors;
+        final msg = cappedCount > 0
+            ? 'Algunas transacciones recurrentes tienen más de $_kMaxBackfillPerRule cobros pendientes. Revísalas en Recurrentes.'
+            : 'No se pudieron procesar $failCount transacción(es) recurrente(s).';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-            'No se pudieron procesar $failCount transacción(es) recurrente(s).',
+            msg,
             style: AppTypography.labelM.copyWith(color: c.textPrimary),
           ),
           backgroundColor: c.card,
@@ -766,6 +783,9 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
     final target = double.tryParse(_targetCtrl.text.replaceAll(',', '.'));
     if (title.isEmpty || target == null || target <= 0) {
       HapticFeedback.heavyImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Completa el nombre y el monto objetivo')),
+      );
       return;
     }
     ref.read(goalsProvider.notifier).add(FinancialGoal(
@@ -1016,9 +1036,14 @@ class _TutorialOverlayState extends State<_TutorialOverlay>
         opacity: _fade,
         child: Stack(
           children: [
-            CustomPaint(
-              size: size,
-              painter: _SpotlightPainter(center: center, radius: radius),
+            // Absorbs all touches so the underlying app is not interactive during the tutorial.
+            GestureDetector(
+              onTap: () {},
+              behavior: HitTestBehavior.opaque,
+              child: CustomPaint(
+                size: size,
+                painter: _SpotlightPainter(center: center, radius: radius),
+              ),
             ),
             Positioned(
               left: 20,
@@ -1194,7 +1219,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final accounts = ref.read(accountsProvider);
     if (accounts.length >= 2) {
       _fromId = accounts.first.id;
-      _toId = accounts[1].id;
+      _toId = accounts.elementAt(1).id;
     } else if (accounts.isNotEmpty) {
       _fromId = accounts.first.id;
     }
@@ -1243,8 +1268,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final accounts = ref.read(accountsProvider);
     final toAccount = accounts.firstWhere((a) => a.id == _toId);
     final notifier = ref.read(accountsProvider.notifier);
-    await notifier.adjustBalance(_fromId!, -amount);
-    await notifier.adjustBalance(_toId!, amount);
+    await notifier.transfer(_fromId!, _toId!, amount);
     if (toAccount.isSavings) {
       await ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
     }
@@ -1267,6 +1291,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final accounts = ref.read(accountsProvider);
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) {
         final sc = sheetCtx.colors;
@@ -1354,6 +1379,52 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     final c = context.colors;
+
+    if (accounts.length < 2) {
+      return Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.xxl, AppSpacing.md, AppSpacing.xxl, AppSpacing.xxl + bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: c.textTertiary.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            Icon(Icons.compare_arrows_rounded,
+                size: 40, color: c.textTertiary.withValues(alpha: 0.5)),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              'Necesitas al menos 2 cuentas para hacer una transferencia',
+              style: AppTypography.bodyM.copyWith(color: c.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            FilledButton(
+              onPressed: () => Navigator.pop(context),
+              style: FilledButton.styleFrom(
+                backgroundColor: c.glass,
+                foregroundColor: c.textPrimary,
+              ),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: c.card,

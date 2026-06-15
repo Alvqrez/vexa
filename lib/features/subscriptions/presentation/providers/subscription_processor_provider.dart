@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/data/local_prefs_service.dart';
 import 'subscriptions_provider.dart';
 
 class SubscriptionProcessor {
@@ -60,34 +61,42 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
   }
 
   final Ref _ref;
-  DateTime? _lastProcessed;
   bool _initialized = false;
+  bool _isProcessing = false;
+
+  static const _kLastProcessedKey = 'subs_last_processed_date';
+
+  Future<bool> _processedToday() async {
+    final stored = await LocalPrefsService.getString(_kLastProcessedKey);
+    if (stored == null) return false;
+    final now = DateTime.now();
+    final today = '${now.year}-${now.month}-${now.day}';
+    return stored == today;
+  }
+
+  Future<void> _markProcessedToday() async {
+    final now = DateTime.now();
+    await LocalPrefsService.setString(
+        _kLastProcessedKey, '${now.year}-${now.month}-${now.day}');
+  }
 
   void _initializeAutoProcessing() {
     if (_initialized) return;
     _initialized = true;
-    // Procesar cada vez que la app se abre o se enfoca
-    // Listener se registra una sola vez y es automáticamente cancelado
-    // cuando el provider se dispone
     _ref.listen(subscriptionsProvider, (previous, next) {
       _scheduleProcessing();
     });
   }
 
   void _scheduleProcessing() {
-    final now = DateTime.now();
-    final lastProcessedToday = _lastProcessed != null &&
-        _lastProcessed!.year == now.year &&
-        _lastProcessed!.month == now.month &&
-        _lastProcessed!.day == now.day;
-
-    // Solo procesar una vez por día
-    if (!lastProcessedToday) {
-      _processSubscriptions();
-    }
+    _processedToday().then((alreadyDone) {
+      if (!alreadyDone) _processSubscriptions();
+    });
   }
 
   Future<void> _processSubscriptions() async {
+    if (_isProcessing) return;
+    _isProcessing = true;
     state = true;
     try {
       final processor = _ref.read(subscriptionProcessorProvider);
@@ -95,15 +104,18 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
       if (processed > 0) {
         debugPrint('SubscriptionAutoProcessor: processed $processed subscriptions');
       }
-      _lastProcessed = DateTime.now();
+      await _markProcessedToday();
     } catch (e, st) {
       debugPrint('SubscriptionAutoProcessor._processSubscriptions error: $e\n$st');
     } finally {
+      _isProcessing = false;
       state = false;
     }
   }
 
   Future<void> processNow() async {
+    if (_isProcessing) return;
+    _isProcessing = true;
     state = true;
     try {
       final processor = _ref.read(subscriptionProcessorProvider);
@@ -111,11 +123,12 @@ class SubscriptionAutoProcessNotifier extends StateNotifier<bool> {
       if (processed > 0) {
         debugPrint('SubscriptionAutoProcessor: manual trigger processed $processed subscriptions');
       }
-      _lastProcessed = DateTime.now();
+      await _markProcessedToday();
     } catch (e, st) {
       debugPrint('SubscriptionAutoProcessor.processNow error: $e\n$st');
       rethrow;
     } finally {
+      _isProcessing = false;
       state = false;
     }
   }

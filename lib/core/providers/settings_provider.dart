@@ -110,8 +110,32 @@ class UserProfileNotifier extends StateNotifier<UserProfile> {
         name: name, email: email, phone: phone, birthdate: birthdate, photoPath: photoPath);
   }
 
-  void clearProfile() {
+  Future<void> clearProfile() async {
+    final photoPath = state.photoPath;
     state = const UserProfile();
+    // Remove LocalPrefs entries.
+    for (final key in const [
+      'profile_name',
+      'profile_email',
+      'profile_phone',
+      'profile_birthdate',
+      'profile_photo_path',
+    ]) {
+      await LocalPrefsService.remove(key);
+    }
+    // Delete photo file from disk.
+    if (photoPath != null) {
+      try {
+        final f = File(photoPath);
+        if (f.existsSync()) f.deleteSync();
+      } catch (_) {}
+    }
+    // Also try the standard filename as a fallback.
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final standard = File('${dir.path}/profile_photo.jpg');
+      if (standard.existsSync()) standard.deleteSync();
+    } catch (_) {}
   }
 
   Future<void> update({

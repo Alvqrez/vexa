@@ -191,6 +191,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _SortSheet(
         current: _sort,

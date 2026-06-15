@@ -29,18 +29,29 @@ class CoachInsight {
 /// estadísticas — sin IA externa. Cada insight requiere datos suficientes;
 /// si no los hay, simplemente no se genera (nada de mensajes genéricos).
 class InsightsEngine {
-  const InsightsEngine({
+  InsightsEngine({
     required this.transactions,
     required this.categories,
     required this.monthlySavings,
     required this.currency,
     this.nowOverride,
-  });
+  }) : _byMonth = _buildMonthMap(transactions);
+
+  static Map<String, List<Transaction>> _buildMonthMap(
+      List<Transaction> txs) {
+    final map = <String, List<Transaction>>{};
+    for (final t in txs) {
+      final key = '${t.date.year}-${t.date.month}';
+      (map[key] ??= []).add(t);
+    }
+    return map;
+  }
 
   final List<Transaction> transactions;
   final List<WalletCategory> categories;
   final double monthlySavings;
   final String currency;
+  final Map<String, List<Transaction>> _byMonth;
 
   /// Permite fijar la fecha en tests.
   final DateTime? nowOverride;
@@ -51,8 +62,8 @@ class InsightsEngine {
       ? '$currency${(v / 1000).toStringAsFixed(1)}k'
       : '$currency${v.toStringAsFixed(0)}';
 
-  Iterable<Transaction> _inMonth(int year, int month) => transactions
-      .where((t) => t.date.year == year && t.date.month == month);
+  Iterable<Transaction> _inMonth(int year, int month) =>
+      _byMonth['$year-$month'] ?? const [];
 
   double _expensesOf(int year, int month) => _inMonth(year, month)
       .where((t) => !t.isIncome)

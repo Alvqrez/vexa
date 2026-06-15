@@ -18,15 +18,27 @@ abstract final class NotificationService {
     tz.initializeTimeZones();
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Permissions are NOT requested here — they are requested lazily the first
+    // time the user enables a notification type in the settings page.
     const iOS = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
     await _plugin.initialize(
       const InitializationSettings(android: android, iOS: iOS),
     );
     _initialized = true;
+  }
+
+  /// Requests iOS notification permissions. Safe to call on Android (no-op).
+  /// Returns true if permissions were granted.
+  static Future<bool> requestPermissions() async {
+    final granted = await _plugin
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(alert: true, badge: true, sound: true);
+    return granted ?? true; // true on Android (permissions declared in manifest)
   }
 
   static AndroidNotificationDetails get _androidDetails =>

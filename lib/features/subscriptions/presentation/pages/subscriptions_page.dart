@@ -10,7 +10,12 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../domain/models/subscription.dart';
 import '../providers/subscriptions_provider.dart';
+import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/utils/id_gen.dart';
+import '../../../../core/utils/amount_formatter.dart';
+import '../../../../core/providers/settings_provider.dart';
+import '../../../../shared/widgets/numeric_keypad.dart';
+import '../../../../shared/widgets/drag_handle.dart';
 import '../../../wallet/domain/models/wallet_category.dart';
 import '../../../wallet/presentation/providers/wallet_provider.dart';
 
@@ -674,11 +679,13 @@ class _SubscriptionMenu extends ConsumerWidget {
         HapticFeedback.selectionClick();
         showModalBottomSheet(
           context: context,
+          isScrollControlled: true,
           backgroundColor: Colors.transparent,
           builder: (_) => _SubsActionSheet(
             subscription: subscription,
             onEdit: () {
               Navigator.pop(context);
+              if (!context.mounted) return;
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -811,9 +818,31 @@ class _SubsActionSheet extends StatelessWidget {
             icon: Icons.payment_rounded,
             label: 'Registrar pago ahora',
             color: AppColors.emerald,
-            onTap: () {
+            onTap: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Registrar pago'),
+                  content: Text(
+                    '¿Confirmar pago de ${subscription.name} por \$${subscription.amount.toStringAsFixed(2)}?',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.emerald),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Confirmar'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed != true) return;
               onCharge();
-              Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -907,16 +936,18 @@ class AddSubscriptionSheet extends ConsumerStatefulWidget {
 
 class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   final _nameCtrl = TextEditingController();
-  final _amountCtrl = TextEditingController();
+  late final ValueNotifier<String> _amountNotifier;
   SubscriptionFrequency _freq = SubscriptionFrequency.monthly;
   late WalletCategory _cat;
   Color _color = const Color(0xFF6366F1);
   IconData _icon = Icons.subscriptions_rounded;
   late DateTime _billingDate;
+  String? _accountId;
 
   @override
   void initState() {
     super.initState();
+    _amountNotifier = ValueNotifier<String>('');
     _billingDate = DateTime.now().add(const Duration(days: 30));
     final cats = ref.read(expenseCategoriesProvider);
     _cat = cats.firstWhere((c) => c.id == 'wc4', orElse: () => cats.first);
@@ -951,7 +982,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _amountCtrl.dispose();
+    _amountNotifier.dispose();
     super.dispose();
   }
 
@@ -973,249 +1004,595 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   String _formatDate(DateTime d) =>
       '${d.day} ${_months[d.month - 1]} ${d.year}';
 
+  /// Avanza `date` al próximo ciclo futuro según `freq` si está en el pasado.
+  DateTime _ensureFuture(DateTime date, SubscriptionFrequency freq) {
+    final today = DateTime.now();
+    var d = date;
+    while (!d.isAfter(today)) {
+      switch (freq) {
+        case SubscriptionFrequency.weekly:
+          d = d.add(const Duration(days: 7));
+        case SubscriptionFrequency.monthly:
+          d = DateTime(d.year, d.month + 1, d.day);
+        case SubscriptionFrequency.quarterly:
+          d = DateTime(d.year, d.month + 3, d.day);
+        case SubscriptionFrequency.annual:
+          d = DateTime(d.year + 1, d.month, d.day);
+      }
+    }
+    return d;
+  }
+
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    final amount = double.tryParse(_amountNotifier.value);
     if (name.isEmpty || amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
     }
-    await ref
-        .read(subscriptionsProvider.notifier)
-        .add(
+    final billingDate = _ensureFuture(_billingDate, _freq);
+    await ref.read(subscriptionsProvider.notifier).add(
           Subscription(
             id: generateId(),
             name: name,
             amount: amount,
-            nextBillingDate: _billingDate,
+            nextBillingDate: billingDate,
             category: _cat.id,
             icon: _icon,
             color: _color,
             frequency: _freq,
+            accountId: _accountId,
           ),
         );
     HapticFeedback.mediumImpact();
-    if (mounted) {
-      Navigator.pop(context);
-    }
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _pickDate() async {
+    HapticFeedback.selectionClick();
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _billingDate.isAfter(now)
+          ? _billingDate
+          : now.add(const Duration(days: 1)),
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+      builder: (ctx, child) => Theme(
+        data: Theme.of(ctx).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppColors.emerald,
+            onPrimary: Colors.white,
+            surface: ctx.colors.card,
+            onSurface: ctx.colors.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _billingDate = picked);
+  }
+
+  void _showIconSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+              child: Text('Ícono',
+                  style:
+                      AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 6,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 1,
+                ),
+                itemCount: _iconOptions.length,
+                itemBuilder: (_, i) {
+                  final ic = _iconOptions[i];
+                  final sel = ic == _icon;
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _icon = ic);
+                      Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: sel
+                            ? _color.withValues(alpha: 0.18)
+                            : Colors.white.withValues(alpha: 0.04),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: sel
+                              ? _color.withValues(alpha: 0.5)
+                              : Colors.white.withValues(alpha: 0.06),
+                          width: sel ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Icon(ic,
+                          size: 22, color: sel ? _color : c.textTertiary),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showColorSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+              child: Text('Color',
+                  style:
+                      AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: _colorOptions.map((col) {
+                  final sel = col.toARGB32() == _color.toARGB32();
+                  return GestureDetector(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _color = col);
+                      Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: col,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: sel ? Colors.white : Colors.transparent,
+                          width: 2.5,
+                        ),
+                        boxShadow: sel
+                            ? [
+                                BoxShadow(
+                                    color: col.withValues(alpha: 0.5),
+                                    blurRadius: 8,
+                                    spreadRadius: -2)
+                              ]
+                            : null,
+                      ),
+                      child: sel
+                          ? const Icon(Icons.check_rounded,
+                              size: 18, color: Colors.white)
+                          : null,
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showFrequencySheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 8),
+              child: Text('Frecuencia',
+                  style:
+                      AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            ...SubscriptionFrequency.values.map((f) {
+              final sel = f == _freq;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _freq = f);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.emeraldSurface : Colors.transparent,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.repeat_rounded,
+                          size: 18,
+                          color: sel ? AppColors.emerald : c.textTertiary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(f.label,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        const Icon(Icons.check_circle_rounded,
+                            size: 18, color: AppColors.emerald),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountSheet(List<dynamic> accounts) {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+            top: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Text('Cuenta',
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GestureDetector(
+              onTap: () {
+                setState(() => _accountId = null);
+                Navigator.pop(context);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding, vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: _accountId == null
+                      ? c.textTertiary.withValues(alpha: 0.10)
+                      : Colors.transparent,
+                  borderRadius:
+                      BorderRadius.circular(AppSpacing.cardRadius),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.block_rounded,
+                        size: 18, color: c.textTertiary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text('Sin cuenta',
+                            style: AppTypography.labelL
+                                .copyWith(color: c.textPrimary))),
+                    if (_accountId == null)
+                      Icon(Icons.check_circle_rounded,
+                          size: 18, color: c.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+            ...accounts.map((a) {
+              final sel = a.id == _accountId;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _accountId = a.id);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? (a.color as Color).withValues(alpha: 0.10)
+                        : Colors.transparent,
+                    borderRadius:
+                        BorderRadius.circular(AppSpacing.cardRadius),
+                    border: Border.all(
+                      color: sel
+                          ? (a.color as Color).withValues(alpha: 0.30)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet_rounded,
+                          size: 18, color: a.color as Color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(a.name as String,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        Icon(Icons.check_circle_rounded,
+                            size: 18, color: a.color as Color),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final currency = ref.watch(currencySymbolProvider);
+    final accounts = ref.watch(accountsProvider);
+    final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        AppSpacing.md,
-        AppSpacing.xxl,
-        AppSpacing.xxl + bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, bottom),
       decoration: BoxDecoration(
-        color: context.colors.card,
+        color: c.card,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.cardRadiusL),
-        ),
+            top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: context.colors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Text(
-              'Nueva suscripción',
-              style: AppTypography.headingS.copyWith(
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            _SheetLabel('Nombre'),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
+            const DragHandle(),
+            Text('Nueva suscripción',
+                style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 12),
+
+            // Nombre con icono (izq) y color (der)
+            TextField(
               controller: _nameCtrl,
-              hint: 'ej. Netflix, Spotify…',
-              icon: Icons.label_outline_rounded,
               autofocus: true,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SheetLabel('Monto'),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
-              controller: _amountCtrl,
-              hint: 'ej. 9.99',
-              icon: Icons.attach_money_rounded,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SheetLabel('Frecuencia'),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              children: SubscriptionFrequency.values.map((f) {
-                final active = f == _freq;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _freq = f);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active
-                          ? AppColors.emeraldSurface
-                          : Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.pillRadius,
+              style: AppTypography.labelL.copyWith(color: c.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'ej. Netflix, Spotify…',
+                hintStyle: AppTypography.labelL.copyWith(color: c.textTertiary),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.04),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                prefixIcon: GestureDetector(
+                  onTap: _showIconSheet,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      border: Border.all(
-                        color: active
-                            ? AppColors.emerald.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.08),
-                      ),
-                    ),
-                    child: Text(
-                      f.label,
-                      style: AppTypography.labelM.copyWith(
-                        color: active
-                            ? AppColors.emerald
-                            : context.colors.textTertiary,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                      ),
+                      child: Icon(_icon, size: 16, color: _color),
                     ),
                   ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SheetLabel('Próximo cobro'),
-            const SizedBox(height: AppSpacing.sm),
-            GestureDetector(
-              onTap: () async {
-                HapticFeedback.selectionClick();
-                final now = DateTime.now();
-                final picked = await showDatePicker(
-                  context: context,
-                  initialDate: _billingDate.isAfter(now)
-                      ? _billingDate
-                      : now.add(const Duration(days: 1)),
-                  firstDate: now,
-                  lastDate: DateTime(now.year + 5),
-                  builder: (ctx, child) => Theme(
-                    data: Theme.of(ctx).copyWith(
-                      colorScheme: ColorScheme.dark(
-                        primary: AppColors.emerald,
-                        onPrimary: Colors.white,
-                        surface: ctx.colors.card,
-                        onSurface: ctx.colors.textPrimary,
-                      ),
-                    ),
-                    child: child!,
-                  ),
-                );
-                if (picked != null) setState(() => _billingDate = picked);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                suffixIconConstraints: const BoxConstraints(minWidth: 52, minHeight: 48),
+                suffixIcon: GestureDetector(
+                  onTap: _showColorSheet,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: _color,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: _color.withValues(alpha: 0.4), blurRadius: 6)],
+                      ),
+                    ),
+                  ),
+                ),
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    width: 0.5,
-                  ),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 16,
-                      color: context.colors.textTertiary,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text(
-                        _formatDate(_billingDate),
-                        style: AppTypography.labelL.copyWith(
-                          color: context.colors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: context.colors.textTertiary,
-                    ),
-                  ],
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  borderSide: BorderSide(color: _color.withValues(alpha: 0.5), width: 1),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
-            _SheetLabel('Icono'),
-            const SizedBox(height: AppSpacing.sm),
-            _IconPicker(
-              icons: _iconOptions,
-              selected: _icon,
-              color: _color,
-              onChanged: (ic) => setState(() => _icon = ic),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _SheetLabel('Color'),
-            const SizedBox(height: AppSpacing.sm),
-            _ColorPicker(
-              colors: _colorOptions,
-              selected: _color,
-              onChanged: (c) => setState(() => _color = c),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: _submit,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.emerald, AppColors.emeraldDim],
-                    ),
-                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.emerald.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
+            const SizedBox(height: 12),
+
+            // Chips (izq) | Monto (der)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Left: freq + date + account chips
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SubChip(
+                        icon: Icons.repeat_rounded,
+                        label: _freq.label,
+                        color: _color,
+                        surface: c.card,
+                        onTap: _showFrequencySheet,
+                      ),
+                      const SizedBox(height: 6),
+                      _SubChip(
+                        icon: Icons.calendar_today_rounded,
+                        label: _formatDate(_billingDate),
+                        color: _color,
+                        surface: c.card,
+                        onTap: _pickDate,
+                      ),
+                      const SizedBox(height: 6),
+                      _SubChip(
+                        icon: Icons.account_balance_wallet_rounded,
+                        label: account != null ? account.name : 'Sin cuenta',
+                        color: account != null ? account.color : c.textTertiary,
+                        surface: c.card,
+                        onTap: () => _showAccountSheet(accounts),
                       ),
                     ],
                   ),
-                  child: Text(
-                    'Agregar suscripción',
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textInverse,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ),
+                const SizedBox(width: 12),
+                // Right: big amount
+                ValueListenableBuilder<String>(
+                  valueListenable: _amountNotifier,
+                  builder: (_, raw, _) {
+                    final split = splitAmount(raw.isEmpty ? '0' : raw);
+                    return Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(currency,
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: _color.withValues(alpha: 0.65),
+                                      height: 1)),
+                            ),
+                            const SizedBox(width: 2),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(split.integer,
+                                    style: TextStyle(
+                                        fontSize: 46,
+                                        fontWeight: FontWeight.w800,
+                                        color: _color,
+                                        letterSpacing: -1.5,
+                                        height: 1)),
+                                Text(split.decimal,
+                                    style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: _color.withValues(alpha: 0.45),
+                                        letterSpacing: -0.5,
+                                        height: 1)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, raw, _) => NumericKeypad(
+                value: raw,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                confirmColor: _color,
+                onConfirm: _submit,
+                keyHeight: 44,
+                confirmHeight: 48,
               ),
             ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
           ],
         ),
       ),
@@ -1223,167 +1600,50 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   }
 }
 
-// ── Sheet shared widgets ──────────────────────────────────────────────────────
+// ── Sub chip ──────────────────────────────────────────────────────────────────
 
-class _SheetLabel extends StatelessWidget {
-  const _SheetLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    style: AppTypography.labelM.copyWith(color: context.colors.textTertiary),
-  );
-}
-
-class _SheetTextField extends StatelessWidget {
-  const _SheetTextField({
-    required this.controller,
-    required this.hint,
+class _SubChip extends StatelessWidget {
+  const _SubChip({
     required this.icon,
-    this.keyboardType,
-    this.autofocus = false,
-  });
-  final TextEditingController controller;
-  final String hint;
-  final IconData icon;
-  final TextInputType? keyboardType;
-  final bool autofocus;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-          width: 0.5,
-        ),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        autofocus: autofocus,
-        style: AppTypography.bodyM.copyWith(color: context.colors.textPrimary),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTypography.bodyM.copyWith(
-            color: context.colors.textTertiary,
-          ),
-          prefixIcon: Icon(icon, size: 18, color: context.colors.textTertiary),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.md,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IconPicker extends StatelessWidget {
-  const _IconPicker({
-    required this.icons,
-    required this.selected,
+    required this.label,
     required this.color,
-    required this.onChanged,
+    required this.surface,
+    required this.onTap,
   });
-  final List<IconData> icons;
-  final IconData selected;
+  final IconData icon;
+  final String label;
   final Color color;
-  final ValueChanged<IconData> onChanged;
+  final Color surface;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: icons.map((ic) {
-        final isSel = ic == selected;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(ic);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: isSel
-                  ? color.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(13),
-              border: Border.all(
-                color: isSel
-                    ? color.withValues(alpha: 0.5)
-                    : Colors.white.withValues(alpha: 0.06),
-                width: isSel ? 1.5 : 1,
-              ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.22), width: 0.5),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.w500, color: color)),
             ),
-            child: Icon(
-              ic,
-              size: 20,
-              color: isSel ? color : context.colors.textTertiary,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _ColorPicker extends StatelessWidget {
-  const _ColorPicker({
-    required this.colors,
-    required this.selected,
-    required this.onChanged,
-  });
-  final List<Color> colors;
-  final Color selected;
-  final ValueChanged<Color> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: AppSpacing.sm,
-      runSpacing: AppSpacing.sm,
-      children: colors.map((c) {
-        final isSel = c.toARGB32() == selected.toARGB32();
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onChanged(c);
-          },
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: c,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isSel ? Colors.white : Colors.transparent,
-                width: 2.5,
-              ),
-              boxShadow: isSel
-                  ? [
-                      BoxShadow(
-                        color: c.withValues(alpha: 0.5),
-                        blurRadius: 10,
-                        spreadRadius: -2,
-                      ),
-                    ]
-                  : null,
-            ),
-            child: isSel
-                ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
-                : null,
-          ),
-        );
-      }).toList(),
+            const SizedBox(width: 3),
+            Icon(Icons.expand_more_rounded, size: 13, color: color.withValues(alpha: 0.7)),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1432,12 +1692,13 @@ class _EditSubscriptionSheet extends ConsumerStatefulWidget {
 class _EditSubscriptionSheetState
     extends ConsumerState<_EditSubscriptionSheet> {
   late final TextEditingController _nameCtrl;
-  late final TextEditingController _amountCtrl;
+  late final ValueNotifier<String> _amountNotifier;
   late SubscriptionFrequency _freq;
   late WalletCategory _cat;
   late Color _color;
   late IconData _icon;
   late DateTime _billingDate;
+  String? _accountId;
 
   static const _iconOptions = [
     Icons.play_circle_rounded,
@@ -1470,19 +1731,20 @@ class _EditSubscriptionSheetState
     super.initState();
     final s = widget.subscription;
     _nameCtrl = TextEditingController(text: s.name);
-    _amountCtrl = TextEditingController(text: s.amount.toStringAsFixed(2));
+    _amountNotifier = ValueNotifier<String>(s.amount.toStringAsFixed(2));
     _freq = s.frequency;
     final cats = ref.read(walletCategoriesProvider);
     _cat = resolveCategory(s.category, cats);
     _color = s.color;
     _icon = s.icon;
     _billingDate = s.nextBillingDate;
+    _accountId = s.accountId;
   }
 
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _amountCtrl.dispose();
+    _amountNotifier.dispose();
     super.dispose();
   }
 
@@ -1505,9 +1767,344 @@ class _EditSubscriptionSheetState
     if (picked != null) setState(() => _billingDate = picked);
   }
 
-  void _submit() {
+  String _formatDate(DateTime d) =>
+      DateFormat('d MMM yyyy', 'es').format(d);
+
+  void _showIconSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSt) => Container(
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.cardRadiusL)),
+          ),
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const DragHandle(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+                child: Text('Ícono',
+                    style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding),
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 6,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 1,
+                  ),
+                  itemCount: _iconOptions.length,
+                  itemBuilder: (_, i) {
+                    final ic = _iconOptions[i];
+                    final sel = ic == _icon;
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _icon = ic);
+                        setSt(() {});
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: sel
+                              ? _color.withValues(alpha: 0.18)
+                              : Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: sel
+                                ? _color.withValues(alpha: 0.5)
+                                : Colors.white.withValues(alpha: 0.06),
+                            width: sel ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Icon(ic,
+                            size: 22, color: sel ? _color : c.textTertiary),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showColorSheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setSt) => Container(
+          decoration: BoxDecoration(
+            color: c.card,
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppSpacing.cardRadiusL)),
+          ),
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const DragHandle(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 12),
+                child: Text('Color',
+                    style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding),
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: _colorOptions.map((col) {
+                    final sel = col.toARGB32() == _color.toARGB32();
+                    return GestureDetector(
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        setState(() => _color = col);
+                        setSt(() {});
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: col,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: sel ? Colors.white : Colors.transparent,
+                            width: 2.5,
+                          ),
+                          boxShadow: sel
+                              ? [
+                                  BoxShadow(
+                                      color: col.withValues(alpha: 0.5),
+                                      blurRadius: 8,
+                                      spreadRadius: -2)
+                                ]
+                              : null,
+                        ),
+                        child: sel
+                            ? const Icon(Icons.check_rounded,
+                                size: 18, color: Colors.white)
+                            : null,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFrequencySheet() {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.card,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const DragHandle(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenPadding, 4, AppSpacing.screenPadding, 8),
+              child: Text('Frecuencia',
+                  style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            ),
+            ...SubscriptionFrequency.values.map((f) {
+              final sel = f == _freq;
+              return GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _freq = f);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: sel ? AppColors.emeraldSurface : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.repeat_rounded,
+                          size: 18,
+                          color: sel ? AppColors.emerald : c.textTertiary),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(f.label,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        const Icon(Icons.check_circle_rounded,
+                            size: 18, color: AppColors.emerald),
+                    ],
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountSheet(List<dynamic> accounts) {
+    HapticFeedback.selectionClick();
+    final c = context.colors;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppSpacing.cardRadiusL)),
+        ),
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).padding.bottom + AppSpacing.lg,
+            top: AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPadding),
+              child: Text('Cuenta',
+                  style: TextStyle(
+                      color: c.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            GestureDetector(
+              onTap: () {
+                setState(() => _accountId = null);
+                Navigator.pop(context);
+              },
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPadding, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  color: _accountId == null
+                      ? c.textTertiary.withValues(alpha: 0.10)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.block_rounded, size: 18, color: c.textTertiary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Text('Sin cuenta',
+                            style: AppTypography.labelL
+                                .copyWith(color: c.textPrimary))),
+                    if (_accountId == null)
+                      Icon(Icons.check_circle_rounded,
+                          size: 18, color: c.textTertiary),
+                  ],
+                ),
+              ),
+            ),
+            ...accounts.map((a) {
+              final sel = a.id == _accountId;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _accountId = a.id);
+                  Navigator.pop(context);
+                },
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPadding, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 11),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? (a.color as Color).withValues(alpha: 0.10)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                    border: Border.all(
+                      color: sel
+                          ? (a.color as Color).withValues(alpha: 0.30)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.account_balance_wallet_rounded,
+                          size: 18, color: a.color as Color),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Text(a.name as String,
+                              style: AppTypography.labelL
+                                  .copyWith(color: c.textPrimary))),
+                      if (sel)
+                        Icon(Icons.check_circle_rounded,
+                            size: 18, color: a.color as Color),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
-    final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
+    final amount = double.tryParse(_amountNotifier.value.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
       HapticFeedback.heavyImpact();
       return;
@@ -1521,6 +2118,8 @@ class _EditSubscriptionSheetState
         color: _color,
         icon: _icon,
         nextBillingDate: _billingDate,
+        accountId: _accountId,
+        clearAccountId: _accountId == null,
       ),
     );
     HapticFeedback.mediumImpact();
@@ -1529,203 +2128,186 @@ class _EditSubscriptionSheetState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final currency = ref.watch(currencySymbolProvider);
+    final accounts = ref.watch(accountsProvider);
+    final account = accounts.where((a) => a.id == _accountId).firstOrNull;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.xxl,
-        AppSpacing.md,
-        AppSpacing.xxl,
-        AppSpacing.xxl + bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(20, 10, 20, bottom),
       decoration: BoxDecoration(
-        color: context.colors.card,
+        color: c.card,
         borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppSpacing.cardRadiusL),
-        ),
+            top: Radius.circular(AppSpacing.cardRadiusL)),
       ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: AppSpacing.xl),
-                decoration: BoxDecoration(
-                  color: context.colors.textTertiary.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            Text(
-              'Editar suscripción',
-              style: AppTypography.headingS.copyWith(
-                color: context.colors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
+            const DragHandle(),
+            Text('Editar suscripción',
+                style: AppTypography.headingS.copyWith(color: c.textPrimary)),
+            const SizedBox(height: 12),
 
-            _SheetLabel('Nombre'),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
+            // Nombre con icono (izq) y color (der)
+            TextField(
               controller: _nameCtrl,
-              hint: 'ej. Netflix, Spotify…',
-              icon: Icons.label_outline_rounded,
               autofocus: true,
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _SheetLabel('Monto'),
-            const SizedBox(height: AppSpacing.sm),
-            _SheetTextField(
-              controller: _amountCtrl,
-              hint: 'ej. 9.99',
-              icon: Icons.attach_money_rounded,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _SheetLabel('Próximo cobro'),
-            const SizedBox(height: AppSpacing.sm),
-            GestureDetector(
-              onTap: _pickDate,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.lg,
-                  vertical: AppSpacing.md,
+              style: AppTypography.labelL.copyWith(color: c.textPrimary),
+              decoration: InputDecoration(
+                hintText: 'ej. Netflix, Spotify…',
+                hintStyle: AppTypography.labelL.copyWith(color: c.textTertiary),
+                filled: true,
+                fillColor: Colors.white.withValues(alpha: 0.04),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+                prefixIconConstraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                prefixIcon: GestureDetector(
+                  onTap: _showIconSheet,
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        color: _color.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(_icon, size: 16, color: _color),
+                    ),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.04),
+                suffixIconConstraints: const BoxConstraints(minWidth: 52, minHeight: 48),
+                suffixIcon: GestureDetector(
+                  onTap: _showColorSheet,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      width: 24, height: 24,
+                      decoration: BoxDecoration(
+                        color: _color,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: _color.withValues(alpha: 0.4), blurRadius: 6)],
+                      ),
+                    ),
+                  ),
+                ),
+                border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
-                    width: 0.5,
-                  ),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: 18,
-                      color: context.colors.textTertiary,
-                    ),
-                    const SizedBox(width: AppSpacing.md),
-                    Text(
-                      DateFormat('d MMM yyyy', 'es').format(_billingDate),
-                      style: AppTypography.bodyM.copyWith(
-                        color: context.colors.textPrimary,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      size: 16,
-                      color: context.colors.textTertiary,
-                    ),
-                  ],
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08), width: 0.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+                  borderSide: BorderSide(color: _color.withValues(alpha: 0.5), width: 1),
                 ),
               ),
             ),
-            const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: 12),
 
-            _SheetLabel('Frecuencia'),
-            const SizedBox(height: AppSpacing.sm),
-            Wrap(
-              spacing: AppSpacing.sm,
-              children: SubscriptionFrequency.values.map((f) {
-                final active = f == _freq;
-                return GestureDetector(
-                  onTap: () {
-                    HapticFeedback.selectionClick();
-                    setState(() => _freq = f);
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 160),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active
-                          ? AppColors.emeraldSurface
-                          : Colors.white.withValues(alpha: 0.04),
-                      borderRadius: BorderRadius.circular(
-                        AppSpacing.pillRadius,
+            // Chips (izq) | Monto (der)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _SubChip(
+                        icon: Icons.repeat_rounded,
+                        label: _freq.label,
+                        color: _color,
+                        surface: c.card,
+                        onTap: _showFrequencySheet,
                       ),
-                      border: Border.all(
-                        color: active
-                            ? AppColors.emerald.withValues(alpha: 0.4)
-                            : Colors.white.withValues(alpha: 0.08),
+                      const SizedBox(height: 6),
+                      _SubChip(
+                        icon: Icons.calendar_today_rounded,
+                        label: _formatDate(_billingDate),
+                        color: _color,
+                        surface: c.card,
+                        onTap: _pickDate,
                       ),
-                    ),
-                    child: Text(
-                      f.label,
-                      style: AppTypography.labelM.copyWith(
-                        color: active
-                            ? AppColors.emerald
-                            : context.colors.textTertiary,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _SheetLabel('Icono'),
-            const SizedBox(height: AppSpacing.sm),
-            _IconPicker(
-              icons: _iconOptions,
-              selected: _icon,
-              color: _color,
-              onChanged: (ic) => setState(() => _icon = ic),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-
-            _SheetLabel('Color'),
-            const SizedBox(height: AppSpacing.sm),
-            _ColorPicker(
-              colors: _colorOptions,
-              selected: _color,
-              onChanged: (c) => setState(() => _color = c),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-
-            SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: _submit,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [AppColors.emerald, AppColors.emeraldDim],
-                    ),
-                    borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.emerald.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
+                      const SizedBox(height: 6),
+                      _SubChip(
+                        icon: Icons.account_balance_wallet_rounded,
+                        label: account != null ? account.name : 'Sin cuenta',
+                        color: account != null ? account.color : c.textTertiary,
+                        surface: c.card,
+                        onTap: () => _showAccountSheet(accounts),
                       ),
                     ],
                   ),
-                  child: Text(
-                    'Guardar cambios',
-                    style: AppTypography.labelL.copyWith(
-                      color: AppColors.textInverse,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
                 ),
+                const SizedBox(width: 12),
+                ValueListenableBuilder<String>(
+                  valueListenable: _amountNotifier,
+                  builder: (_, raw, _) {
+                    final split = splitAmount(raw.isEmpty ? '0' : raw);
+                    return Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Text(currency,
+                                  style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: _color.withValues(alpha: 0.65),
+                                      height: 1)),
+                            ),
+                            const SizedBox(width: 2),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(split.integer,
+                                    style: TextStyle(
+                                        fontSize: 46,
+                                        fontWeight: FontWeight.w800,
+                                        color: _color,
+                                        letterSpacing: -1.5,
+                                        height: 1)),
+                                Text(split.decimal,
+                                    style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: _color.withValues(alpha: 0.45),
+                                        letterSpacing: -0.5,
+                                        height: 1)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            ValueListenableBuilder<String>(
+              valueListenable: _amountNotifier,
+              builder: (_, raw, _) => NumericKeypad(
+                value: raw,
+                onValueChanged: (v) => _amountNotifier.value = v,
+                confirmColor: _color,
+                onConfirm: _submit,
+                keyHeight: 44,
+                confirmHeight: 48,
               ),
             ),
+            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
           ],
         ),
       ),

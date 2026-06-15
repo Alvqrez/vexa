@@ -25,7 +25,8 @@ IsarSubscription _subsToIsar(Subscription s) => IsarSubscription()
   ..colorValue = s.color.toARGB32()
   ..frequencyStr = s.frequency.name
   ..isActive = s.isActive
-  ..note = s.note;
+  ..note = s.note
+  ..accountId = s.accountId;
 
 Subscription _isarToSubs(IsarSubscription is_) => Subscription(
       id: is_.subscriptionId,
@@ -41,6 +42,7 @@ Subscription _isarToSubs(IsarSubscription is_) => Subscription(
       ),
       isActive: is_.isActive,
       note: is_.note,
+      accountId: is_.accountId,
     );
 
 class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
@@ -53,13 +55,13 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarSubscriptions.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarSubscriptions.where().findAll();
     if (records.isNotEmpty) {
       state = records.map(_isarToSubs).toList()
         ..sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
     }
-    _isLoaded = true;
   }
 
   Future<void> _persistAll() => _isar.writeTxn(() async {
@@ -101,8 +103,14 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   Future<void> chargeSubscription(Subscription s) async {
     try {
       final accounts = _ref.read(accountsProvider);
-      final account = accounts.isEmpty
-          ? null
+      if (accounts.isEmpty) {
+        debugPrint('SubscriptionsNotifier.chargeSubscription: no accounts, skipping ${s.name}');
+        return;
+      }
+      final account = s.accountId != null
+          ? accounts.firstWhere((a) => a.id == s.accountId,
+              orElse: () => accounts.firstWhere((a) => !a.isSavings,
+                  orElse: () => accounts.first))
           : accounts.firstWhere((a) => !a.isSavings, orElse: () => accounts.first);
       final transaction = Transaction(
         id: generateId(),
@@ -111,7 +119,7 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
         type: TransactionType.expense,
         category: s.category,
         date: DateTime.now(),
-        accountId: account?.id,
+        accountId: account.id,
       );
       await _ref.read(transactionsProvider.notifier).add(transaction);
 
@@ -121,6 +129,11 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
       debugPrint('SubscriptionsNotifier.chargeSubscription failed: $e');
       rethrow;
     }
+  }
+
+  Future<void> reset() async {
+    state = const [];
+    _isLoaded = false;
   }
 }
 

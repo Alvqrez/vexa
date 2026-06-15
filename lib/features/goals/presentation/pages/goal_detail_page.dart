@@ -126,15 +126,12 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
   @override
   Widget build(BuildContext context) {
     final goals = ref.watch(goalsProvider);
-    if (goals.isEmpty) {
+    final goal = goals.where((g) => g.id == widget.goalId).firstOrNull;
+    if (goal == null) {
       WidgetsBinding.instance.addPostFrameCallback(
           (_) { if (mounted) Navigator.of(context).pop(); });
       return const SizedBox.shrink();
     }
-    final goal = goals.firstWhere(
-      (g) => g.id == widget.goalId,
-      orElse: () => goals.first,
-    );
     final color = goal.isCompleted ? AppColors.emerald : goal.color;
     final c = context.colors;
 

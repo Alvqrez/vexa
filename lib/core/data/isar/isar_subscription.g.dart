@@ -17,53 +17,58 @@ const IsarSubscriptionSchema = CollectionSchema(
   name: r'IsarSubscription',
   id: -1005276068565913477,
   properties: {
-    r'amount': PropertySchema(
+    r'accountId': PropertySchema(
       id: 0,
+      name: r'accountId',
+      type: IsarType.string,
+    ),
+    r'amount': PropertySchema(
+      id: 1,
       name: r'amount',
       type: IsarType.double,
     ),
     r'categoryStr': PropertySchema(
-      id: 1,
+      id: 2,
       name: r'categoryStr',
       type: IsarType.string,
     ),
     r'colorValue': PropertySchema(
-      id: 2,
+      id: 3,
       name: r'colorValue',
       type: IsarType.long,
     ),
     r'frequencyStr': PropertySchema(
-      id: 3,
+      id: 4,
       name: r'frequencyStr',
       type: IsarType.string,
     ),
     r'iconCodePoint': PropertySchema(
-      id: 4,
+      id: 5,
       name: r'iconCodePoint',
       type: IsarType.long,
     ),
     r'isActive': PropertySchema(
-      id: 5,
+      id: 6,
       name: r'isActive',
       type: IsarType.bool,
     ),
     r'name': PropertySchema(
-      id: 6,
+      id: 7,
       name: r'name',
       type: IsarType.string,
     ),
     r'nextBillingDate': PropertySchema(
-      id: 7,
+      id: 8,
       name: r'nextBillingDate',
       type: IsarType.dateTime,
     ),
     r'note': PropertySchema(
-      id: 8,
+      id: 9,
       name: r'note',
       type: IsarType.string,
     ),
     r'subscriptionId': PropertySchema(
-      id: 9,
+      id: 10,
       name: r'subscriptionId',
       type: IsarType.string,
     )
@@ -102,6 +107,12 @@ int _isarSubscriptionEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.accountId;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   bytesCount += 3 + object.categoryStr.length * 3;
   bytesCount += 3 + object.frequencyStr.length * 3;
   bytesCount += 3 + object.name.length * 3;
@@ -121,16 +132,17 @@ void _isarSubscriptionSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeDouble(offsets[0], object.amount);
-  writer.writeString(offsets[1], object.categoryStr);
-  writer.writeLong(offsets[2], object.colorValue);
-  writer.writeString(offsets[3], object.frequencyStr);
-  writer.writeLong(offsets[4], object.iconCodePoint);
-  writer.writeBool(offsets[5], object.isActive);
-  writer.writeString(offsets[6], object.name);
-  writer.writeDateTime(offsets[7], object.nextBillingDate);
-  writer.writeString(offsets[8], object.note);
-  writer.writeString(offsets[9], object.subscriptionId);
+  writer.writeString(offsets[0], object.accountId);
+  writer.writeDouble(offsets[1], object.amount);
+  writer.writeString(offsets[2], object.categoryStr);
+  writer.writeLong(offsets[3], object.colorValue);
+  writer.writeString(offsets[4], object.frequencyStr);
+  writer.writeLong(offsets[5], object.iconCodePoint);
+  writer.writeBool(offsets[6], object.isActive);
+  writer.writeString(offsets[7], object.name);
+  writer.writeDateTime(offsets[8], object.nextBillingDate);
+  writer.writeString(offsets[9], object.note);
+  writer.writeString(offsets[10], object.subscriptionId);
 }
 
 IsarSubscription _isarSubscriptionDeserialize(
@@ -140,17 +152,18 @@ IsarSubscription _isarSubscriptionDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = IsarSubscription();
-  object.amount = reader.readDouble(offsets[0]);
-  object.categoryStr = reader.readString(offsets[1]);
-  object.colorValue = reader.readLong(offsets[2]);
-  object.frequencyStr = reader.readString(offsets[3]);
-  object.iconCodePoint = reader.readLong(offsets[4]);
+  object.accountId = reader.readStringOrNull(offsets[0]);
+  object.amount = reader.readDouble(offsets[1]);
+  object.categoryStr = reader.readString(offsets[2]);
+  object.colorValue = reader.readLong(offsets[3]);
+  object.frequencyStr = reader.readString(offsets[4]);
+  object.iconCodePoint = reader.readLong(offsets[5]);
   object.id = id;
-  object.isActive = reader.readBool(offsets[5]);
-  object.name = reader.readString(offsets[6]);
-  object.nextBillingDate = reader.readDateTime(offsets[7]);
-  object.note = reader.readStringOrNull(offsets[8]);
-  object.subscriptionId = reader.readString(offsets[9]);
+  object.isActive = reader.readBool(offsets[6]);
+  object.name = reader.readString(offsets[7]);
+  object.nextBillingDate = reader.readDateTime(offsets[8]);
+  object.note = reader.readStringOrNull(offsets[9]);
+  object.subscriptionId = reader.readString(offsets[10]);
   return object;
 }
 
@@ -162,24 +175,26 @@ P _isarSubscriptionDeserializeProp<P>(
 ) {
   switch (propertyId) {
     case 0:
-      return (reader.readDouble(offset)) as P;
-    case 1:
-      return (reader.readString(offset)) as P;
-    case 2:
-      return (reader.readLong(offset)) as P;
-    case 3:
-      return (reader.readString(offset)) as P;
-    case 4:
-      return (reader.readLong(offset)) as P;
-    case 5:
-      return (reader.readBool(offset)) as P;
-    case 6:
-      return (reader.readString(offset)) as P;
-    case 7:
-      return (reader.readDateTime(offset)) as P;
-    case 8:
       return (reader.readStringOrNull(offset)) as P;
+    case 1:
+      return (reader.readDouble(offset)) as P;
+    case 2:
+      return (reader.readString(offset)) as P;
+    case 3:
+      return (reader.readLong(offset)) as P;
+    case 4:
+      return (reader.readString(offset)) as P;
+    case 5:
+      return (reader.readLong(offset)) as P;
+    case 6:
+      return (reader.readBool(offset)) as P;
+    case 7:
+      return (reader.readString(offset)) as P;
+    case 8:
+      return (reader.readDateTime(offset)) as P;
     case 9:
+      return (reader.readStringOrNull(offset)) as P;
+    case 10:
       return (reader.readString(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -382,6 +397,160 @@ extension IsarSubscriptionQueryWhere
 
 extension IsarSubscriptionQueryFilter
     on QueryBuilder<IsarSubscription, IsarSubscription, QFilterCondition> {
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'accountId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'accountId',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'accountId',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'accountId',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'accountId',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'accountId',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
+      accountIdIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'accountId',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<IsarSubscription, IsarSubscription, QAfterFilterCondition>
       amountEqualTo(
     double value, {
@@ -1390,6 +1559,20 @@ extension IsarSubscriptionQueryLinks
 extension IsarSubscriptionQuerySortBy
     on QueryBuilder<IsarSubscription, IsarSubscription, QSortBy> {
   QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
+      sortByAccountId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'accountId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
+      sortByAccountIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'accountId', Sort.desc);
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
       sortByAmount() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'amount', Sort.asc);
@@ -1530,6 +1713,20 @@ extension IsarSubscriptionQuerySortBy
 
 extension IsarSubscriptionQuerySortThenBy
     on QueryBuilder<IsarSubscription, IsarSubscription, QSortThenBy> {
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
+      thenByAccountId() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'accountId', Sort.asc);
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
+      thenByAccountIdDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'accountId', Sort.desc);
+    });
+  }
+
   QueryBuilder<IsarSubscription, IsarSubscription, QAfterSortBy>
       thenByAmount() {
     return QueryBuilder.apply(this, (query) {
@@ -1685,6 +1882,13 @@ extension IsarSubscriptionQuerySortThenBy
 extension IsarSubscriptionQueryWhereDistinct
     on QueryBuilder<IsarSubscription, IsarSubscription, QDistinct> {
   QueryBuilder<IsarSubscription, IsarSubscription, QDistinct>
+      distinctByAccountId({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'accountId', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<IsarSubscription, IsarSubscription, QDistinct>
       distinctByAmount() {
     return QueryBuilder.apply(this, (query) {
       return query.addDistinctBy(r'amount');
@@ -1761,6 +1965,13 @@ extension IsarSubscriptionQueryProperty
   QueryBuilder<IsarSubscription, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<IsarSubscription, String?, QQueryOperations>
+      accountIdProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'accountId');
     });
   }
 

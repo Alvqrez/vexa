@@ -53,13 +53,13 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
   bool _isLoaded = false;
 
   Future<void> _load() async {
-    final records = await _isar.isarLoans.where().findAll();
     if (_isLoaded) return;
+    _isLoaded = true;
+    final records = await _isar.isarLoans.where().findAll();
     if (records.isNotEmpty) {
       state = records.map(_isarToLoan).toList()
         ..sort((a, b) => b.date.compareTo(a.date));
     }
-    _isLoaded = true;
   }
 
   Future<void> _persistAll() => _isar.writeTxn(() async {
@@ -118,12 +118,15 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
 
   Future<void> delete(String id) async {
     _isLoaded = true;
+    // Capture before removing from state so we can use name/date for fallback.
+    final loan = state.where((l) => l.id == id).firstOrNull;
     state = state.where((l) => l.id != id).toList();
     await _isar.writeTxn(() => _isar.isarLoans.deleteByLoanId(id));
 
     // Reverse the originating transaction to restore the account balance.
     final txId = await LocalPrefsService.getString('loan_origin_tx_$id');
     if (txId != null) {
+      // Fast path: known txId from LocalPrefs.
       final tx = _ref
           .read(transactionsProvider)
           .where((t) => t.id == txId)
@@ -132,6 +135,19 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
         await _ref.read(transactionsProvider.notifier).delete(tx);
       }
       await LocalPrefsService.remove('loan_origin_tx_$id');
+    } else if (loan != null && loan.accountId != null) {
+      // Fallback: LocalPrefs lost — locate originating tx by merchant name + date + account.
+      final expectedMerchant = 'Préstamo: ${loan.name}';
+      final loanDay = DateTime(loan.date.year, loan.date.month, loan.date.day);
+      final tx = _ref.read(transactionsProvider).where((t) {
+        final tDay = DateTime(t.date.year, t.date.month, t.date.day);
+        return t.merchant == expectedMerchant &&
+            tDay == loanDay &&
+            t.accountId == loan.accountId;
+      }).firstOrNull;
+      if (tx != null) {
+        await _ref.read(transactionsProvider.notifier).delete(tx);
+      }
     }
   }
 

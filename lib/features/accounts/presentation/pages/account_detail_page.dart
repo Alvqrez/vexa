@@ -140,14 +140,21 @@ class AccountDetailPage extends ConsumerWidget {
                                       AppSpacing.cardRadius,
                                     ),
                                   ),
-                                  title: Text(
-                                    'Eliminar cuenta',
-                                    style: AppTypography.headingS.copyWith(
-                                      color: c.textPrimary,
-                                    ),
+                                  title: Row(
+                                    children: [
+                                      const Icon(Icons.warning_amber_rounded,
+                                          color: AppColors.negative, size: 22),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Eliminar cuenta',
+                                        style: AppTypography.headingS.copyWith(
+                                          color: c.textPrimary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   content: Text(
-                                    '¿Eliminar "${stats.account.name}"? Esta acción no se puede deshacer.',
+                                    '¿Eliminar "${stats.account.name}"? Se borrarán también todas sus transacciones. Esta acción no se puede deshacer.',
                                     style: AppTypography.bodyM.copyWith(
                                       color: c.textSecondary,
                                     ),
@@ -162,21 +169,22 @@ class AccountDetailPage extends ConsumerWidget {
                                         ),
                                       ),
                                     ),
-                                    TextButton(
-                                      onPressed: () {
-                                        ref
+                                    FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: AppColors.negative,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      onPressed: () async {
+                                        await ref
                                             .read(accountsProvider.notifier)
                                             .deleteAccount(accountId);
-                                        Navigator.of(context)
-                                          ..pop()
-                                          ..pop();
+                                        if (context.mounted) {
+                                          Navigator.of(context)
+                                            ..pop()
+                                            ..pop();
+                                        }
                                       },
-                                      child: Text(
-                                        'Eliminar',
-                                        style: AppTypography.labelM.copyWith(
-                                          color: AppColors.negative,
-                                        ),
-                                      ),
+                                      child: const Text('Eliminar'),
                                     ),
                                   ],
                                 ),
