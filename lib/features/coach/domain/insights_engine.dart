@@ -193,6 +193,12 @@ class InsightsEngine {
   // ── Mejor mes de ahorro ─────────────────────────────────────────────────────
 
   List<CoachInsight> _bestSavingsMonth() {
+    // Comparar el neto de un mes PARCIAL contra meses completos sería injusto
+    // (p. ej. tras cobrar la nómina a inicio de mes, el neto luce enorme).
+    // Solo se evalúa cuando el mes ya está mayormente transcurrido (≥66%).
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    if (now.day / daysInMonth < 0.66) return [];
+
     final currentNet =
         _incomeOf(now.year, now.month) - _expensesOf(now.year, now.month);
     if (currentNet <= 0) return [];

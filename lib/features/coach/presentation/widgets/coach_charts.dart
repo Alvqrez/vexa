@@ -125,7 +125,12 @@ class CoachOverviewRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final income = ref.watch(analysisIncomeProvider);
     final expenses = ref.watch(analysisExpensesProvider);
-    final savings = ref.watch(monthlySavingsProvider);
+    final month = ref.watch(selectedAnalysisMonthProvider);
+    final savings = ref
+            .watch(savingsForMonthProvider(
+                (year: month.year, month: month.month)))
+            .valueOrNull ??
+        0.0;
     final currency = ref.watch(currencySymbolProvider);
 
     return Row(
@@ -529,9 +534,11 @@ class _CoachCategoryMonthlyBarsState
     final currency = ref.watch(currencySymbolProvider);
     final walletCats = ref.watch(walletCategoriesProvider);
 
-    final now = DateTime.now();
+    // Ventana de 6 meses anclada al mes seleccionado en "Tu mes" (no a hoy),
+    // para mantener coherencia con el resto de la pestaña.
+    final anchor = ref.watch(selectedAnalysisMonthProvider);
     final monthData = List.generate(6, (i) {
-      final m = DateTime(now.year, now.month - 5 + i);
+      final m = DateTime(anchor.year, anchor.month - 5 + i);
       final catTotals = <String, double>{};
       for (final t in transactions) {
         if (t.isIncome || t.date.month != m.month || t.date.year != m.year) {
@@ -591,16 +598,17 @@ class _CoachCategoryMonthlyBarsState
                                 child: Text(
                                   _monthAbbrs[monthData[i].m.month - 1],
                                   style: AppTypography.labelS.copyWith(
-                                    color: monthData[i].m.month == now.month &&
-                                            monthData[i].m.year == now.year
+                                    color: monthData[i].m.month ==
+                                                anchor.month &&
+                                            monthData[i].m.year == anchor.year
                                         ? AppColors.emerald
                                         : c.textTertiary,
                                     fontSize: 10,
-                                    fontWeight:
-                                        monthData[i].m.month == now.month &&
-                                                monthData[i].m.year == now.year
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
+                                    fontWeight: monthData[i].m.month ==
+                                                anchor.month &&
+                                            monthData[i].m.year == anchor.year
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
                                   ),
                                 ),
                               ),
@@ -763,6 +771,7 @@ class _CoachCategoryPieChartState
     if (breakdown.isEmpty) return const SizedBox.shrink();
 
     final walletCats = ref.watch(walletCategoriesProvider);
+    final month = ref.watch(selectedAnalysisMonthProvider);
     final total = breakdown.values.fold(0.0, (a, b) => a + b);
     final entries = breakdown.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -775,7 +784,7 @@ class _CoachCategoryPieChartState
 
     return CoachSectionCard(
       title: 'Distribución por categoría',
-      badge: 'este mes',
+      badge: DateFormat('MMMM', 'es').format(month),
       badgeColor: AppColors.petroleum,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -1177,6 +1186,7 @@ class CoachTopSubcategoriesList extends ConsumerWidget {
     final allSubs = ref.watch(subcategoriesProvider);
     final walletCats = ref.watch(walletCategoriesProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final month = ref.watch(selectedAnalysisMonthProvider);
 
     // Aplanar: (cat, sub, monto), omitiendo "sin subcategoría" y huérfanas.
     final flat = <({WalletCategory cat, Subcategory sub, double amount})>[];
@@ -1202,7 +1212,7 @@ class CoachTopSubcategoriesList extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: AppSpacing.xl),
       child: CoachSectionCard(
       title: 'Top subcategorías',
-      badge: 'este mes',
+      badge: DateFormat('MMMM', 'es').format(month),
       badgeColor: AppColors.emerald,
       child: Column(
         children: [
@@ -1402,13 +1412,20 @@ class CoachInterpretCard extends ConsumerWidget {
     final c = context.colors;
     final income = ref.watch(analysisIncomeProvider);
     final expenses = ref.watch(analysisExpensesProvider);
-    final savings = ref.watch(monthlySavingsProvider);
+    final month = ref.watch(selectedAnalysisMonthProvider);
+    final savings = ref
+            .watch(savingsForMonthProvider(
+                (year: month.year, month: month.month)))
+            .valueOrNull ??
+        0.0;
     final currency = ref.watch(currencySymbolProvider);
 
     final net = income - expenses;
     final isPositive = net >= 0;
     final preview = isPositive
-        ? 'Estás ahorrando $currency${savings.toStringAsFixed(0)} este mes.'
+        ? (savings > 0
+            ? 'Apartaste $currency${savings.toStringAsFixed(0)} en ahorro este mes.'
+            : 'Tu balance es positivo: $currency${net.toStringAsFixed(0)} disponibles.')
         : 'Tus gastos superan tus ingresos por $currency${(-net).toStringAsFixed(0)}.';
 
     return GestureDetector(

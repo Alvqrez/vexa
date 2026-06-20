@@ -676,6 +676,24 @@ final monthlySavingsProvider = Provider<double>((ref) {
   return ref.watch(savingsTransfersProvider);
 });
 
+/// Ahorro (transferencias a cuentas de Ahorro) de un mes concreto.
+/// Para el mes en curso reusa el notifier reactivo; para meses pasados lee
+/// el valor persistido bajo su propia clave. Evita mostrar el ahorro del mes
+/// actual cuando el usuario navega a un mes anterior en el análisis.
+final savingsForMonthProvider =
+    FutureProvider.family<double, ({int year, int month})>((ref, m) async {
+  final now = DateTime.now();
+  if (m.year == now.year && m.month == now.month) {
+    return ref.watch(savingsTransfersProvider);
+  }
+  try {
+    return await LocalPrefsService.getDouble('savings_${m.year}_${m.month}');
+  } catch (e) {
+    debugPrint('savingsForMonthProvider: error reading ${m.year}-${m.month}: $e');
+    return 0.0;
+  }
+});
+
 /// Percentage change in income vs the previous month.
 /// Returns null when there is no previous-month data to compare against.
 final monthOverMonthProvider = Provider<double?>((ref) {

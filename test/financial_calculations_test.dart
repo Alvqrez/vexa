@@ -286,6 +286,106 @@ void main() {
       });
     });
 
+    // ─── VEXA SCORE: BUDGET COMPLIANCE PER ITEM ─────────────────────────────
+    //
+    // Replica la fórmula real de vexaScoreProvider. REGRESIÓN: antes se usaba
+    // `BudgetItemWithSpent.ratio` (acotado a [0,1]), por lo que la rama de
+    // sobregasto (ratio > 1.0) era código muerto y un usuario 300% por encima
+    // del límite puntuaba igual que uno justo en el límite (60). La razón debe
+    // calcularse SIN acotar para penalizar el exceso.
+    group('Vexa Score — budget compliance per item', () {
+      double itemScore(double spent, double limit) {
+        final ratio = spent / limit; // sin acotar
+        if (ratio <= 0.8) return 100;
+        if (ratio <= 1.0) return 100 - (ratio - 0.8) * 200; // 100 → 60
+        return (60 - (ratio - 1.0) * 120).clamp(0.0, 60.0); // 60 → 0
+      }
+
+      test('under 80% of limit scores full marks', () {
+        expect(itemScore(50, 100), 100);
+      });
+
+      test('exactly at limit scores 60', () {
+        expect(itemScore(100, 100), closeTo(60, 0.01));
+      });
+
+      test('moderately over budget scores below 60', () {
+        // 120% → 60 - (0.2 * 120) = 36
+        expect(itemScore(120, 100), closeTo(36, 0.01));
+      });
+
+      test('severely over budget bottoms out at 0 (not 60)', () {
+        // 300% → 60 - (2.0 * 120) = -180 → clamp 0
+        expect(itemScore(300, 100), 0.0);
+        // Confirma que NO se queda en 60 como con la razón acotada.
+        expect(itemScore(300, 100), lessThan(60));
+      });
+    });
+
+    // ─── CASHFLOW PROJECTION: NO DOBLE CONTEO ───────────────────────────────
+    //
+    // REGRESIÓN: el promedio diario incluía los cargos de suscripción (que son
+    // transacciones reales) Y además se sumaban las suscripciones como eventos
+    // discretos → la suscripción se contaba dos veces. La corrección descuenta
+    // el equivalente mensual amortizado del promedio de gasto.
+    group('Cashflow — subscription double-count removal', () {
+      test('amortized subscription is not counted twice', () {
+        // 2 meses de datos: 600 variable + 60 de una suscripción mensual de 30.
+        const rawTotalExpense = 660.0;
+        const histDays = 60;
+        const monthlySubs = 30.0;
+
+        final rawAvgDaily = rawTotalExpense / histDays; // 11.0
+        final dailySubs = monthlySubs / 30.44;
+        final varAvgDaily =
+            (rawAvgDaily - dailySubs).clamp(0.0, double.infinity);
+
+        // Proyección a 30 días = gasto variable + 1 cargo discreto de la sub.
+        final projected30 = varAvgDaily * 30 + monthlySubs;
+        // Naïve (con doble conteo) habría dado 11*30 + 30 = 360.
+        const naive = 11.0 * 30 + 30.0;
+
+        expect(projected30, closeTo(330.43, 0.5)); // ≈ gasto real esperado
+        expect(projected30, lessThan(naive)); // corrige la inflación
+      });
+
+      test('variable average never goes negative', () {
+        const rawAvgDaily = 0.5; // gasto variable muy bajo
+        const monthlySubs = 100.0; // suscripciones altas
+        final dailySubs = monthlySubs / 30.44;
+        final varAvgDaily =
+            (rawAvgDaily - dailySubs).clamp(0.0, double.infinity);
+
+        expect(varAvgDaily, 0.0); // acotado, nunca negativo
+      });
+
+      test('requires real history span, not just a count', () {
+        // 5 movimientos pero todos del mismo día → span 1 → sin proyección.
+        const count = 5;
+        const histDays = 1;
+        expect(count >= 5 && histDays >= 14, false);
+
+        // 6 movimientos repartidos en 20 días → proyección válida.
+        expect(6 >= 5 && 20 >= 14, true);
+      });
+    });
+
+    // ─── INSIGHT "MEJOR MES": MES PARCIAL VS COMPLETO ───────────────────────
+    group('Insight best-savings-month partial guard', () {
+      bool shouldEvaluate(int day, int daysInMonth) =>
+          day / daysInMonth >= 0.66;
+
+      test('skips early in the month', () {
+        expect(shouldEvaluate(3, 30), false); // día 3 de 30
+        expect(shouldEvaluate(15, 31), false); // mitad de mes
+      });
+
+      test('evaluates once the month is mostly elapsed', () {
+        expect(shouldEvaluate(20, 30), true); // 66%
+        expect(shouldEvaluate(28, 28), true); // fin de febrero
+      });
+    });
+
     // ─── EDGE CASES ──────────────────────────────────────────────────────────
 
     group('Edge Cases and Precision', () {

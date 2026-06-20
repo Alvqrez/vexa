@@ -1,9 +1,18 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../home/domain/models/transaction.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
 import '../../../loans/presentation/providers/loans_provider.dart';
 import '../../../loans/domain/models/loan.dart';
 import '../../../goals/presentation/providers/goals_provider.dart';
+
+// Prefijos de comercio que la propia app asigna a las transacciones generadas
+// por préstamos (ver LoansNotifier). Se usan para excluir esos movimientos
+// puntuales del promedio diario, ya que se proyectan como eventos discretos.
+bool _isLoanTx(Transaction t) =>
+    t.merchant.startsWith('Préstamo: ') ||
+    t.merchant.startsWith('Cobro préstamo: ') ||
+    t.merchant.startsWith('Pago deuda: ');
 
 /// Desglose de un horizonte de proyección (30, 60 o 90 días).
 class CashflowWindow {
@@ -82,6 +91,9 @@ final cashflowProjectionProvider = Provider<CashflowProjection>((ref) {
   final sixtyAgo = today.subtract(const Duration(days: 60));
   final recent =
       transactions.where((t) => t.date.isAfter(sixtyAgo)).toList();
+
+  // Span real de datos: días entre la transacción más antigua de la ventana y
+  // hoy. `recent` viene ordenado por fecha desc, así que `last` es la más vieja.
   final histDays = recent.isEmpty
       ? 0
       : today
@@ -93,17 +105,34 @@ final cashflowProjectionProvider = Provider<CashflowProjection>((ref) {
               .inDays
               .clamp(1, 60);
 
+  // El promedio diario debe reflejar SOLO el gasto/ingreso variable recurrente.
+  // Las suscripciones y los préstamos se modelan como eventos discretos más
+  // abajo; si además quedaran en el promedio se contarían dos veces:
+  //  • Préstamos: la app crea transacciones con prefijos conocidos al originar
+  //    o pagar un préstamo → se excluyen aquí (son movimientos puntuales).
+  //  • Suscripciones: sus cargos sí son transacciones normales y no se pueden
+  //    identificar de forma fiable, así que se descuenta su equivalente
+  //    mensual amortizado del promedio de gasto.
   double totalIncome = 0;
   double totalExpense = 0;
   for (final t in recent) {
+    if (_isLoanTx(t)) continue; // modelado discretamente (loanIn/Out)
     if (t.isIncome) {
       totalIncome += t.amount;
     } else {
       totalExpense += t.amount;
     }
   }
-  final avgDailyIncome = histDays > 0 ? totalIncome / histDays : 0.0;
-  final avgDailyExpense = histDays > 0 ? totalExpense / histDays : 0.0;
+  final rawAvgDailyIncome = histDays > 0 ? totalIncome / histDays : 0.0;
+  final rawAvgDailyExpense = histDays > 0 ? totalExpense / histDays : 0.0;
+
+  final monthlySubsTotal =
+      subscriptions.fold<double>(0, (s, sub) => s + sub.monthlyEquivalent);
+  final dailySubs = monthlySubsTotal / 30.44; // días promedio por mes
+  final avgDailyIncome = rawAvgDailyIncome;
+  // Resta la parte amortizada de suscripciones para no doble-contarlas.
+  final avgDailyExpense =
+      (rawAvgDailyExpense - dailySubs).clamp(0.0, double.infinity);
 
   // ── Eventos puntuales: suscripciones y préstamos por día ───────────────────
   // outflowOn[d] / inflowOn[d]: movimientos del día `d` (1..90)
@@ -200,6 +229,9 @@ final cashflowProjectionProvider = Provider<CashflowProjection>((ref) {
     avgDailyExpense: avgDailyExpense,
     activeGoalsTarget: goalsTarget,
     activeGoalsSaved: goalsSaved,
-    hasHistory: recent.length >= 3,
+    // Requiere un historial REAL: al menos 5 movimientos repartidos en ≥14
+    // días. Con datos concentrados en 1-2 días, dividir por un span minúsculo
+    // dispararía los promedios y la proyección sería irreal.
+    hasHistory: recent.length >= 5 && histDays >= 14,
   );
 });

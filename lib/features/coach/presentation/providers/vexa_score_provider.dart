@@ -30,19 +30,22 @@ final vexaScoreProvider = Provider<VexaScore>((ref) {
 
   // ── 2. Presupuesto (25%): cumplimiento promedio de límites ─────────────────
   double budgetScore;
-  if (budgets.isNotEmpty) {
+  // Solo cuentan presupuestos con límite real (>0). `b.ratio` está acotado a
+  // [0,1], así que para penalizar el sobregasto usamos la razón cruda.
+  final activeBudgets = budgets.where((b) => b.item.limit > 0).toList();
+  if (activeBudgets.isNotEmpty) {
     var total = 0.0;
-    for (final b in budgets) {
-      final ratio = b.ratio;
+    for (final b in activeBudgets) {
+      final ratio = b.spent / b.item.limit; // sin acotar: detecta >100%
       if (ratio <= 0.8) {
         total += 100;
       } else if (ratio <= 1.0) {
         total += 100 - (ratio - 0.8) * 200; // 100 → 60
       } else {
-        total += (60 - (ratio - 1.0) * 120).clamp(0.0, 60.0);
+        total += (60 - (ratio - 1.0) * 120).clamp(0.0, 60.0); // 60 → 0
       }
     }
-    budgetScore = total / budgets.length;
+    budgetScore = total / activeBudgets.length;
   } else {
     // Sin presupuestos: usar relación gasto/ingreso como aproximación
     budgetScore = income > 0
