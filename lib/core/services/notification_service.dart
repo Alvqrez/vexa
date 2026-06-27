@@ -10,6 +10,7 @@ abstract final class NotificationService {
   static const _channelName = 'Vexa Finance';
 
   static const _idDailyTip = 1;
+  static const _idLogReminder = 2;
   static const _idBudgetBase = 10000; // Reservar rango [10000-10999] para budgets
   static const _idSubsBase = 20000;   // Reservar rango [20000-20999] para suscripciones
 
@@ -92,6 +93,34 @@ abstract final class NotificationService {
 
   static Future<void> cancelDailyTip() async {
     await _plugin.cancel(_idDailyTip);
+  }
+
+  // ── Recordatorio de registro ──────────────────────────────────────────────────
+
+  /// Recordatorio diario a las 21:00 para registrar los gastos del día.
+  static Future<void> scheduleLogReminder() async {
+    await _plugin.cancel(_idLogReminder);
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 21); // 9 PM
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    await _plugin.zonedSchedule(
+      _idLogReminder,
+      '📝 ¿Registraste tus gastos de hoy?',
+      'Anota tus movimientos del día para mantener tu balance al día.',
+      scheduled,
+      _details,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  static Future<void> cancelLogReminder() async {
+    await _plugin.cancel(_idLogReminder);
   }
 
   // ── Subscription expiry ──────────────────────────────────────────────────────

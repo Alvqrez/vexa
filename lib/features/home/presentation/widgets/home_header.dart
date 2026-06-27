@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -57,7 +57,7 @@ class HomeHeader extends ConsumerWidget {
         // Streak pill
         GestureDetector(
           onTap: () {
-            HapticFeedback.lightImpact();
+            Haptics.lightImpact();
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const StreakPage()),
             );
@@ -137,12 +137,12 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   }
 
   void _toggle() {
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     _overlayController.toggle();
   }
 
   void _dismissOne(String id) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() => _dismissed.add(id));
     if (_dismissed.containsAll(['n1', 'n2'])) {
       LocalPrefsService.setInt('notif_cleared_day', _todayInt());
@@ -150,7 +150,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
   }
 
   void _clearAll() {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     setState(() {
       _dismissed.addAll(['n1', 'n2']);
     });
@@ -164,6 +164,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
     final prediction = ref.watch(predictionProvider);
     final txns = ref.watch(transactionsProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
     final now = DateTime.now();
     final hasTransactionsThisMonth = txns.any(
         (t) => t.date.month == now.month && t.date.year == now.year);
@@ -176,7 +177,7 @@ class _NotificationButtonState extends ConsumerState<_NotificationButton> {
           color: prediction.isOnTrack ? AppColors.emerald : AppColors.negative,
           title: 'Predicción del mes',
           body: prediction.isOnTrack
-              ? 'Vas bien. Ahorro estimado: +$currency${prediction.predictedSavings.toStringAsFixed(0)}'
+              ? 'Vas bien. Ahorro estimado: ${maskMoney(hide, '+$currency${prediction.predictedSavings.toStringAsFixed(0)}')}'
               : 'Atención: gastos superarán ingresos este mes.',
           time: 'hoy',
           unread: true,
@@ -529,7 +530,7 @@ class _AvatarButton extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const ProfilePage()),
         );

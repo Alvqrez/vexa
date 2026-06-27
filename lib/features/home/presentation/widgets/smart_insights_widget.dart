@@ -16,7 +16,6 @@ class SmartInsightsWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
-    if (!ref.watch(notifPrefsProvider).prediction) return const SizedBox.shrink();
     final insights = _buildInsights(ref);
     if (insights.isEmpty) return const SizedBox.shrink();
 

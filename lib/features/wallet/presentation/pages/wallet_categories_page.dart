@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -54,7 +55,7 @@ class _WalletCategoriesPageState extends ConsumerState<WalletCategoriesPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    )..revealForward();
     _tabCtrl = TabController(length: 2, vsync: this);
 
     _fadeAnims = List.generate(3, (i) {
@@ -436,7 +437,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
   bool _expanded = false;
 
   void _toggle() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() => _expanded = !_expanded);
   }
 
@@ -570,7 +571,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         showModalBottomSheet(
                           context: context,
                           isScrollControlled: true,
@@ -640,7 +641,7 @@ class _CategoryTileState extends ConsumerState<_CategoryTile> {
                               physics: const NeverScrollableScrollPhysics(),
                               buildDefaultDragHandles: false,
                               onReorderItem: (oldIndex, newIndex) {
-                                HapticFeedback.mediumImpact();
+                                Haptics.mediumImpact();
                                 ref
                                     .read(subcategoriesProvider.notifier)
                                     .reorder(category.id, oldIndex, newIndex);
@@ -697,7 +698,7 @@ class _SubcategoryRow extends StatelessWidget {
     final color = subcategory.effectiveColor(parentColor);
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onEdit();
       },
       behavior: HitTestBehavior.opaque,
@@ -728,7 +729,7 @@ class _SubcategoryRow extends StatelessWidget {
             ),
             GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
+                Haptics.selectionClick();
                 onDelete();
               },
               behavior: HitTestBehavior.opaque,
@@ -770,7 +771,7 @@ class _AddSubcategoryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       behavior: HitTestBehavior.opaque,
@@ -814,7 +815,7 @@ class _AddCategoryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -909,7 +910,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
   void _submit() {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
     final cats = ref.read(walletCategoriesProvider);
@@ -927,7 +928,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
         isDefault: widget.existing?.isDefault ?? false,
       ),
     );
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     Navigator.pop(context);
   }
 
@@ -1034,7 +1035,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
                       ),
                       child: GestureDetector(
                         onTap: () {
-                          HapticFeedback.selectionClick();
+                          Haptics.selectionClick();
                           setState(() => _type = t);
                         },
                         child: AnimatedContainer(
@@ -1323,7 +1324,7 @@ class _CategoryActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -1375,7 +1376,7 @@ class _ColorPickerRow extends StatelessWidget {
         final isSel = c.toARGB32() == selected.toARGB32();
         return GestureDetector(
           onTap: () {
-            HapticFeedback.selectionClick();
+            Haptics.selectionClick();
             onChanged(c);
           },
           child: AnimatedContainer(

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/loan.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
@@ -151,6 +153,40 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
     }
   }
 
+  /// Datos de ejemplo (solo debug). No crea transacciones de origen.
+  Future<void> seed() async {
+    if (kReleaseMode) return;
+    _isLoaded = true;
+    final now = DateTime.now();
+    state = [
+      Loan(
+        id: 'seed_loan_1',
+        name: 'Carlos',
+        amount: 500,
+        paidAmount: 200,
+        type: LoanType.lentByMe,
+        date: DateTime(now.year, now.month - 1, 10),
+        dueDate: DateTime(now.year, now.month, now.day + 15),
+        icon: Icons.person_outline_rounded,
+        color: AppColors.emerald,
+        accountId: '1',
+      ),
+      Loan(
+        id: 'seed_loan_2',
+        name: 'Préstamo personal',
+        amount: 1200,
+        paidAmount: 400,
+        type: LoanType.borrowedByMe,
+        date: DateTime(now.year, now.month - 2, 5),
+        dueDate: DateTime(now.year, now.month + 2, 1),
+        icon: Icons.account_balance_rounded,
+        color: AppColors.negative,
+        accountId: '1',
+      ),
+    ];
+    await _persistAll();
+  }
+
   Future<void> addPayment(String id, double paymentAmount, {String? accountId}) async {
     // Validate payment amount
     if (paymentAmount <= 0) {
@@ -158,7 +194,11 @@ class LoansNotifier extends StateNotifier<List<Loan>> {
       return;
     }
 
-    final loan = state.firstWhere((l) => l.id == id);
+    final loan = state.where((l) => l.id == id).firstOrNull;
+    if (loan == null) {
+      debugPrint('LoansNotifier.addPayment: loan $id not found, skipping');
+      return;
+    }
     _isLoaded = true;
     state = [
       for (final l in state)

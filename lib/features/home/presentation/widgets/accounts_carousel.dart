@@ -5,6 +5,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../shared/widgets/animated_number.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../../domain/models/account.dart';
 import '../providers/home_provider.dart';
 import '../../../../features/accounts/presentation/pages/account_detail_page.dart';
@@ -17,6 +18,7 @@ class AccountsCarousel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.colors;
     final accounts = ref.watch(accountsProvider);
+    final hidden = ref.watch(hideAmountsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -62,8 +64,8 @@ class AccountsCarousel extends ConsumerWidget {
               itemCount: accounts.length,
               separatorBuilder: (context, _) =>
                   const SizedBox(width: AppSpacing.md),
-              itemBuilder: (context, index) =>
-                  _AccountCard(account: accounts[index], width: cardWidth),
+              itemBuilder: (context, index) => _AccountCard(
+                  account: accounts[index], width: cardWidth, hidden: hidden),
             ),
           );
         }),
@@ -73,9 +75,11 @@ class AccountsCarousel extends ConsumerWidget {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account, required this.width});
+  const _AccountCard(
+      {required this.account, required this.width, this.hidden = false});
   final Account account;
   final double width;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +152,7 @@ class _AccountCard extends StatelessWidget {
                   letterSpacing: -0.5,
                 ),
                 duration: const Duration(milliseconds: 900),
+                hidden: hidden,
               ),
             ],
           ),

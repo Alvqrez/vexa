@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -44,7 +45,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
   }
 
   void _confirmDelete(FinancialGoal goal) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showDialog<void>(
       context: context,
@@ -70,7 +71,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
           ),
           TextButton(
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               Navigator.of(dialogCtx).pop(); // cerrar diálogo
               Navigator.of(context).pop(); // salir del detalle
               ref.read(goalsProvider.notifier).remove(goal.id);
@@ -96,7 +97,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
           await ref.read(goalsProvider.notifier).addProgress(goal.id, amount);
           final newProgress = (goal.current + amount) / goal.target;
           if (newProgress >= 1.0 && !goal.completed) {
-            HapticFeedback.heavyImpact();
+            Haptics.heavyImpact();
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (!mounted) return;
               ConfettiOverlay.show(context);
@@ -172,7 +173,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -411,7 +412,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
                       if (!goal.isCompleted)
                         GestureDetector(
                           onTap: () {
-                            HapticFeedback.lightImpact();
+                            Haptics.lightImpact();
                             _showAddProgress(goal);
                           },
                           child: Container(
@@ -463,7 +464,7 @@ class _GoalDetailPageState extends ConsumerState<GoalDetailPage>
   }
 
   String _fmt(double v) =>
-      v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0);
+      pmask(v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0));
 }
 
 // ── Arc painter ───────────────────────────────────────────────────────────────
@@ -588,7 +589,7 @@ class _AddProgressSheetState extends State<_AddProgressSheet> {
   Future<void> _submit() async {
     final amount = double.tryParse(_ctrl.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) return;
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     await widget.onAdd(amount);
     if (mounted) {
       Navigator.of(context).pop();

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -188,7 +188,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
   }
 
   void _showSortSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -266,7 +266,7 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                         showSearch: _showSearch,
                         onBack: () => Navigator.of(context).pop(),
                         onSearchToggle: () {
-                          HapticFeedback.selectionClick();
+                          Haptics.selectionClick();
                           setState(() {
                             _showSearch = !_showSearch;
                             if (!_showSearch) {
@@ -308,13 +308,17 @@ class _AllTransactionsPageState extends ConsumerState<AllTransactionsPage>
                         Expanded(
                             child: _SummaryChip(
                                 label: 'Ingresos',
-                                value: '+\$${income.toStringAsFixed(0)}',
+                                value: ref.watch(hideAmountsProvider)
+                                    ? '+\$••••'
+                                    : '+\$${income.toStringAsFixed(0)}',
                                 color: AppColors.positive)),
                         const SizedBox(width: AppSpacing.sm),
                         Expanded(
                             child: _SummaryChip(
                                 label: 'Egresos',
-                                value: '-\$${expenses.toStringAsFixed(0)}',
+                                value: ref.watch(hideAmountsProvider)
+                                    ? '-\$••••'
+                                    : '-\$${expenses.toStringAsFixed(0)}',
                                 color: AppColors.negative)),
                       ]),
                       const SizedBox(height: AppSpacing.md),
@@ -684,7 +688,7 @@ class _SortSheet extends StatelessWidget {
             final active = s == current;
             return GestureDetector(
               onTap: () {
-                HapticFeedback.selectionClick();
+                Haptics.selectionClick();
                 onSelect(s);
                 Navigator.pop(context);
               },
@@ -819,7 +823,7 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: AnimatedContainer(

@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -319,7 +319,7 @@ class _CoachDailyHeatMapState extends ConsumerState<CoachDailyHeatMap> {
                       onTap: cells[row * 7 + col].$1 == 0
                           ? null
                           : () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() {
                                 final d = cells[row * 7 + col].$1;
                                 if (_selectedDay == d) {
@@ -705,7 +705,7 @@ class _CoachCategoryMonthlyBarsState
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() {
                     if (isSelected) {
                       _selBarIdx = null;
@@ -1023,7 +1023,7 @@ class _CatBarState extends State<_CatBar>
     return GestureDetector(
       onTap: _hasSubData
           ? () {
-              HapticFeedback.selectionClick();
+              Haptics.selectionClick();
               setState(() => _expanded = !_expanded);
             }
           : null,
@@ -1430,7 +1430,7 @@ class CoachInterpretCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,

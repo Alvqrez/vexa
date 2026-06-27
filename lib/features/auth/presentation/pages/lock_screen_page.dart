@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -98,7 +98,7 @@ class _LockScreenPageState extends State<LockScreenPage>
 
   void _addDigit(String d) {
     if (_digits.length >= 4 || _isLockedOut) return;
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _digits.add(d);
       _error = false;
@@ -108,7 +108,7 @@ class _LockScreenPageState extends State<LockScreenPage>
 
   void _removeDigit() {
     if (_digits.isEmpty || _isLockedOut) return;
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     setState(() => _digits.removeLast());
   }
 
@@ -118,7 +118,7 @@ class _LockScreenPageState extends State<LockScreenPage>
     if (ok) {
       _unlock();
     } else {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       _shakeCtrl.forward(from: 0);
       setState(() {
         _error = true;
@@ -134,7 +134,7 @@ class _LockScreenPageState extends State<LockScreenPage>
     if (ok) {
       _unlock();
     } else {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       _shakeCtrl.forward(from: 0);
       setState(() => _error = true);
       _passCtrl.clear();

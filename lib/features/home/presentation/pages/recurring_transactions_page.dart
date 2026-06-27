@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -179,7 +179,7 @@ class RecurringTransactionsPage extends ConsumerWidget {
     List<Account> accounts, {
     RecurringTransaction? existing,
   }) {
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -282,7 +282,7 @@ class _RecurringItemRow extends ConsumerWidget {
           const SizedBox(width: AppSpacing.sm),
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              Haptics.selectionClick();
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -422,7 +422,7 @@ class _RecurringActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -514,7 +514,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
       _type == TransactionType.income ? AppColors.positive : AppColors.negative;
 
   void _showCategorySheet(List<WalletCategory> cats) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     final bottom = MediaQuery.of(context).padding.bottom;
     showModalBottomSheet<void>(
@@ -549,7 +549,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                       final sel = cat.id == _cat.id;
                       return GestureDetector(
                         onTap: () {
-                          HapticFeedback.selectionClick();
+                          Haptics.selectionClick();
                           setState(() => _cat = cat);
                           Navigator.pop(context);
                         },
@@ -594,7 +594,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
   }
 
   void _showFrequencySheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -622,7 +622,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
               final sel = f == _freq;
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _freq = f);
                   Navigator.pop(context);
                 },
@@ -663,7 +663,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
 
   void _showAccountSheet() {
     if (widget.accounts.isEmpty) return;
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -696,7 +696,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
               final sel = a.id == _accountId;
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _accountId = a.id);
                   Navigator.pop(context);
                 },
@@ -746,7 +746,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
     final nameInvalid = name.isEmpty;
     final amountInvalid = amount == null || amount <= 0;
     if (nameInvalid || amountInvalid) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       setState(() => _nameError = nameInvalid);
       if (mounted) {
         final c = context.colors;
@@ -793,7 +793,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
       } else {
         await ref.read(recurringListProvider.notifier).add(r);
       }
-      HapticFeedback.mediumImpact();
+      Haptics.mediumImpact();
       if (mounted) Navigator.of(context).pop();
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
@@ -852,7 +852,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                         right: t == TransactionType.income ? 4 : 0),
                     child: GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _type = t);
                       },
                       child: AnimatedContainer(
@@ -1024,7 +1024,7 @@ class _RecurringFormSheetState extends ConsumerState<_RecurringFormSheet> {
                   return Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() {
                           if (sel) {
                             _weekDays.remove(day);

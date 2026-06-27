@@ -1,6 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -28,8 +28,10 @@ class _CashflowProjectionSectionState
   String _fmt(double v, String sym) {
     final abs = v.abs();
     final sign = v < 0 ? '-' : '';
-    if (abs >= 1000) return '$sign$sym${(abs / 1000).toStringAsFixed(1)}k';
-    return '$sign$sym${abs.toStringAsFixed(0)}';
+    final s = abs >= 1000
+        ? '$sign$sym${(abs / 1000).toStringAsFixed(1)}k'
+        : '$sign$sym${abs.toStringAsFixed(0)}';
+    return pmask(s);
   }
 
   @override
@@ -83,7 +85,7 @@ class _CashflowProjectionSectionState
               return Expanded(
                 child: GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     setState(() => _windowIdx = i);
                   },
                   child: AnimatedContainer(

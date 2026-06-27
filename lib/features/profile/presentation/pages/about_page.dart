@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -8,6 +9,10 @@ import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../goals/presentation/providers/goals_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
+import '../../../loans/presentation/providers/loans_provider.dart';
 
 class AboutPage extends ConsumerStatefulWidget {
   const AboutPage({super.key});
@@ -27,7 +32,7 @@ class _AboutPageState extends ConsumerState<AboutPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -62,7 +67,7 @@ class _AboutPageState extends ConsumerState<AboutPage>
     _logoTapCount++;
     final remaining = 10 - _logoTapCount;
     if (remaining > 0 && remaining <= 3) {
-      HapticFeedback.selectionClick();
+      Haptics.selectionClick();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(
           '$remaining tap${remaining == 1 ? '' : 's'} para activar modo demo',
@@ -84,7 +89,7 @@ class _AboutPageState extends ConsumerState<AboutPage>
   }
 
   Future<void> _confirmDemoMode() async {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     final c = context.colors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -121,6 +126,10 @@ class _AboutPageState extends ConsumerState<AboutPage>
     if (confirmed == true && mounted) {
       await ref.read(accountsProvider.notifier).seed();
       await ref.read(transactionsProvider.notifier).seed();
+      await ref.read(subscriptionsProvider.notifier).seed();
+      await ref.read(goalsProvider.notifier).seed();
+      await ref.read(budgetProvider.notifier).seed();
+      await ref.read(loansProvider.notifier).seed();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Datos de demo cargados',

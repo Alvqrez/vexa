@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../core/utils/receipt_image_store.dart';
@@ -158,7 +158,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _openDatePicker() async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -189,12 +189,12 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
     if (_isSubmitting) return;
     final amount = _parsedAmount;
     if (amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       _showError('Ingresa un monto válido');
       return;
     }
     if (_selectedAccountId == null) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       _showError('Selecciona una cuenta');
       return;
     }
@@ -262,7 +262,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       await _saveRecurring();
     }
 
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) {
       navigator.pop();
       messenger
@@ -324,7 +324,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   Future<void> _openCategorySheet() async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final result = await showModalBottomSheet<_CategorySheetResult>(
       context: context,
       isScrollControlled: true,
@@ -356,7 +356,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   void _openAccountSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final accounts = ref.read(accountsProvider);
     showModalBottomSheet<void>(
       context: context,
@@ -410,7 +410,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
       _showError('Máximo $_maxPhotos fotos por transacción');
       return;
     }
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
       isScrollControlled: true,
@@ -483,7 +483,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
   }
 
   void _removePhoto(String name) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _imageNames.remove(name);
       // Si venía de la transacción original, se borra del disco al guardar;
@@ -792,7 +792,7 @@ class _AddTransactionSheetState extends ConsumerState<AddTransactionSheet> {
                               padding: const EdgeInsets.only(right: 6),
                               child: GestureDetector(
                                 onTap: () {
-                                  HapticFeedback.selectionClick();
+                                  Haptics.selectionClick();
                                   setState(() => _recurrenceFreq = f);
                                 },
                                 child: AnimatedContainer(
@@ -1058,7 +1058,7 @@ class _PhotoSourceButton extends StatelessWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -1318,17 +1318,17 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
   }
 
   void _selectCategory(WalletCategory wc) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     Navigator.of(context).pop(_CategorySheetResult(wc));
   }
 
   void _selectSub(WalletCategory wc, Subcategory sub) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     Navigator.of(context).pop(_CategorySheetResult(wc, subcategory: sub));
   }
 
   void _toggleExpand(String catId) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() => _expandedId = _expandedId == catId ? null : catId);
   }
 
@@ -1468,7 +1468,7 @@ class _CategorySheetState extends ConsumerState<_CategorySheet> {
                                           selected: false,
                                           outlined: true,
                                           onTap: () {
-                                            HapticFeedback.selectionClick();
+                                            Haptics.selectionClick();
                                             Navigator.of(context).pop(
                                               _CategorySheetResult(wc,
                                                   createSubcategoryFor: wc),
@@ -1604,7 +1604,7 @@ class _AccountSheet extends StatelessWidget {
                 surface: account.color.withValues(alpha: 0.10),
                 isSelected: account.id == selectedId,
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   onChanged(account.id);
                 },
               )),

@@ -38,7 +38,7 @@ class _WalletPageState extends ConsumerState<WalletPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -220,7 +220,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                             .copyWith(color: c.textTertiary)),
                     const SizedBox(height: 4),
                     Text(
-                      '$currency${total.toStringAsFixed(2)}',
+                      pmask('$currency${total.toStringAsFixed(2)}'),
                       style: AppTypography.headingL
                           .copyWith(color: c.textPrimary),
                     ),
@@ -246,7 +246,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                 Expanded(
                   child: _MiniKpi(
                     label: 'Ingresos',
-                    value: '$currency${income.toStringAsFixed(0)}',
+                    value: pmask('$currency${income.toStringAsFixed(0)}'),
                     color: AppColors.positive,
                     icon: Icons.south_rounded,
                   ),
@@ -255,7 +255,7 @@ class _AccountsOverviewCard extends ConsumerWidget {
                 Expanded(
                   child: _MiniKpi(
                     label: 'Gastos',
-                    value: '$currency${expenses.toStringAsFixed(0)}',
+                    value: pmask('$currency${expenses.toStringAsFixed(0)}'),
                     color: AppColors.negative,
                     icon: Icons.north_rounded,
                   ),
@@ -375,7 +375,7 @@ class _SubscriptionsPreviewSection extends ConsumerWidget {
 
     return _WalletSection(
       title: 'Suscripciones',
-      subtitle: '$currency${total.toStringAsFixed(2)}/mes',
+      subtitle: pmask('$currency${total.toStringAsFixed(2)}/mes'),
       icon: Icons.subscriptions_rounded,
       onTap: () => Navigator.push(context,
           MaterialPageRoute(builder: (_) => const SubscriptionsPage())),
@@ -425,7 +425,7 @@ class _SubsPreviewTile extends ConsumerWidget {
               style:
                   AppTypography.labelL.copyWith(color: c.textPrimary)),
         ),
-        Text('-$currency${subscription.amount.toStringAsFixed(2)}',
+        Text(pmask('-$currency${subscription.amount.toStringAsFixed(2)}'),
             style: AppTypography.labelM.copyWith(
                 color: AppColors.negative, fontWeight: FontWeight.w600)),
         const SizedBox(width: AppSpacing.sm),
@@ -509,7 +509,7 @@ class _LoansPreviewSection extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${isLent ? '+' : '-'}$currency${l.remainingAmount.toStringAsFixed(2)}',
+                        pmask('${isLent ? '+' : '-'}$currency${l.remainingAmount.toStringAsFixed(2)}'),
                         style: AppTypography.labelM.copyWith(
                             color: accentColor, fontWeight: FontWeight.w600),
                       ),
@@ -734,7 +734,7 @@ class _RecurringTransactionsCard extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '${isIncome ? '+' : '-'}$currency${r.amount.toStringAsFixed(2)}',
+                        pmask('${isIncome ? '+' : '-'}$currency${r.amount.toStringAsFixed(2)}'),
                         style: AppTypography.labelL.copyWith(
                           color: isIncome
                               ? AppColors.positive

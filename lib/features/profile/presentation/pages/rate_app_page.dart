@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -26,7 +27,7 @@ class _RateAppPageState extends State<RateAppPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -76,7 +77,7 @@ class _RateAppPageState extends State<RateAppPage>
 
   void _submit() {
     if (_stars == 0) return;
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     setState(() => _submitted = true);
   }
 
@@ -170,7 +171,7 @@ class _RateAppPageState extends State<RateAppPage>
                                     final filled = i < _stars;
                                     return GestureDetector(
                                       onTap: () {
-                                        HapticFeedback.selectionClick();
+                                        Haptics.selectionClick();
                                         setState(() => _stars = i + 1);
                                       },
                                       child: Padding(

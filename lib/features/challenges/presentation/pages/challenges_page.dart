@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -78,7 +78,7 @@ class ChallengesPage extends ConsumerWidget {
                           ),
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               showCreateChallengeSheet(context, ref);
                             },
                             child: Container(
@@ -229,7 +229,7 @@ class _ChallengeCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ChallengeDetailPage(challengeId: ch.id),
         ));
@@ -312,7 +312,7 @@ class _ChallengeCard extends ConsumerWidget {
                 else if (canMarkToday)
                   GestureDetector(
                     onTap: () {
-                      HapticFeedback.mediumImpact();
+                      Haptics.mediumImpact();
                       ref
                           .read(challengesProvider.notifier)
                           .toggleDay(ch.id, now);
@@ -541,7 +541,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
   }
 
   void _applyTemplate(_ChallengeTemplate t) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _nameCtrl.text = t.name;
       _descCtrl.text = t.description;
@@ -556,7 +556,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
     final challenge = Challenge(
@@ -569,7 +569,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
       durationDays: _duration,
       startDate: DateTime.now(),
     );
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     await widget.onCreate(challenge);
     if (mounted) Navigator.of(context).pop();
   }
@@ -668,7 +668,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
                   padding: const EdgeInsets.only(right: AppSpacing.sm),
                   child: GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _frequency = f);
                     },
                     child: AnimatedContainer(
@@ -714,7 +714,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
                 final sel = d == _duration;
                 return GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     setState(() => _duration = d);
                   },
                   child: AnimatedContainer(
@@ -758,7 +758,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
                   final col = _colors[_colorIdx];
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _iconIdx = i);
                     },
                     child: AnimatedContainer(
@@ -793,7 +793,7 @@ class _CreateChallengeSheetState extends State<_CreateChallengeSheet> {
                 final sel = i == _colorIdx;
                 return GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     setState(() => _colorIdx = i);
                   },
                   child: AnimatedContainer(

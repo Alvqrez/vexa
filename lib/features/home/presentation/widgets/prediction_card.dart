@@ -15,6 +15,7 @@ class PredictionCard extends ConsumerWidget {
     final c = context.colors;
     final p = ref.watch(predictionProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
 
     // No data yet — don't show misleading predictions
     if (!p.hasData) {
@@ -113,7 +114,8 @@ class PredictionCard extends ConsumerWidget {
                 Expanded(
                   child: _PredItem(
                     label: 'Gasto estimado',
-                    value: '$currency${p.predictedExpenses.toStringAsFixed(0)}',
+                    value: maskMoney(
+                        hide, '~$currency${p.predictedExpenses.toStringAsFixed(0)}'),
                     color: AppColors.negative,
                     icon: Icons.arrow_upward_rounded,
                   ),
@@ -124,11 +126,13 @@ class PredictionCard extends ConsumerWidget {
                     label: p.predictedIncome > 0
                         ? 'Neto estimado'
                         : 'Gasto diario',
-                    value: p.predictedIncome > 0
-                        ? (p.predictedSavings >= 0
-                            ? '+$currency${p.predictedSavings.toStringAsFixed(0)}'
-                            : '-$currency${p.predictedSavings.abs().toStringAsFixed(0)}')
-                        : '$currency${p.dailyAvgExpense.toStringAsFixed(0)}/día',
+                    value: maskMoney(
+                        hide,
+                        p.predictedIncome > 0
+                            ? (p.predictedSavings >= 0
+                                ? '~+$currency${p.predictedSavings.toStringAsFixed(0)}'
+                                : '~-$currency${p.predictedSavings.abs().toStringAsFixed(0)}')
+                            : '~$currency${p.dailyAvgExpense.toStringAsFixed(0)}/día'),
                     color: p.predictedIncome > 0
                         ? (p.predictedSavings >= 0
                             ? AppColors.emerald

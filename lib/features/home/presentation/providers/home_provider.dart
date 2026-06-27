@@ -349,79 +349,79 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
   Future<void> seed() async {
     if (kReleaseMode) return;
     _isLoaded = true;
-    state = _initial;
+    state = _buildSeed();
     await _isar.writeTxn(() async {
       await _isar.isarTransactions.clear();
       await _isar.isarTransactions.putAll(state.map(_txToIsar).toList());
     });
   }
 
+  /// Genera ~4 meses de transacciones variadas (nómina + gastos por categoría)
+  /// para poder ver con datos reales el Coach, insights, gráficas y proyección.
+  /// Solo se usa en debug (ver [seed]).
+  static List<Transaction> _buildSeed() {
+    final now = DateTime.now();
+    final txs = <Transaction>[];
+    var seq = 0;
+    String id() => 'seed_${seq++}';
 
-  static final _initial = [
-    Transaction(
-      id: '1',
-      merchant: 'Spotify Premium',
-      amount: 9.99,
-      type: TransactionType.expense,
-      category: 'wc4', // Entretenimiento
-      date: DateTime.now().subtract(const Duration(hours: 2)),
-      accountId: '1',
-    ),
-    Transaction(
-      id: '2',
-      merchant: 'Nómina Mayo',
-      amount: 1800.00,
-      type: TransactionType.income,
-      category: 'wc7', // Salario
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      accountId: '1',
-    ),
-    Transaction(
-      id: '3',
-      merchant: 'Mercadona',
-      amount: 67.40,
-      type: TransactionType.expense,
-      category: 'wc1', // Comida
-      date: DateTime.now().subtract(const Duration(days: 1, hours: 5)),
-      accountId: '3',
-    ),
-    Transaction(
-      id: '4',
-      merchant: 'Glovo',
-      amount: 24.80,
-      type: TransactionType.expense,
-      category: 'wc1', // Comida
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      accountId: '3',
-    ),
-    Transaction(
-      id: '5',
-      merchant: 'Metro Madrid',
-      amount: 12.50,
-      type: TransactionType.expense,
-      category: 'wc2', // Transporte
-      date: DateTime.now().subtract(const Duration(days: 2, hours: 3)),
-      accountId: '2',
-    ),
-    Transaction(
-      id: '6',
-      merchant: 'Zara',
-      amount: 89.95,
-      type: TransactionType.expense,
-      category: 'wc3', // Compras
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      accountId: '2',
-    ),
-    Transaction(
-      id: '7',
-      merchant: 'Clínica Sanitas',
-      amount: 45.00,
-      type: TransactionType.expense,
-      category: 'wc5', // Salud
-      date: DateTime.now().subtract(const Duration(days: 4)),
-      accountId: '1',
-    ),
-  ];
+    // Nómina mensual (últimos 4 meses), día 1.
+    for (var m = 0; m < 4; m++) {
+      final d = DateTime(now.year, now.month - m, 1, 9);
+      if (d.isAfter(now)) continue;
+      txs.add(Transaction(
+        id: id(),
+        merchant: 'Nómina',
+        amount: 1850.00,
+        type: TransactionType.income,
+        category: 'wc7',
+        date: d,
+        accountId: '1',
+      ));
+    }
+
+    // (merchant, categoryId, baseAmount, accountId)
+    const templates = [
+      ('Mercadona', 'wc1', 62.40, '3'),
+      ('Glovo', 'wc1', 23.10, '3'),
+      ('Cafetería', 'wc1', 6.80, '2'),
+      ('Restaurante', 'wc1', 41.50, '2'),
+      ('Metro', 'wc2', 12.50, '2'),
+      ('Gasolina', 'wc2', 48.00, '1'),
+      ('Uber', 'wc2', 14.30, '2'),
+      ('Zara', 'wc3', 79.95, '2'),
+      ('Amazon', 'wc3', 34.50, '1'),
+      ('Cine', 'wc4', 18.00, '2'),
+      ('Concierto', 'wc4', 55.00, '1'),
+      ('Farmacia', 'wc5', 22.40, '1'),
+      ('Dentista', 'wc5', 60.00, '1'),
+      ('Luz', 'wc6', 54.20, '1'),
+      ('Internet', 'wc6', 39.90, '1'),
+    ];
+
+    for (var m = 0; m < 4; m++) {
+      for (var i = 0; i < templates.length; i++) {
+        final t = templates[i];
+        final day = ((3 + i * 2) % 27) + 1;
+        final date = DateTime(now.year, now.month - m, day, 10 + (i % 9));
+        if (date.isAfter(now)) continue;
+        // Pequeña variación mensual para que las tendencias no sean planas.
+        final amt = t.$3 * (1 + (m * 0.05) - 0.08);
+        txs.add(Transaction(
+          id: id(),
+          merchant: t.$1,
+          amount: double.parse(amt.toStringAsFixed(2)),
+          type: TransactionType.expense,
+          category: t.$2,
+          date: date,
+          accountId: t.$4,
+        ));
+      }
+    }
+
+    txs.sort((a, b) => b.date.compareTo(a.date));
+    return txs;
+  }
 
   Future<void> add(Transaction t) async {
     _isLoaded = true;
@@ -439,8 +439,8 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
           await _ref.read(accountsProvider.notifier).adjustBalance(t.accountId!, delta);
         } catch (e) {
           debugPrint('TransactionsNotifier.add: balance adjustment failed: $e');
-          // Transaction was added but balance wasn't updated — notify user
-          // (UI should show warning or trigger manual balance correction)
+          _ref.read(balanceWarningProvider.notifier).state =
+              'Transacción guardada, pero el saldo de la cuenta no se actualizó. Verifica el balance manualmente.';
         }
       }
     } catch (e) {
@@ -459,6 +459,12 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
         if (t.id == updated.id) updated else t,
     ];
     try {
+      // Persist the record first — it's the operation most likely to fail.
+      // Balances are only reconciled once the write succeeds, mirroring add()
+      // and avoiding balances drifting away from a transaction that never saved.
+      await _isar.writeTxn(
+        () => _isar.isarTransactions.putByTxId(_txToIsar(updated)),
+      );
       if (original.accountId == updated.accountId) {
         if (original.accountId != null) {
           final origEffect =
@@ -499,11 +505,18 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
           }
         }
       }
-      await _isar.writeTxn(
-        () => _isar.isarTransactions.putByTxId(_txToIsar(updated)),
-      );
     } catch (e) {
       state = prevState;
+      // Best-effort: si la tx ya se había persistido pero la reconciliación de
+      // balances falló, restaura el registro original para no dejar la DB con
+      // el valor nuevo mientras el estado y los balances vuelven al anterior.
+      try {
+        await _isar.writeTxn(
+          () => _isar.isarTransactions.putByTxId(_txToIsar(original)),
+        );
+      } catch (revertErr) {
+        debugPrint('TransactionsNotifier.update: revert failed: $revertErr');
+      }
       debugPrint('TransactionsNotifier.update: failed, rolled back: $e');
       rethrow;
     }
@@ -527,6 +540,8 @@ class TransactionsNotifier extends StateNotifier<List<Transaction>> {
             .adjustBalance(t.accountId!, reverse);
       } catch (e) {
         debugPrint('TransactionsNotifier.delete: balance adjustment failed: $e');
+        _ref.read(balanceWarningProvider.notifier).state =
+            'Transacción eliminada, pero el saldo de la cuenta no se actualizó. Verifica el balance manualmente.';
       }
     }
     // Limpieza de fotos adjuntas. No se borran al instante: el snackbar de
@@ -1036,3 +1051,7 @@ final fabPulseProvider = StateProvider<int>((ref) => 0);
 /// been acknowledged by a flash animation in the list.
 final newTransactionIdsProvider =
     StateProvider<Set<String>>((ref) => const {});
+
+/// Mensaje de advertencia cuando un ajuste de saldo falla después de guardar
+/// una transacción. La UI lo consume mostrando un snackbar y lo limpia a null.
+final balanceWarningProvider = StateProvider<String?>((ref) => null);

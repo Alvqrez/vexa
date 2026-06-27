@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -47,7 +48,7 @@ class GoalsPage extends ConsumerWidget {
                         ),
                         GestureDetector(
                           onTap: () {
-                            HapticFeedback.lightImpact();
+                            Haptics.lightImpact();
                             _showAddGoalSheet(context, ref);
                           },
                           child: Container(
@@ -197,7 +198,7 @@ class GoalsPage extends ConsumerWidget {
   }
 
   String _fmt(double v) =>
-      v >= 1000 ? '\$${(v / 1000).toStringAsFixed(1)}k' : '\$${v.toStringAsFixed(0)}';
+      pmask(v >= 1000 ? '\$${(v / 1000).toStringAsFixed(1)}k' : '\$${v.toStringAsFixed(0)}');
 
   void _showAddGoalSheet(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
@@ -257,7 +258,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => GoalDetailPage(goalId: g.id),
@@ -337,7 +338,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
                 const SizedBox(width: AppSpacing.sm),
                 GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
@@ -414,7 +415,7 @@ class _GoalCardState extends ConsumerState<_GoalCard>
   }
 
   String _fmt(double v) =>
-      v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0);
+      pmask(v >= 1000 ? '${(v / 1000).toStringAsFixed(1)}k' : v.toStringAsFixed(0));
 }
 
 // ── Add goal sheet ────────────────────────────────────────────────────────────
@@ -466,14 +467,14 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     final title = _titleCtrl.text.trim();
     final targetText = _targetCtrl.text.trim();
     if (title.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escribe un nombre para la meta')),
       );
       return;
     }
     if (targetText.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escribe el monto objetivo')),
       );
@@ -481,7 +482,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
     }
     final target = double.tryParse(targetText);
     if (target == null || target <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('El monto debe ser mayor a cero')),
       );
@@ -498,7 +499,7 @@ class _AddGoalSheetState extends State<_AddGoalSheet> {
       deadline: DateTime.now().add(const Duration(days: 90)),
     );
 
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     await widget.onAdd(goal);
     if (mounted) {
       Navigator.of(context).pop();
@@ -955,7 +956,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
   }
 
   Future<void> _pickDeadline() async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final picked = await showDatePicker(
       context: context,
       initialDate: _deadline.isAfter(DateTime.now()) ? _deadline : DateTime.now().add(const Duration(days: 30)),
@@ -981,14 +982,14 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
     final target = double.tryParse(_targetCtrl.text.trim());
     final current = double.tryParse(_currentCtrl.text.trim());
     if (title.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escribe un nombre para la meta')),
       );
       return;
     }
     if (target == null || target <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('El monto objetivo debe ser mayor a cero')),
       );
@@ -1004,7 +1005,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
       deadline: _deadline,
       completed: safeCurrent >= target,
     );
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     widget.onSave(updated);
     Navigator.of(context).pop();
   }
@@ -1015,7 +1016,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
   }
 
   void _confirmDelete() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showDialog<void>(
       context: context,
@@ -1041,7 +1042,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
           ),
           TextButton(
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               Navigator.of(dialogCtx).pop(); // cerrar diálogo
               Navigator.of(context).pop(); // cerrar sheet
               widget.onDelete();
@@ -1137,7 +1138,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
                   final sel = i == _iconIdx;
                   final col = _colors[_colorIdx];
                   return GestureDetector(
-                    onTap: () { HapticFeedback.selectionClick(); setState(() => _iconIdx = i); },
+                    onTap: () { Haptics.selectionClick(); setState(() => _iconIdx = i); },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 150),
                       width: 44, height: 44,
@@ -1163,7 +1164,7 @@ class _EditGoalSheetState extends State<_EditGoalSheet> {
               children: List.generate(_colors.length, (i) {
                 final sel = i == _colorIdx;
                 return GestureDetector(
-                  onTap: () { HapticFeedback.selectionClick(); setState(() => _colorIdx = i); },
+                  onTap: () { Haptics.selectionClick(); setState(() => _colorIdx = i); },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 150),
                     width: 32, height: 32,

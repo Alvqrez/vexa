@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -27,7 +27,7 @@ class _TransactionsSectionState extends ConsumerState<TransactionsSection> {
   bool get _isSelecting => _selectedIds.isNotEmpty;
 
   void _toggle(String id) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       if (_selectedIds.contains(id)) {
         _selectedIds.remove(id);
@@ -38,12 +38,12 @@ class _TransactionsSectionState extends ConsumerState<TransactionsSection> {
   }
 
   void _clearSelection() {
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     setState(() => _selectedIds.clear());
   }
 
   Future<void> _deleteSelected(List<Transaction> visible) async {
-    HapticFeedback.heavyImpact();
+    Haptics.heavyImpact();
     final toDelete = visible.where((t) => _selectedIds.contains(t.id)).toList();
     setState(() => _selectedIds.clear());
     for (final t in toDelete) {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -103,7 +103,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   }
 
   void _openDetail() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => TransactionDetailPage(transaction: widget.transaction),
@@ -112,7 +112,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   }
 
   void _openEdit() {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -123,7 +123,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   }
 
   Future<void> _delete() async {
-    HapticFeedback.heavyImpact();
+    Haptics.heavyImpact();
     final t = widget.transaction;
     final c = context.colors;
     final messenger = ScaffoldMessenger.of(context);
@@ -164,7 +164,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
   }
 
   void _openNote() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -188,6 +188,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
         resolveSubcategory(t.subcategoryId, ref.watch(subcategoriesProvider));
     final isIncome = t.isIncome;
     final currency = ref.watch(currencySymbolProvider);
+    final hideAmounts = ref.watch(hideAmountsProvider);
 
     // Find the account matching this transaction
     final accounts = ref.watch(accountsProvider);
@@ -204,7 +205,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
       onTap: widget.selectionMode ? widget.onSelectToggle : _openDetail,
       onLongPress: !widget.selectionMode && widget.onSelectToggle != null
           ? () {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               widget.onSelectToggle!();
             }
           : null,
@@ -254,7 +255,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sub != null ? cat.name : t.merchant,
+                        t.merchant,
                         style: AppTypography.bodyM.copyWith(
                           color: c.textPrimary,
                           fontWeight: FontWeight.w500,
@@ -339,7 +340,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               _openNote();
                             },
                             child: Padding(
@@ -352,7 +353,9 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
                             ),
                           ),
                         Text(
-                          t.formattedWith(currency),
+                          hideAmounts
+                              ? '${isIncome ? '+' : '-'}$currency••••'
+                              : t.formattedWith(currency),
                           style: AppTypography.labelL.copyWith(
                             color: isIncome
                                 ? AppColors.positive
@@ -416,7 +419,7 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
           return false;
         }
         // Delete — confirm
-        HapticFeedback.mediumImpact();
+        Haptics.mediumImpact();
         return true;
       },
       onDismissed: (direction) {
@@ -428,12 +431,20 @@ class _TransactionItemState extends ConsumerState<TransactionItem>
     );
   }
 
+  static const _relMonths = [
+    '', 'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+    'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+  ];
+
   String _relativeDate(DateTime date) {
-    final diff = DateTime.now().difference(date);
+    final now = DateTime.now();
+    final diff = now.difference(date);
     if (diff.inMinutes < 60) return 'Hace ${diff.inMinutes}m';
     if (diff.inHours < 24) return 'Hace ${diff.inHours}h';
     if (diff.inDays == 1) return 'Ayer';
-    return 'Hace ${diff.inDays}d';
+    if (diff.inDays < 7) return 'Hace ${diff.inDays}d';
+    if (date.year == now.year) return '${date.day} ${_relMonths[date.month]}';
+    return '${date.day} ${_relMonths[date.month]} ${date.year}';
   }
 }
 

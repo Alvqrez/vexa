@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -66,7 +66,7 @@ class _EducationPageState extends State<EducationPage> {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -271,7 +271,7 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: AnimatedContainer(
@@ -323,7 +323,7 @@ class _TipCard extends StatelessWidget {
     final color = tip.category.color;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         _showDetail(context);
       },
       child: Container(

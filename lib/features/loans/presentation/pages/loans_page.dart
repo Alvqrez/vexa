@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -38,7 +38,7 @@ class _LoansPageState extends State<LoansPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
     _checkOnboarding();
   }
 
@@ -220,7 +220,7 @@ class _LoansHeader extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            HapticFeedback.selectionClick();
+            Haptics.selectionClick();
             onAdd();
           },
           child: Container(
@@ -338,7 +338,7 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
                   _LoanInfoRow(
                     icon: Icons.arrow_upward_rounded,
                     label: 'Yo presté',
-                    value: '\$${totalLent.toStringAsFixed(2)}',
+                    value: pmask('\$${totalLent.toStringAsFixed(2)}'),
                     color: AppColors.positive,
                     count: lentCount,
                   ),
@@ -346,7 +346,7 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
                   _LoanInfoRow(
                     icon: Icons.arrow_downward_rounded,
                     label: 'Pedí prestado',
-                    value: '\$${totalBorrowed.toStringAsFixed(2)}',
+                    value: pmask('\$${totalBorrowed.toStringAsFixed(2)}'),
                     color: AppColors.negative,
                     count: borrowedCount,
                   ),
@@ -355,7 +355,7 @@ class _LoansSummaryCardState extends ConsumerState<_LoansSummaryCard>
                     icon: Icons.account_balance_wallet_rounded,
                     label: 'Balance neto',
                     value:
-                        '${totalLent >= totalBorrowed ? '+' : '-'}\$${(totalLent - totalBorrowed).abs().toStringAsFixed(2)}',
+                        pmask('${totalLent >= totalBorrowed ? '+' : '-'}\$${(totalLent - totalBorrowed).abs().toStringAsFixed(2)}'),
                     color: totalLent >= totalBorrowed
                         ? AppColors.positive
                         : AppColors.negative,
@@ -718,14 +718,14 @@ class _LoanCard extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      '\$${l.remainingAmount.toStringAsFixed(2)}',
+                      pmask('\$${l.remainingAmount.toStringAsFixed(2)}'),
                       style: AppTypography.labelL.copyWith(
                         color: accentColor,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     Text(
-                      'de \$${l.amount.toStringAsFixed(2)}',
+                      pmask('de \$${l.amount.toStringAsFixed(2)}'),
                       style: AppTypography.labelS
                           .copyWith(color: c.textTertiary),
                     ),
@@ -777,7 +777,7 @@ class _LoanMenu extends ConsumerWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -955,7 +955,7 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -1016,14 +1016,14 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
   Future<void> _submit() async {
     final amount = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     if (amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
     final clamped = amount.clamp(0.0, widget.loan.remainingAmount);
     await ref
         .read(loansProvider.notifier)
         .addPayment(widget.loan.id, clamped, accountId: _accountId);
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) {
       Navigator.pop(context);
     }
@@ -1105,7 +1105,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
           const SizedBox(height: AppSpacing.md),
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              Haptics.selectionClick();
               _amountCtrl.text =
                   l.remainingAmount.toStringAsFixed(2);
             },
@@ -1244,7 +1244,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountNotifier.value);
     if (name.isEmpty || amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
 
@@ -1276,14 +1276,14 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
           ));
     }
 
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) {
       Navigator.pop(context);
     }
   }
 
   void _showIconSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1327,7 +1327,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                   final sel = ic == _icon;
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _icon = ic);
                       Navigator.pop(context);
                     },
@@ -1358,7 +1358,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
   }
 
   void _showColorSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1393,7 +1393,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                   final sel = col.toARGB32() == _color.toARGB32();
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _color = col);
                       Navigator.pop(context);
                     },
@@ -1475,7 +1475,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                         EdgeInsets.only(right: t == LoanType.lentByMe ? 6 : 0),
                     child: GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _type = t);
                       },
                       child: AnimatedContainer(
@@ -1598,7 +1598,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
                       color: _dueDate != null ? c.textPrimary : c.textTertiary,
                       surface: c.glass,
                       onTap: () async {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         final now = DateTime.now();
                         final picked = await showDatePicker(
                           context: context,
@@ -1718,7 +1718,7 @@ class _LoanFormSheetState extends ConsumerState<_LoanFormSheet> {
   }
 
   void _openAccountSheet(List<dynamic> accounts) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1850,7 +1850,7 @@ class _LoanChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -1959,7 +1959,7 @@ class _LoansOnboardingDialog extends StatelessWidget {
               width: double.infinity,
               child: GestureDetector(
                 onTap: () {
-                  HapticFeedback.mediumImpact();
+                  Haptics.mediumImpact();
                   Navigator.pop(context);
                 },
                 child: Container(
@@ -2111,7 +2111,7 @@ class _AccountChip extends StatelessWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: AnimatedContainer(

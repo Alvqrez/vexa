@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/subscription.dart';
 import '../../../home/domain/models/transaction.dart';
 import '../../../../core/utils/id_gen.dart';
@@ -112,19 +114,36 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
               orElse: () => accounts.firstWhere((a) => !a.isSavings,
                   orElse: () => accounts.first))
           : accounts.firstWhere((a) => !a.isSavings, orElse: () => accounts.first);
-      final transaction = Transaction(
-        id: generateId(),
-        merchant: s.name,
-        amount: s.amount,
-        type: TransactionType.expense,
-        category: s.category,
-        date: DateTime.now(),
-        accountId: account.id,
-      );
-      await _ref.read(transactionsProvider.notifier).add(transaction);
 
-      final nextDate = s.nextAfterCurrent;
-      await update(s.copyWith(nextBillingDate: nextDate));
+      // Recupera TODOS los periodos vencidos: por cada fecha de cobro que ya
+      // pasó (o es hoy) se crea un cargo fechado en su día real y se avanza la
+      // fecha. El avance se persiste tras cada cargo para que un cierre abrupto
+      // no provoque doble cobro (a lo sumo se repite el último periodo). El
+      // guard evita un bucle infinito si la frecuencia no avanzara la fecha.
+      final now = DateTime.now();
+      final todayDate = DateTime(now.year, now.month, now.day);
+      var current = s;
+      var guard = 0;
+      while (guard < 600) {
+        final billing = current.nextBillingDate;
+        final billingDate =
+            DateTime(billing.year, billing.month, billing.day);
+        if (billingDate.isAfter(todayDate)) break; // ya al día
+        await _ref.read(transactionsProvider.notifier).add(Transaction(
+              id: generateId(),
+              merchant: s.name,
+              amount: s.amount,
+              type: TransactionType.expense,
+              category: s.category,
+              date: billing, // fecha real de cobro, no "hoy"
+              accountId: account.id,
+            ));
+        final next = current.nextAfterCurrent;
+        if (!next.isAfter(billing)) break; // seguridad: la fecha no avanza
+        current = current.copyWith(nextBillingDate: next);
+        await update(current); // persiste el avance de inmediato (crash-safe)
+        guard++;
+      }
     } catch (e) {
       debugPrint('SubscriptionsNotifier.chargeSubscription failed: $e');
       rethrow;
@@ -134,6 +153,61 @@ class SubscriptionsNotifier extends StateNotifier<List<Subscription>> {
   Future<void> reset() async {
     state = const [];
     _isLoaded = false;
+  }
+
+  /// Datos de ejemplo (solo debug).
+  Future<void> seed() async {
+    if (kReleaseMode) return;
+    _isLoaded = true;
+    final now = DateTime.now();
+    DateTime inDays(int d) => DateTime(now.year, now.month, now.day + d);
+    state = [
+      Subscription(
+        id: 'seed_sub_1',
+        name: 'Netflix',
+        amount: 12.99,
+        nextBillingDate: inDays(2),
+        category: 'wc4',
+        icon: Icons.movie_outlined,
+        color: AppColors.negative,
+        frequency: SubscriptionFrequency.monthly,
+        accountId: '1',
+      ),
+      Subscription(
+        id: 'seed_sub_2',
+        name: 'Spotify',
+        amount: 9.99,
+        nextBillingDate: inDays(12),
+        category: 'wc4',
+        icon: Icons.music_note_outlined,
+        color: AppColors.emerald,
+        frequency: SubscriptionFrequency.monthly,
+        accountId: '1',
+      ),
+      Subscription(
+        id: 'seed_sub_3',
+        name: 'Gimnasio',
+        amount: 29.99,
+        nextBillingDate: inDays(20),
+        category: 'wc5',
+        icon: Icons.fitness_center_rounded,
+        color: AppColors.petroleum,
+        frequency: SubscriptionFrequency.monthly,
+        accountId: '1',
+      ),
+      Subscription(
+        id: 'seed_sub_4',
+        name: 'iCloud',
+        amount: 2.99,
+        nextBillingDate: inDays(5),
+        category: 'wc6',
+        icon: Icons.cloud_outlined,
+        color: AppColors.catTransport,
+        frequency: SubscriptionFrequency.monthly,
+        accountId: '1',
+      ),
+    ];
+    await _persistAll();
   }
 }
 

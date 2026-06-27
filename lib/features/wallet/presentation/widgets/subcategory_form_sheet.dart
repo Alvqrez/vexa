@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -126,7 +126,7 @@ class _SubcategoryFormSheetState extends ConsumerState<SubcategoryFormSheet> {
   Future<void> _submit() async {
     final name = _nameCtrl.text.trim();
     if (name.isEmpty) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Escribe un nombre para la subcategoría')),
       );
@@ -159,7 +159,7 @@ class _SubcategoryFormSheetState extends ConsumerState<SubcategoryFormSheet> {
       );
       await notifier.add(saved);
     }
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) navigator.pop(saved);
   }
 
@@ -288,7 +288,7 @@ class _SubcategoryFormSheetState extends ConsumerState<SubcategoryFormSheet> {
               // Heredar color del padre
               GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _color = null);
                 },
                 child: AnimatedContainer(
@@ -314,7 +314,7 @@ class _SubcategoryFormSheetState extends ConsumerState<SubcategoryFormSheet> {
                 final isSel = _color?.toARGB32() == col.toARGB32();
                 return GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     setState(() => _color = col);
                   },
                   child: AnimatedContainer(

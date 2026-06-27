@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -68,7 +68,7 @@ class _MonthHeatmapState extends State<MonthHeatmap> {
   }
 
   void _shift(int delta) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() => _month = DateTime(_month.year, _month.month + delta));
   }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -69,7 +69,7 @@ class ChallengeDetailPage extends ConsumerWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -216,7 +216,7 @@ class ChallengeDetailPage extends ConsumerWidget {
                       if (canMarkToday)
                         GestureDetector(
                           onTap: () {
-                            HapticFeedback.mediumImpact();
+                            Haptics.mediumImpact();
                             ref
                                 .read(challengesProvider.notifier)
                                 .toggleDay(ch.id, now);
@@ -344,7 +344,7 @@ class ChallengeDetailPage extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref, Challenge ch) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showDialog<void>(
       context: context,
@@ -369,7 +369,7 @@ class ChallengeDetailPage extends ConsumerWidget {
           ),
           TextButton(
             onPressed: () {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               Navigator.of(dialogCtx).pop();
               ref.read(challengesProvider.notifier).remove(ch.id);
             },

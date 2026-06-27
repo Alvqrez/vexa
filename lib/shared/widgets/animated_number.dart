@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/providers/settings_provider.dart';
 
 class AnimatedNumber extends StatefulWidget {
   const AnimatedNumber({
@@ -11,6 +12,7 @@ class AnimatedNumber extends StatefulWidget {
     this.curve = const Cubic(0.16, 1.00, 0.30, 1.00),
     this.showChangeBadge = false,
     this.animate = true,
+    this.hidden = false,
   });
 
   final double value;
@@ -24,6 +26,9 @@ class AnimatedNumber extends StatefulWidget {
 
   /// When false, skips the counting animation (instant display).
   final bool animate;
+
+  /// When true, masks the amount (privacy mode "Ocultar montos").
+  final bool hidden;
 
   @override
   State<AnimatedNumber> createState() => _AnimatedNumberState();
@@ -40,13 +45,17 @@ class _AnimatedNumberState extends State<AnimatedNumber>
   double _previousValue = 0;
   double _lastDelta = 0;
 
+  // Effective animation flag: honours both the per-widget opt-out and the
+  // global "Animaciones" setting (reduced motion).
+  bool get _animate => widget.animate && AppMotion.enabled;
+
   @override
   void initState() {
     super.initState();
 
     _counter = AnimationController(
       vsync: this,
-      duration: widget.animate ? widget.duration : Duration.zero,
+      duration: _animate ? widget.duration : Duration.zero,
     );
     _flash = AnimationController(
       vsync: this,
@@ -83,12 +92,12 @@ class _AnimatedNumberState extends State<AnimatedNumber>
     if (old.value != widget.value) {
       _lastDelta = widget.value - old.value;
       _previousValue = old.value;
-      _counter.duration = widget.animate ? widget.duration : Duration.zero;
+      _counter.duration = _animate ? widget.duration : Duration.zero;
       _buildAnimation(_previousValue, widget.value);
       _counter
         ..reset()
         ..forward();
-      if (widget.showChangeBadge && _lastDelta != 0) {
+      if (_animate && widget.showChangeBadge && _lastDelta != 0) {
         _flash
           ..reset()
           ..forward();
@@ -96,7 +105,7 @@ class _AnimatedNumberState extends State<AnimatedNumber>
     }
     // Respect animate toggle change mid-session
     if (old.animate != widget.animate) {
-      _counter.duration = widget.animate ? widget.duration : Duration.zero;
+      _counter.duration = _animate ? widget.duration : Duration.zero;
     }
   }
 
@@ -115,6 +124,11 @@ class _AnimatedNumberState extends State<AnimatedNumber>
 
   @override
   Widget build(BuildContext context) {
+    // Privacy mode: render a masked placeholder instead of the figure.
+    if (widget.hidden) {
+      return Text('${widget.prefix}••••', style: widget.style);
+    }
+
     final formatter = NumberFormat('#,##0.00', 'en_US');
     final isPositive = _lastDelta >= 0;
     final badgeColor =

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -40,7 +41,7 @@ class _VexaCoachPageState extends ConsumerState<VexaCoachPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -70,7 +71,7 @@ class _VexaCoachPageState extends ConsumerState<VexaCoachPage>
   }
 
   void _showProjection() {
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -605,7 +606,7 @@ class _QuickActionRow extends ConsumerWidget {
             color: const Color(0xFF7C5CFC),
             subtitle: 'Simular futuro',
             onTap: () {
-              HapticFeedback.lightImpact();
+              Haptics.lightImpact();
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (_) => const TimeMachinePage()),
               );
@@ -781,7 +782,7 @@ class _Tab extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          Haptics.selectionClick();
           onTap();
         },
         child: AnimatedContainer(
@@ -966,7 +967,7 @@ class _MonthSectionHeader extends ConsumerWidget {
         ),
         GestureDetector(
           onTap: () {
-            HapticFeedback.selectionClick();
+            Haptics.selectionClick();
             ref.read(selectedAnalysisMonthProvider.notifier).state =
                 DateTime(selected.year, selected.month - 1);
           },
@@ -982,7 +983,7 @@ class _MonthSectionHeader extends ConsumerWidget {
           onTap: isCurrentMonth
               ? null
               : () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   ref.read(selectedAnalysisMonthProvider.notifier).state =
                       DateTime(selected.year, selected.month + 1);
                 },

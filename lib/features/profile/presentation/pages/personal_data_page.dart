@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -36,7 +36,7 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    )..revealForward();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _populateControllers(ref.read(userProfileProvider));
@@ -52,7 +52,7 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
   }
 
   Future<void> _pickPhoto() async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final source = await _showSourceSheet();
     if (source == null) return;
 
@@ -146,9 +146,9 @@ class _PersonalDataPageState extends ConsumerState<PersonalDataPage>
         phone: _phoneController.text.trim(),
         birthdate: _birthdateController.text.trim(),
       );
-      HapticFeedback.lightImpact();
+      Haptics.lightImpact();
     } else {
-      HapticFeedback.selectionClick();
+      Haptics.selectionClick();
     }
     setState(() => _editing = !_editing);
   }

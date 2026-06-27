@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -44,7 +44,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
     _loadPrefs();
   }
 
@@ -136,7 +136,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
 
     if (confirmed != true || !mounted) return;
-    HapticFeedback.heavyImpact();
+    Haptics.heavyImpact();
 
     await ref.read(transactionsProvider.notifier).reset();
     await ref.read(streakProvider.notifier).reset();
@@ -193,7 +193,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
     );
 
     if (confirmed != true || !mounted) return;
-    HapticFeedback.heavyImpact();
+    Haptics.heavyImpact();
 
     try {
       // Reset in-memory state for notifiers that have reset()
@@ -282,15 +282,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                         _SettingsSection(
                           title: 'Apariencia',
                           items: [
-                            _ToggleItem(
-                              icon: Icons.dark_mode_outlined,
-                              color: AppColors.petroleum,
-                              title: 'Modo oscuro',
-                              subtitle: 'Tema oscuro de la app.',
-                              value: ref.watch(themeModeProvider) == ThemeMode.dark,
-                              onChanged: (v) {
-                                HapticFeedback.selectionClick();
-                                final mode = v ? ThemeMode.dark : ThemeMode.light;
+                            _ThemeSelectorItem(
+                              current: ref.watch(themeModeProvider),
+                              onSelect: (mode) {
+                                Haptics.selectionClick();
                                 ref.read(themeModeProvider.notifier).state = mode;
                                 saveThemeMode(mode);
                               },
@@ -321,7 +316,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               subtitle: 'Feedback táctil en acciones.',
                               value: _haptics,
                               onChanged: (v) {
-                                HapticFeedback.selectionClick();
+                                Haptics.enabled = v; // gate before the click
+                                Haptics.selectionClick();
                                 setState(() => _haptics = v);
                                 LocalPrefsService.setBool('settings_haptics', v);
                               },
@@ -334,7 +330,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                                   'Transiciones y efectos visuales.',
                               value: ref.watch(animationsEnabledProvider),
                               onChanged: (v) {
-                                HapticFeedback.selectionClick();
+                                Haptics.selectionClick();
+                                AppMotion.enabled = v; // static mirror for routes
                                 ref.read(animationsEnabledProvider.notifier).state = v;
                                 LocalPrefsService.setBool('settings_animations', v);
                               },
@@ -358,7 +355,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                               subtitle: 'Muestra asteriscos en lugar de valores.',
                               value: ref.watch(hideAmountsProvider),
                               onChanged: (v) {
-                                HapticFeedback.selectionClick();
+                                Haptics.selectionClick();
+                                AppPrivacy.hideAmounts = v; // static mirror
                                 ref.read(hideAmountsProvider.notifier).state = v;
                                 LocalPrefsService.setBool('settings_hide_amounts', v);
                               },
@@ -371,7 +369,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage>
                                   'Ayuda a mejorar Vexa de forma anónima.',
                               value: _analytics,
                               onChanged: (v) {
-                                HapticFeedback.selectionClick();
+                                Haptics.selectionClick();
                                 setState(() => _analytics = v);
                                 LocalPrefsService.setBool('settings_analytics', v);
                               },
@@ -556,6 +554,112 @@ class _SettingsSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Theme selector item ───────────────────────────────────────────────────────
+
+class _ThemeSelectorItem extends StatelessWidget {
+  const _ThemeSelectorItem({required this.current, required this.onSelect});
+  final ThemeMode current;
+  final ValueChanged<ThemeMode> onSelect;
+
+  static const _options = [
+    (mode: ThemeMode.system, label: 'Sistema', icon: Icons.brightness_auto_rounded),
+    (mode: ThemeMode.light, label: 'Claro', icon: Icons.light_mode_outlined),
+    (mode: ThemeMode.dark, label: 'Oscuro', icon: Icons.dark_mode_outlined),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppColors.petroleum.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: const Icon(Icons.palette_outlined,
+                    size: 17, color: AppColors.petroleum),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Tema',
+                        style: AppTypography.labelL
+                            .copyWith(color: c.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text('Claro, oscuro o el del sistema.',
+                        style: AppTypography.labelS
+                            .copyWith(color: c.textTertiary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            decoration: BoxDecoration(
+              color: c.glass,
+              borderRadius: BorderRadius.circular(AppSpacing.md),
+              border: Border.all(color: c.glassBorder, width: 0.5),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              children: [
+                for (final o in _options)
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => onSelect(o.mode),
+                      behavior: HitTestBehavior.opaque,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                          color: current == o.mode
+                              ? AppColors.emerald.withValues(alpha: 0.16)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(AppSpacing.sm),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(o.icon,
+                                size: 16,
+                                color: current == o.mode
+                                    ? AppColors.emerald
+                                    : c.textTertiary),
+                            const SizedBox(height: 4),
+                            Text(o.label,
+                                style: AppTypography.labelS.copyWith(
+                                  color: current == o.mode
+                                      ? AppColors.emerald
+                                      : c.textSecondary,
+                                  fontWeight: current == o.mode
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                )),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

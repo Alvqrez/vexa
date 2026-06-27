@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -10,6 +10,10 @@ import '../../../../core/constants/app_curves.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
+import '../../../subscriptions/presentation/providers/subscriptions_provider.dart';
+import '../../../goals/presentation/providers/goals_provider.dart';
+import '../../../budget/presentation/providers/budget_provider.dart';
+import '../../../loans/presentation/providers/loans_provider.dart';
 import '../../../gamification/presentation/widgets/streak_widget.dart';
 import '../../../education/presentation/pages/education_page.dart';
 import 'personal_data_page.dart';
@@ -43,7 +47,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -650,7 +654,7 @@ class _SettingsItem extends StatelessWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap?.call();
       },
       behavior: HitTestBehavior.opaque,
@@ -717,7 +721,7 @@ class _UseSeedButton extends ConsumerWidget {
           title: Text('Cargar datos de ejemplo',
               style: AppTypography.headingS.copyWith(color: cc.textPrimary)),
           content: Text(
-            'Se cargarán cuentas y transacciones de muestra. Los datos actuales serán reemplazados.',
+            'Se cargarán cuentas, transacciones, préstamos, suscripciones, metas y presupuestos de muestra. Los datos actuales serán reemplazados.',
             style: AppTypography.bodyM.copyWith(color: cc.textSecondary),
           ),
           actions: [
@@ -737,9 +741,13 @@ class _UseSeedButton extends ConsumerWidget {
     );
 
     if (confirmed != true || !context.mounted) return;
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     await ref.read(accountsProvider.notifier).seed();
     await ref.read(transactionsProvider.notifier).seed();
+    await ref.read(subscriptionsProvider.notifier).seed();
+    await ref.read(goalsProvider.notifier).seed();
+    await ref.read(budgetProvider.notifier).seed();
+    await ref.read(loansProvider.notifier).seed();
     if (!context.mounted) return;
     final sc = context.colors;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(

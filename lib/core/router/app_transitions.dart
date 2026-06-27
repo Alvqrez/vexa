@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../providers/settings_provider.dart';
 
 /// Premium slide-up + fade transition used for all pushed routes.
 /// Duration: 280ms — fast enough to feel snappy, slow enough to feel elegant.
@@ -10,6 +11,8 @@ class VexaPageRoute<T> extends PageRouteBuilder<T> {
           transitionDuration: const Duration(milliseconds: 300),
           reverseTransitionDuration: const Duration(milliseconds: 240),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // Reduced motion: skip the transition entirely.
+            if (!AppMotion.enabled) return child;
             // Forward: slide up 4% + fade in
             final enterSlide = Tween<Offset>(
               begin: const Offset(0, 0.04),
@@ -68,6 +71,8 @@ class VexaPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
+    // Reduced motion: skip the transition entirely.
+    if (!AppMotion.enabled) return child;
     final enterSlide = Tween<Offset>(
       begin: const Offset(0, 0.04),
       end: Offset.zero,

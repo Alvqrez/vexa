@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../home/presentation/providers/home_provider.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
@@ -151,6 +153,47 @@ class BudgetNotifier extends StateNotifier<List<BudgetItem>> {
     _isLoaded = true;
     state = const [];
     await _isar.writeTxn(() => _isar.isarBudgetItems.clear());
+  }
+
+  /// Datos de ejemplo (solo debug).
+  Future<void> seed() async {
+    if (kReleaseMode) return;
+    _isLoaded = true;
+    state = const [
+      BudgetItem(
+        id: 'seed_bud_1',
+        name: 'Comida',
+        icon: Icons.restaurant_rounded,
+        color: AppColors.catFood,
+        category: 'wc1',
+        limit: 400,
+      ),
+      BudgetItem(
+        id: 'seed_bud_2',
+        name: 'Transporte',
+        icon: Icons.directions_bus_rounded,
+        color: AppColors.catTransport,
+        category: 'wc2',
+        limit: 150,
+      ),
+      BudgetItem(
+        id: 'seed_bud_3',
+        name: 'Compras',
+        icon: Icons.shopping_bag_rounded,
+        color: AppColors.catShopping,
+        category: 'wc3',
+        limit: 200,
+      ),
+      BudgetItem(
+        id: 'seed_bud_4',
+        name: 'Ocio',
+        icon: Icons.celebration_rounded,
+        color: AppColors.catEntertainment,
+        category: 'wc4',
+        limit: 120,
+      ),
+    ];
+    await _persistAll();
   }
 }
 

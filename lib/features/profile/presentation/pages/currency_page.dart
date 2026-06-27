@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -38,7 +38,7 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
     _loadSaved();
   }
 
@@ -128,7 +128,7 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage>
                                 selected:
                                     _currencies[i].code == _selected,
                                 onTap: () {
-                                  HapticFeedback.selectionClick();
+                                  Haptics.selectionClick();
                                   _select(_currencies[i]);
                                 },
                               ),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -73,7 +73,7 @@ class AllAccountsPage extends ConsumerWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -101,7 +101,7 @@ class AllAccountsPage extends ConsumerWidget {
                           // Add account button
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               _showAddAccount(context, ref);
                             },
                             child: Container(
@@ -189,7 +189,7 @@ class AllAccountsPage extends ConsumerWidget {
                       120,
                     ),
                     onReorderItem: (oldIndex, newIndex) {
-                      HapticFeedback.mediumImpact();
+                      Haptics.mediumImpact();
                       ref
                           .read(accountsProvider.notifier)
                           .reorder(oldIndex, newIndex);
@@ -255,7 +255,7 @@ class _AccountRow extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => AccountDetailPage(accountId: account.id),
@@ -630,7 +630,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                           final color = _accountColors[_colorIndex];
                           return GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() => _icon = _icons[i]);
                             },
                             child: AnimatedContainer(
@@ -696,7 +696,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                           final selected = i == _colorIndex;
                           return GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() => _colorIndex = i);
                             },
                             child: AnimatedContainer(
@@ -741,7 +741,7 @@ class _AddAccountSheetState extends State<_AddAccountSheet> {
                     // Savings account toggle
                     GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _isSavings = !_isSavings);
                       },
                       behavior: HitTestBehavior.opaque,

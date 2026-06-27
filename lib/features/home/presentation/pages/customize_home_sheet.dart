@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -71,7 +71,7 @@ class CustomizeHomeSheet extends ConsumerWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     notifier.reset();
                   },
                   child: Text(
@@ -109,7 +109,7 @@ class CustomizeHomeSheet extends ConsumerWidget {
                 ),
               ),
               onReorderItem: (oldIndex, newIndex) {
-                HapticFeedback.selectionClick();
+                Haptics.selectionClick();
                 notifier.reorder(oldIndex, newIndex);
               },
               itemCount: config.sections.length,
@@ -120,7 +120,7 @@ class CustomizeHomeSheet extends ConsumerWidget {
                   entry: entry,
                   index: index,
                   onToggle: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     notifier.toggleVisibility(entry.section);
                   },
                 );

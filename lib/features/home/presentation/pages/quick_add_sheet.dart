@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -111,7 +111,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
   /// Selector rápido de subcategoría al mantener presionado un chip.
   Future<void> _showSubcategorySheetFor(WalletCategory cat) async {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     final subs = ref.read(subcategoriesByCategoryProvider(cat.id));
     final c = context.colors;
     final selected = await showModalBottomSheet<Object?>(
@@ -226,7 +226,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
   void _switchType(TransactionType type) {
     if (_type == type) return;
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _type = type;
       _categoryId = null; // re-resolverá al primer chip del nuevo tipo
@@ -239,7 +239,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     final amountStr = _amountNotifier.value;
     final amount = double.tryParse(amountStr);
     if (amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ingresa un monto mayor a cero')),
       );
@@ -247,7 +247,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     }
     final cat = _selectedCategory;
     if (cat == null) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       Navigator.of(context).pop(QuickAddNeedsCategory(amountStr));
       return;
     }
@@ -279,7 +279,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
         await LocalPrefsService.setString('last_account_id', _accountId!);
       }
 
-      HapticFeedback.mediumImpact();
+      Haptics.mediumImpact();
       if (!mounted) return;
       // Mark this transaction for flash animation in the list.
       ref.read(newTransactionIdsProvider.notifier).state = {transaction.id};
@@ -292,7 +292,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   }
 
   void _openCategorySheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final cats = _categoriesFor(_type);
     final c = context.colors;
     showModalBottomSheet<void>(
@@ -333,7 +333,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                   final sel = cat.id == _categoryId;
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() {
                         if (_categoryId != cat.id) _subcategoryId = null;
                         _categoryId = cat.id;
@@ -388,7 +388,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   }
 
   void _openAccountPicker() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final accounts = ref.read(accountsProvider);
     final c = context.colors;
     showModalBottomSheet<void>(
@@ -423,7 +423,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
               final sel = a.id == _accountId;
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _accountId = a.id);
                   Navigator.of(context).pop();
                 },
@@ -589,7 +589,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                       const SizedBox(height: 6),
                       GestureDetector(
                         onTap: () {
-                          HapticFeedback.selectionClick();
+                          Haptics.selectionClick();
                           final cat = _selectedCategory;
                           Navigator.of(context).pop();
                           widget.onMoreDetails!(_type, _amountNotifier.value,
@@ -811,7 +811,7 @@ class _SubChip extends StatelessWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -868,7 +868,7 @@ class _QChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       onLongPress: onLongPress,
@@ -919,7 +919,7 @@ class _MiniAction extends StatelessWidget {
       message: tooltip,
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          Haptics.selectionClick();
           onTap();
         },
         child: Container(

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/vexa_colors_ext.dart';
@@ -42,7 +42,7 @@ class NumericKeypad extends StatelessWidget {
   ];
 
   void _press(String key) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     String next = value;
 
     if (key == '⌫') {
@@ -119,7 +119,7 @@ class NumericKeypad extends StatelessWidget {
             color: confirmColor,
             height: confirmHeight,
             onTap: () async {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               await onConfirm();
             },
           ),

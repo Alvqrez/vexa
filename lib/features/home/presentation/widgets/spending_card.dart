@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -54,11 +54,12 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
     final ratio = ref.watch(budgetSpendingRatioProvider);
     final limit = ref.watch(totalBudgetLimitProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
 
     // ── Double-Bezel outer tray ─────────────────────────────────────────────
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const BudgetPage()),
         );
@@ -173,13 +174,15 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '$currency${expenses.toStringAsFixed(0)}',
+                            text: maskMoney(
+                                hide, '$currency${expenses.toStringAsFixed(0)}'),
                             style: AppTypography.headingL.copyWith(
                               color: c.textPrimary,
                             ),
                           ),
                           TextSpan(
-                            text: ' / $currency${limit.toStringAsFixed(0)}',
+                            text:
+                                ' / ${maskMoney(hide, '$currency${limit.toStringAsFixed(0)}')}',
                             style: AppTypography.bodyM.copyWith(
                               color: c.textTertiary,
                             ),
@@ -190,14 +193,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                     const SizedBox(height: AppSpacing.lg),
                     _StatRow(
                       label: 'Ingresos',
-                      value: '$currency${income.toStringAsFixed(0)}',
+                      value: maskMoney(hide, '$currency${income.toStringAsFixed(0)}'),
                       color: AppColors.positive,
                       icon: Icons.south_rounded,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _StatRow(
                       label: 'Gastos',
-                      value: '$currency${expenses.toStringAsFixed(0)}',
+                      value: maskMoney(hide, '$currency${expenses.toStringAsFixed(0)}'),
                       color: AppColors.negative,
                       icon: Icons.north_rounded,
                     ),
@@ -219,14 +222,14 @@ class _SpendingCardState extends ConsumerState<SpendingCard>
                     const SizedBox(height: AppSpacing.lg),
                     _StatRow(
                       label: 'Ingresos',
-                      value: '$currency${income.toStringAsFixed(0)}',
+                      value: maskMoney(hide, '$currency${income.toStringAsFixed(0)}'),
                       color: AppColors.positive,
                       icon: Icons.south_rounded,
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     _StatRow(
                       label: 'Gastos',
-                      value: '$currency${expenses.toStringAsFixed(0)}',
+                      value: maskMoney(hide, '$currency${expenses.toStringAsFixed(0)}'),
                       color: AppColors.negative,
                       icon: Icons.north_rounded,
                     ),

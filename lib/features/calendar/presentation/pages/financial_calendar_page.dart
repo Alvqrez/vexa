@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -34,7 +34,7 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    )..revealForward();
     _selectedDay = DateTime(
       DateTime.now().year,
       DateTime.now().month,
@@ -49,20 +49,20 @@ class _FinancialCalendarPageState extends ConsumerState<FinancialCalendarPage>
   }
 
   void _prevMonth() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month - 1, 1);
       _stagger.reset();
-      _stagger.forward();
+      _stagger.revealForward();
     });
   }
 
   void _nextMonth() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _currentMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 1);
       _stagger.reset();
-      _stagger.forward();
+      _stagger.revealForward();
     });
   }
 
@@ -494,7 +494,7 @@ class _CalendarGrid extends StatelessWidget {
                   ),
                   child: GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       onDayTap(date);
                     },
                     child: _DayCell(

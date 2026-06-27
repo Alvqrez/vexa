@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../onboarding/presentation/pages/onboarding_page.dart';
 import '../../../auth/presentation/pages/lock_screen_page.dart';
@@ -7,6 +6,7 @@ import '../../../shell/presentation/pages/main_shell.dart';
 import '../../../../core/data/local_prefs_service.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/services/local_auth_service.dart';
+import '../../../../core/utils/haptics.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -82,6 +82,13 @@ class _SplashPageState extends ConsumerState<SplashPage> with TickerProviderStat
       final savedTheme = await loadThemeMode();
       final savedAnimations = await LocalPrefsService.getBool('settings_animations', defaultValue: true);
       final savedHideAmounts = await LocalPrefsService.getBool('settings_hide_amounts', defaultValue: false);
+      final savedHaptics = await LocalPrefsService.getBool('settings_haptics', defaultValue: true);
+
+      // Static gates read outside Riverpod (haptics calls, route transitions,
+      // deep money widgets).
+      Haptics.enabled = savedHaptics;
+      AppMotion.enabled = savedAnimations;
+      AppPrivacy.hideAmounts = savedHideAmounts;
 
       if (!mounted) return;
 

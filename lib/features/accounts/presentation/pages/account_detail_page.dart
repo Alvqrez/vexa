@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -26,6 +26,7 @@ class AccountDetailPage extends ConsumerWidget {
     final stats = ref.watch(accountStatsProvider(accountId));
     final color = stats.account.color;
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
     final allTransfers = ref.watch(transferHistoryProvider);
     final transfers = allTransfers
         .where(
@@ -70,7 +71,7 @@ class AccountDetailPage extends ConsumerWidget {
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -99,7 +100,7 @@ class AccountDetailPage extends ConsumerWidget {
                           ),
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               showModalBottomSheet(
                                 context: context,
                                 isScrollControlled: true,
@@ -130,7 +131,7 @@ class AccountDetailPage extends ConsumerWidget {
                           const SizedBox(width: AppSpacing.xs),
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               showDialog(
                                 context: context,
                                 builder: (_) => AlertDialog(
@@ -239,7 +240,9 @@ class AccountDetailPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '$currency${stats.balance.toStringAsFixed(2)}',
+                            hide
+                                ? '$currency••••'
+                                : '$currency${stats.balance.toStringAsFixed(2)}',
                             style: AppTypography.displayM.copyWith(
                               color: c.textPrimary,
                             ),
@@ -254,8 +257,9 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Ingresos',
-                              value:
-                                  '+$currency${stats.income.toStringAsFixed(0)}',
+                              value: hide
+                                  ? '+$currency••••'
+                                  : '+$currency${stats.income.toStringAsFixed(0)}',
                               color: AppColors.positive,
                               icon: Icons.arrow_downward_rounded,
                             ),
@@ -264,8 +268,9 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Egresos',
-                              value:
-                                  '-$currency${stats.expenses.toStringAsFixed(0)}',
+                              value: hide
+                                  ? '-$currency••••'
+                                  : '-$currency${stats.expenses.toStringAsFixed(0)}',
                               color: AppColors.negative,
                               icon: Icons.arrow_upward_rounded,
                             ),
@@ -274,9 +279,11 @@ class AccountDetailPage extends ConsumerWidget {
                           Expanded(
                             child: _StatCard(
                               label: 'Neto',
-                              value: stats.net >= 0
-                                  ? '+$currency${stats.net.toStringAsFixed(0)}'
-                                  : '-$currency${stats.net.abs().toStringAsFixed(0)}',
+                              value: hide
+                                  ? '$currency••••'
+                                  : stats.net >= 0
+                                      ? '+$currency${stats.net.toStringAsFixed(0)}'
+                                      : '-$currency${stats.net.abs().toStringAsFixed(0)}',
                               color: stats.net >= 0
                                   ? AppColors.emerald
                                   : AppColors.negative,
@@ -603,7 +610,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         onTap();
       },
       child: Container(
@@ -699,7 +706,7 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
       isSavings: _isSavings,
     );
     ref.read(accountsProvider.notifier).updateAccount(updated);
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     Navigator.of(context).pop();
   }
 
@@ -823,7 +830,7 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                           final selected = _icon == _icons[i];
                           return GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() => _icon = _icons[i]);
                             },
                             child: AnimatedContainer(
@@ -887,7 +894,7 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                           final selected = i == _colorIndex;
                           return GestureDetector(
                             onTap: () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() => _colorIndex = i);
                             },
                             child: AnimatedContainer(
@@ -930,7 +937,7 @@ class _EditAccountSheetState extends ConsumerState<_EditAccountSheet> {
                     const SizedBox(height: AppSpacing.lg),
                     GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _isSavings = !_isSavings);
                       },
                       behavior: HitTestBehavior.opaque,
@@ -1118,7 +1125,7 @@ class _CorrectionSheetState extends ConsumerState<_CorrectionSheet> {
         .read(accountsProvider.notifier)
         .correctBalance(widget.account.id, newBalance);
 
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) {
       Navigator.of(context).pop();
     }

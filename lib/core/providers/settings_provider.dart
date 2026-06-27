@@ -7,8 +7,48 @@ import '../data/local_prefs_service.dart';
 /// Global toggle: when false, all UI animations are disabled (reduced motion).
 final animationsEnabledProvider = StateProvider<bool>((ref) => true);
 
+/// Static mirror of [animationsEnabledProvider] for contexts that can't read
+/// Riverpod (route transition builders, plain widgets). Kept in sync at splash
+/// startup and from the Ajustes toggle.
+abstract final class AppMotion {
+  static bool enabled = true;
+}
+
+/// Plays an entry/reveal animation, or jumps straight to the end when the user
+/// has turned animations off (reduced motion). Use for screen stagger reveals.
+extension ReducedMotionController on AnimationController {
+  void revealForward() {
+    if (AppMotion.enabled) {
+      forward();
+    } else {
+      value = 1.0;
+    }
+  }
+}
+
 /// When true, sensitive monetary values are hidden behind asterisks.
 final hideAmountsProvider = StateProvider<bool>((ref) => false);
+
+/// Replaces a formatted money string with a masked placeholder when the privacy
+/// setting "Ocultar montos" is on. Keeps a leading sign if present so layout and
+/// color cues stay intact (e.g. "+••••" / "-••••").
+String maskMoney(bool hide, String formatted) {
+  if (!hide) return formatted;
+  if (formatted.startsWith('+')) return '+••••';
+  if (formatted.startsWith('-')) return '-••••';
+  return '••••';
+}
+
+/// Static mirror of [hideAmountsProvider] for deep widgets that receive their
+/// data via constructor (and can't easily watch Riverpod). Kept in sync at
+/// splash startup and from the Ajustes toggle. These screens rebuild on
+/// navigation, so reading the static at build time stays correct.
+abstract final class AppPrivacy {
+  static bool hideAmounts = false;
+}
+
+/// [maskMoney] using the global [AppPrivacy.hideAmounts] flag.
+String pmask(String formatted) => maskMoney(AppPrivacy.hideAmounts, formatted);
 
 /// Currently selected currency symbol.
 final currencySymbolProvider = StateProvider<String>((ref) => '\$');
@@ -165,10 +205,14 @@ final userProfileProvider =
 class NotifPrefs {
   const NotifPrefs({
     this.dailyTip = true,
-    this.prediction = true,
+    this.logReminder = true,
+    this.budgetAlerts = true,
+    this.subscriptionAlerts = true,
   });
   final bool dailyTip;
-  final bool prediction;
+  final bool logReminder;
+  final bool budgetAlerts;
+  final bool subscriptionAlerts;
 }
 
 class NotifPrefsNotifier extends StateNotifier<NotifPrefs> {
@@ -180,9 +224,19 @@ class NotifPrefsNotifier extends StateNotifier<NotifPrefs> {
     try {
       final dailyTip =
           await LocalPrefsService.getBool('notif_daily_tip', defaultValue: true);
-      final prediction = await LocalPrefsService.getBool('notif_prediction',
+      final logReminder = await LocalPrefsService.getBool('notif_log_reminder',
           defaultValue: true);
-      state = NotifPrefs(dailyTip: dailyTip, prediction: prediction);
+      final budgetAlerts = await LocalPrefsService.getBool('notif_budget_alerts',
+          defaultValue: true);
+      final subscriptionAlerts = await LocalPrefsService.getBool(
+          'notif_subscription_alerts',
+          defaultValue: true);
+      state = NotifPrefs(
+        dailyTip: dailyTip,
+        logReminder: logReminder,
+        budgetAlerts: budgetAlerts,
+        subscriptionAlerts: subscriptionAlerts,
+      );
     } catch (e) {
       debugPrint('NotifPrefsNotifier._load: error loading preferences: $e');
     }

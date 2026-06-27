@@ -110,7 +110,7 @@ class _BalanceChartCardState extends ConsumerState<BalanceChartCard>
                     borderRadius: BorderRadius.circular(AppSpacing.pillRadius),
                   ),
                   child: Text(
-                    'Últimos 30 días',
+                    '~ 30 días',
                     style: AppTypography.labelS.copyWith(
                       color: lineColor,
                       fontWeight: FontWeight.w600,

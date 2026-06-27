@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/vexa_colors_ext.dart';
 import '../../core/constants/app_spacing.dart';
@@ -94,7 +94,7 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
   }
 
   Future<void> _select(IconData icon) async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final cps = [
       icon.codePoint,
       ..._recents.map((i) => i.codePoint).where((c) => c != icon.codePoint),
@@ -104,7 +104,7 @@ class _IconPickerSheetState extends State<IconPickerSheet> {
   }
 
   Future<void> _toggleFavorite(IconData icon) async {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     setState(() {
       if (!_favorites.remove(icon.codePoint)) {
         _favorites.add(icon.codePoint);
@@ -400,7 +400,7 @@ class _CategoryChip extends StatelessWidget {
       padding: const EdgeInsets.only(right: 7),
       child: GestureDetector(
         onTap: () {
-          HapticFeedback.selectionClick();
+          Haptics.selectionClick();
           onTap();
         },
         child: AnimatedContainer(

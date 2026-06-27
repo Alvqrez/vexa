@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -34,11 +34,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     _bgCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    )..forward();
+    )..revealForward();
     _contentCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -51,7 +51,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   void _next() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     // _slides.length = name slide, _slides.length + 1 = currency (last)
     if (_page < _slides.length + 1) {
       _pageCtrl.nextPage(
@@ -64,7 +64,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   void _skipToCurrency() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     _pageCtrl.animateToPage(
       _slides.length + 1,
       duration: const Duration(milliseconds: 380),
@@ -73,7 +73,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   }
 
   Future<void> _complete() async {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     final name = _nameCtrl.text.trim();
     await ref
         .read(userProfileProvider.notifier)
@@ -841,7 +841,7 @@ class _CurrencySlide extends StatelessWidget {
                 final selected = i == selectedIndex;
                 return GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     onSelect(i);
                   },
                   child: AnimatedContainer(

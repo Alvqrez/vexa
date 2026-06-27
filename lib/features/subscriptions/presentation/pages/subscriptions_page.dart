@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -37,7 +37,7 @@ class _SubscriptionsPageState extends State<SubscriptionsPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -217,7 +217,7 @@ class _SubsHeader extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            HapticFeedback.selectionClick();
+            Haptics.selectionClick();
             onAdd();
           },
           child: Container(
@@ -312,7 +312,7 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '\$${total.toStringAsFixed(0)}',
+                          pmask('\$${total.toStringAsFixed(0)}'),
                           style: AppTypography.headingS.copyWith(
                             color: context.colors.textPrimary,
                             fontSize: 18,
@@ -352,7 +352,7 @@ class _MonthlyTotalCardState extends ConsumerState<_MonthlyTotalCard>
                   _SubsInfoRow(
                     icon: Icons.calendar_today_rounded,
                     label: 'Costo anual',
-                    value: '\$${(total * 12).toStringAsFixed(0)}',
+                    value: pmask('\$${(total * 12).toStringAsFixed(0)}'),
                     color: AppColors.negative,
                   ),
                 ],
@@ -643,7 +643,7 @@ class _SubscriptionCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  '\$${s.amount.toStringAsFixed(2)}',
+                  pmask('\$${s.amount.toStringAsFixed(2)}'),
                   style: AppTypography.labelL.copyWith(
                     color: AppColors.negative,
                     fontWeight: FontWeight.w700,
@@ -676,7 +676,7 @@ class _SubscriptionMenu extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -797,7 +797,7 @@ class _SubsActionSheet extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '\$${subscription.amount.toStringAsFixed(2)}${subscription.frequency.shortLabel}',
+                    pmask('\$${subscription.amount.toStringAsFixed(2)}${subscription.frequency.shortLabel}'),
                     style: AppTypography.labelM.copyWith(
                       color: context.colors.textTertiary,
                     ),
@@ -891,7 +891,7 @@ class _ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       child: Container(
@@ -1027,7 +1027,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountNotifier.value);
     if (name.isEmpty || amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
     final billingDate = _ensureFuture(_billingDate, _freq);
@@ -1044,12 +1044,12 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
             accountId: _accountId,
           ),
         );
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) Navigator.pop(context);
   }
 
   Future<void> _pickDate() async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
@@ -1074,7 +1074,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   }
 
   void _showIconSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1119,7 +1119,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
                   final sel = ic == _icon;
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _icon = ic);
                       Navigator.pop(context);
                     },
@@ -1152,7 +1152,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   }
 
   void _showColorSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1188,7 +1188,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
                   final sel = col.toARGB32() == _color.toARGB32();
                   return GestureDetector(
                     onTap: () {
-                      HapticFeedback.selectionClick();
+                      Haptics.selectionClick();
                       setState(() => _color = col);
                       Navigator.pop(context);
                     },
@@ -1228,7 +1228,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   }
 
   void _showFrequencySheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1257,7 +1257,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
               final sel = f == _freq;
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _freq = f);
                   Navigator.pop(context);
                 },
@@ -1298,7 +1298,7 @@ class _AddSubscriptionSheetState extends ConsumerState<AddSubscriptionSheet> {
   }
 
   void _showAccountSheet(List<dynamic> accounts) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1771,7 +1771,7 @@ class _EditSubscriptionSheetState
       DateFormat('d MMM yyyy', 'es').format(d);
 
   void _showIconSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1815,7 +1815,7 @@ class _EditSubscriptionSheetState
                     final sel = ic == _icon;
                     return GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _icon = ic);
                         setSt(() {});
                         Navigator.pop(context);
@@ -1850,7 +1850,7 @@ class _EditSubscriptionSheetState
   }
 
   void _showColorSheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1885,7 +1885,7 @@ class _EditSubscriptionSheetState
                     final sel = col.toARGB32() == _color.toARGB32();
                     return GestureDetector(
                       onTap: () {
-                        HapticFeedback.selectionClick();
+                        Haptics.selectionClick();
                         setState(() => _color = col);
                         setSt(() {});
                         Navigator.pop(context);
@@ -1927,7 +1927,7 @@ class _EditSubscriptionSheetState
   }
 
   void _showFrequencySheet() {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -1955,7 +1955,7 @@ class _EditSubscriptionSheetState
               final sel = f == _freq;
               return GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   setState(() => _freq = f);
                   Navigator.pop(context);
                 },
@@ -1995,7 +1995,7 @@ class _EditSubscriptionSheetState
   }
 
   void _showAccountSheet(List<dynamic> accounts) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final c = context.colors;
     showModalBottomSheet<void>(
       context: context,
@@ -2106,7 +2106,7 @@ class _EditSubscriptionSheetState
     final name = _nameCtrl.text.trim();
     final amount = double.tryParse(_amountNotifier.value.replaceAll(',', '.'));
     if (name.isEmpty || amount == null || amount <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       return;
     }
     widget.onSave(
@@ -2122,7 +2122,7 @@ class _EditSubscriptionSheetState
         clearAccountId: _accountId == null,
       ),
     );
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     Navigator.pop(context);
   }
 

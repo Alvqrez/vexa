@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -29,7 +30,7 @@ class _SecurityPageState extends State<SecurityPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
     _load();
   }
 
@@ -139,7 +140,7 @@ class _SecurityPageState extends State<SecurityPage>
   // ── Biometric ─────────────────────────────────────────────────────────────────
 
   Future<void> _onBiometricToggle(bool value) async {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     await LocalAuthService.setBiometric(value);
     setState(() => _biometricEnabled = value);
   }
@@ -380,7 +381,7 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
 
   void _addDigit(String d) {
     if (_digits.length >= 4) return;
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     setState(() {
       _digits.add(d);
       _error = false;
@@ -390,7 +391,7 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
 
   void _removeDigit() {
     if (_digits.isEmpty) return;
-    HapticFeedback.lightImpact();
+    Haptics.lightImpact();
     setState(() => _digits.removeLast());
   }
 
@@ -404,10 +405,10 @@ class _PinSetupSheetState extends State<_PinSetupSheet> {
     } else {
       if (_digits.join() == _firstPin!.join()) {
         await LocalAuthService.setPin(_digits.join());
-        HapticFeedback.mediumImpact();
+        Haptics.mediumImpact();
         if (mounted) Navigator.of(context).pop(true);
       } else {
-        HapticFeedback.heavyImpact();
+        Haptics.heavyImpact();
         setState(() {
           _error = true;
           _digits.clear();
@@ -526,7 +527,7 @@ class _PasswordSetupSheetState extends State<_PasswordSetupSheet> {
       return;
     }
     await LocalAuthService.setPassword(pass);
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) Navigator.of(context).pop(true);
   }
 
@@ -742,7 +743,7 @@ class _SecurityAction extends StatelessWidget {
     final c = context.colors;
     return GestureDetector(
       onTap: () {
-        HapticFeedback.selectionClick();
+        Haptics.selectionClick();
         onTap();
       },
       behavior: HitTestBehavior.opaque,

@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../domain/models/financial_goal.dart';
 import '../../../../core/providers/isar_provider.dart';
 import '../../../../core/data/isar_service.dart';
@@ -89,6 +91,45 @@ class GoalsNotifier extends StateNotifier<List<FinancialGoal>> {
     _isLoaded = true;
     state = const [];
     await _isar.writeTxn(() => _isar.isarFinancialGoals.clear());
+  }
+
+  /// Datos de ejemplo (solo debug).
+  Future<void> seed() async {
+    if (kReleaseMode) return;
+    _isLoaded = true;
+    final now = DateTime.now();
+    DateTime inMonths(int m) => DateTime(now.year, now.month + m, 1);
+    state = [
+      FinancialGoal(
+        id: 'seed_goal_1',
+        title: 'Fondo de emergencia',
+        icon: Icons.shield_outlined,
+        color: AppColors.emerald,
+        current: 1800,
+        target: 6000,
+        deadline: inMonths(8),
+      ),
+      FinancialGoal(
+        id: 'seed_goal_2',
+        title: 'Vacaciones',
+        icon: Icons.beach_access_outlined,
+        color: AppColors.warning,
+        current: 650,
+        target: 1500,
+        deadline: inMonths(4),
+      ),
+      FinancialGoal(
+        id: 'seed_goal_3',
+        title: 'Laptop nueva',
+        icon: Icons.laptop_mac_rounded,
+        color: AppColors.petroleum,
+        current: 1200,
+        target: 1200,
+        deadline: inMonths(1),
+        completed: true,
+      ),
+    ];
+    await _persistAll();
   }
 }
 

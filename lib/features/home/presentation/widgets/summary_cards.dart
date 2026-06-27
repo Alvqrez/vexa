@@ -91,6 +91,7 @@ class SummaryBalanceCard extends ConsumerWidget {
               prefix: currency,
               duration: const Duration(milliseconds: 1400),
               showChangeBadge: true,
+              hidden: ref.watch(hideAmountsProvider),
             ),
 
             const SizedBox(height: 10),
@@ -155,6 +156,7 @@ class SummaryCardsRow extends ConsumerWidget {
     final income = ref.watch(monthlyIncomeProvider);
     final expenses = ref.watch(monthlyExpensesProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hidden = ref.watch(hideAmountsProvider);
 
     return Row(
       children: [
@@ -166,6 +168,7 @@ class SummaryCardsRow extends ConsumerWidget {
             icon: Icons.arrow_downward_rounded,
             color: AppColors.positive,
             type: TransactionType.income,
+            hidden: hidden,
           ),
         ),
         const SizedBox(width: AppSpacing.md),
@@ -177,6 +180,7 @@ class SummaryCardsRow extends ConsumerWidget {
             icon: Icons.arrow_upward_rounded,
             color: AppColors.negative,
             type: TransactionType.expense,
+            hidden: hidden,
           ),
         ),
       ],
@@ -192,6 +196,7 @@ class _SummaryCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.type,
+    this.hidden = false,
   });
 
   final String label;
@@ -200,6 +205,7 @@ class _SummaryCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final TransactionType type;
+  final bool hidden;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +281,7 @@ class _SummaryCard extends StatelessWidget {
                   letterSpacing: -0.5,
                 ),
                 duration: const Duration(milliseconds: 1000),
+                hidden: hidden,
               ),
               const SizedBox(height: 4),
               Text(

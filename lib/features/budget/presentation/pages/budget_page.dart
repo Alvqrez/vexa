@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -34,7 +34,7 @@ class _BudgetPageState extends ConsumerState<BudgetPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),
-    )..forward();
+    )..revealForward();
   }
 
   @override
@@ -359,13 +359,13 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
                       children: [
                         TextSpan(
                           text:
-                              '${widget.currency}${spent.toStringAsFixed(0)}',
+                              pmask('${widget.currency}${spent.toStringAsFixed(0)}'),
                           style: AppTypography.headingL
                               .copyWith(color: c.textPrimary),
                         ),
                         TextSpan(
                           text:
-                              ' / ${widget.currency}${limit.toStringAsFixed(0)}',
+                              ' / ${pmask('${widget.currency}${limit.toStringAsFixed(0)}')}',
                           style: AppTypography.bodyM
                               .copyWith(color: c.textTertiary),
                         ),
@@ -377,7 +377,7 @@ class _BudgetOverviewCardState extends ConsumerState<_BudgetOverviewCard>
                     icon: Icons.savings_outlined,
                     label: 'Disponible',
                     value:
-                        '${widget.currency}${remaining.toStringAsFixed(0)}',
+                        pmask('${widget.currency}${remaining.toStringAsFixed(0)}'),
                     color: remaining >= 0
                         ? AppColors.positive
                         : AppColors.negative,
@@ -678,7 +678,7 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                         if (item.item.limit > 0) ...[
                           const SizedBox(height: 2),
                           Text(
-                            '${widget.currency}${item.remaining.toStringAsFixed(0)} disponible',
+                            '${pmask('${widget.currency}${item.remaining.toStringAsFixed(0)}')} disponible',
                             style: AppTypography.labelS.copyWith(
                               color: item.isOver
                                   ? AppColors.negative
@@ -693,12 +693,12 @@ class _BudgetCategoryCardState extends State<_BudgetCategoryCard>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '${widget.currency}${item.spent.toStringAsFixed(0)}',
+                        pmask('${widget.currency}${item.spent.toStringAsFixed(0)}'),
                         style: AppTypography.labelL.copyWith(color: color),
                       ),
                       if (item.item.limit > 0)
                         Text(
-                          'de ${widget.currency}${item.item.limit.toStringAsFixed(0)}',
+                          'de ${pmask('${widget.currency}${item.item.limit.toStringAsFixed(0)}')}',
                           style: AppTypography.labelS.copyWith(
                             color: c.textTertiary,
                           ),
@@ -809,7 +809,7 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
         ? (double.tryParse(_limitCtrl.text.replaceAll(',', '.')) ?? 0.0)
         : 0.0;
     await widget.onSave(limit);
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) {
       Navigator.of(context).pop();
     }
@@ -1045,7 +1045,7 @@ class _EditLimitSheetState extends State<_EditLimitSheet>
                 // Delete link
                 GestureDetector(
                   onTap: () {
-                    HapticFeedback.heavyImpact();
+                    Haptics.heavyImpact();
                     widget.onDelete();
                     Navigator.of(context).pop();
                   },
@@ -1167,7 +1167,7 @@ class _CategoryPickerSheetState extends ConsumerState<_CategoryPickerSheet>
       category: cat.id,
       limit: limit,
     ));
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -1265,7 +1265,7 @@ class _CategoryPickerSheetState extends ConsumerState<_CategoryPickerSheet>
                       onTap: alreadyAdded
                           ? null
                           : () {
-                              HapticFeedback.selectionClick();
+                              Haptics.selectionClick();
                               setState(() {
                                 _selected = isSelected ? null : cat;
                                 if (!isSelected) _limitExpanded = false;

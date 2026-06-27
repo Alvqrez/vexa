@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -8,6 +8,7 @@ import '../../../../core/constants/app_spacing.dart';
 import '../../../../core/constants/app_curves.dart';
 import '../../../../shared/widgets/skeleton_loader.dart';
 import '../../domain/models/home_config.dart';
+import '../../../../core/providers/settings_provider.dart';
 import '../providers/home_config_provider.dart';
 import '../providers/home_provider.dart';
 import '../widgets/accounts_carousel.dart';
@@ -40,7 +41,13 @@ class _HomePageState extends ConsumerState<HomePage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1300),
-    )..forward();
+    );
+    // Reduced motion: show everything at once instead of staggering it in.
+    if (AppMotion.enabled) {
+      _stagger.forward();
+    } else {
+      _stagger.value = 1.0;
+    }
   }
 
   @override
@@ -50,7 +57,7 @@ class _HomePageState extends ConsumerState<HomePage>
   }
 
   Future<void> _onRefresh() async {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     // Isar is local — brief pause gives satisfying visual feedback
     await Future.delayed(const Duration(milliseconds: 600));
   }
@@ -123,6 +130,33 @@ class _HomePageState extends ConsumerState<HomePage>
     final c = context.colors;
     final config = ref.watch(homeConfigProvider);
     final visible = config.visibleSections;
+
+    // Mostrar aviso si un ajuste de saldo falló tras guardar/borrar una tx.
+    ref.listen<String?>(balanceWarningProvider, (_, msg) {
+      if (msg == null || !mounted) return;
+      ref.read(balanceWarningProvider.notifier).state = null;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded,
+                  size: 16, color: AppColors.warning),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(msg,
+                    style: AppTypography.labelM
+                        .copyWith(color: context.colors.textPrimary)),
+              ),
+            ],
+          ),
+          backgroundColor: context.colors.card,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+        ));
+    });
 
     // Switch from skeleton to real content once accounts have loaded from Isar.
     // Accounts always have ≥2 defaults after first load.

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -36,7 +36,7 @@ class _TimeMachinePageState extends ConsumerState<TimeMachinePage>
     _anim = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    )..revealForward();
     _amountCtrl.addListener(() => setState(() {}));
   }
 
@@ -56,9 +56,12 @@ class _TimeMachinePageState extends ConsumerState<TimeMachinePage>
   void _replay() => _anim.forward(from: 0);
 
   String _fmt(double v, String sym) {
-    if (v >= 1000000) return '$sym${(v / 1000000).toStringAsFixed(2)}M';
-    if (v >= 10000) return '$sym${(v / 1000).toStringAsFixed(1)}k';
-    return '$sym${v.toStringAsFixed(0)}';
+    final String s = v >= 1000000
+        ? '$sym${(v / 1000000).toStringAsFixed(2)}M'
+        : v >= 10000
+            ? '$sym${(v / 1000).toStringAsFixed(1)}k'
+            : '$sym${v.toStringAsFixed(0)}';
+    return pmask(s);
   }
 
   @override
@@ -114,7 +117,7 @@ class _TimeMachinePageState extends ConsumerState<TimeMachinePage>
                         children: [
                           GestureDetector(
                             onTap: () {
-                              HapticFeedback.lightImpact();
+                              Haptics.lightImpact();
                               Navigator.of(context).pop();
                             },
                             child: Container(
@@ -225,7 +228,7 @@ class _TimeMachinePageState extends ConsumerState<TimeMachinePage>
                                       resolveCategory(t.category, cats);
                                   return GestureDetector(
                                     onTap: () {
-                                      HapticFeedback.selectionClick();
+                                      Haptics.selectionClick();
                                       _amountCtrl.text =
                                           t.amount.toStringAsFixed(0);
                                       _replay();
@@ -275,7 +278,7 @@ class _TimeMachinePageState extends ConsumerState<TimeMachinePage>
                           return Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                HapticFeedback.selectionClick();
+                                Haptics.selectionClick();
                                 setState(() => _selectedYears = y);
                                 _replay();
                               },

@@ -16,13 +16,14 @@ class QuickStats extends ConsumerWidget {
     final expenses = ref.watch(monthlyExpensesProvider);
     final savings = ref.watch(monthlySavingsProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
 
     return Row(
       children: [
         Expanded(
           child: _StatTile(
             label: 'Ingresos',
-            value: _compact(income, currency),
+            value: maskMoney(hide, _compact(income, currency)),
             icon: Icons.south_rounded,
             color: AppColors.positive,
             surface: AppColors.positiveSurface,
@@ -32,7 +33,7 @@ class QuickStats extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Gastos',
-            value: _compact(expenses, currency),
+            value: maskMoney(hide, _compact(expenses, currency)),
             icon: Icons.north_rounded,
             color: AppColors.negative,
             surface: AppColors.negativeSurface,
@@ -42,7 +43,7 @@ class QuickStats extends ConsumerWidget {
         Expanded(
           child: _StatTile(
             label: 'Ahorrado',
-            value: _compact(savings, currency),
+            value: maskMoney(hide, _compact(savings, currency)),
             icon: Icons.savings_outlined,
             color: AppColors.petroleum,
             surface: AppColors.petroleumSurface,

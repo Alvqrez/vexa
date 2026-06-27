@@ -14,6 +14,7 @@ class FinancialProjectionWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final projection = ref.watch(financialProjectionProvider);
     final currency = ref.watch(currencySymbolProvider);
+    final hide = ref.watch(hideAmountsProvider);
     final c = context.colors;
 
     return Container(
@@ -66,7 +67,8 @@ class FinancialProjectionWidget extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   label: 'Ingreso (30 días)',
-                  value: '$currency${projection.averageMonthlyIncome.toStringAsFixed(0)}',
+                  value: maskMoney(hide,
+                      '$currency${projection.averageMonthlyIncome.toStringAsFixed(0)}'),
                   color: AppColors.positive,
                 ),
               ),
@@ -74,7 +76,8 @@ class FinancialProjectionWidget extends ConsumerWidget {
               Expanded(
                 child: _StatCard(
                   label: 'Gasto (30 días)',
-                  value: '$currency${projection.averageMonthlyExpense.toStringAsFixed(0)}',
+                  value: maskMoney(hide,
+                      '$currency${projection.averageMonthlyExpense.toStringAsFixed(0)}'),
                   color: AppColors.negative,
                 ),
               ),

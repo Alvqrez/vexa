@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vexa_finance/core/providers/settings_provider.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -50,7 +51,7 @@ class _HelpCenterPageState extends State<HelpCenterPage>
     _stagger = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
-    )..forward();
+    )..revealForward();
   }
 
   @override

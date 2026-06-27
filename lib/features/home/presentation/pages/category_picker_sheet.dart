@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -111,7 +111,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet>
   }
 
   void _select(WalletCategory cat, [Subcategory? sub]) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     Navigator.of(context).pop(CategorySelection(cat, sub));
   }
 
@@ -171,7 +171,7 @@ class _CategoryPickerSheetState extends ConsumerState<CategoryPickerSheet>
     if (_overlayCategory == null) return;
     final hit = _hitTestOption(globalPos);
     if (hit != _hoveredOption) {
-      if (hit != -1) HapticFeedback.selectionClick();
+      if (hit != -1) Haptics.selectionClick();
       setState(() => _hoveredOption = hit);
     }
   }
@@ -859,7 +859,7 @@ class _CategoryTileState extends State<_CategoryTile> {
           if (!mounted) return;
           _longPressFired = true;
           setState(() => _pressed = false);
-          HapticFeedback.mediumImpact();
+          Haptics.mediumImpact();
           widget.onLongPressStart(_TileLongPressDetails(_globalRect()));
         });
       },

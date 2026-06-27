@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/utils/receipt_image_store.dart';
@@ -101,13 +101,19 @@ class TransactionDetailPage extends ConsumerWidget {
                         color: cat.surface,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Icon(cat.icon, color: cat.color, size: 28),
+                      child: Icon(
+                        sub?.icon ?? cat.icon,
+                        color: sub?.effectiveColor(cat.color) ?? cat.color,
+                        size: 28,
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   // Amount
                   Text(
-                    transaction.formattedWith(currency),
+                    ref.watch(hideAmountsProvider)
+                        ? '${isIncome ? '+' : '-'}$currency••••'
+                        : transaction.formattedWith(currency),
                     style: AppTypography.displayM.copyWith(
                       color: amountColor,
                       fontWeight: FontWeight.w800,
@@ -272,7 +278,7 @@ class TransactionDetailPage extends ConsumerWidget {
   }
 
   void _deleteWithUndo(BuildContext context, WidgetRef ref) {
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     final messenger = ScaffoldMessenger.of(context);
     final notifier = ref.read(transactionsProvider.notifier);
     final c = context.colors;
@@ -337,7 +343,7 @@ class _ReceiptPhoto extends StatelessWidget {
     }
     return GestureDetector(
       onTap: () {
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
         Navigator.of(context).push(
           PageRouteBuilder(
             opaque: false,
@@ -454,7 +460,7 @@ class _MoreMenuButton extends ConsumerWidget {
             builder: (_) => AddTransactionSheet(existing: transaction),
           );
         } else if (v == 'delete') {
-          HapticFeedback.mediumImpact();
+          Haptics.mediumImpact();
           final messenger = ScaffoldMessenger.of(context);
           final notifier = ref.read(transactionsProvider.notifier);
           final c = context.colors;
@@ -622,7 +628,7 @@ class _ActionButtonState extends State<_ActionButton>
     return GestureDetector(
       onTapDown: (_) {
         _press.reverse();
-        HapticFeedback.lightImpact();
+        Haptics.lightImpact();
       },
       onTapUp: (_) => _press.forward(),
       onTapCancel: () => _press.forward(),

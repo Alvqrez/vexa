@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/theme/vexa_colors_ext.dart';
@@ -72,15 +72,15 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       await LocalAuthService.setupAccount(email, pass);
-      HapticFeedback.mediumImpact();
+      Haptics.mediumImpact();
       _goToApp();
     } else {
       final ok = await LocalAuthService.verifyAccount(email, pass);
       if (ok) {
-        HapticFeedback.mediumImpact();
+        Haptics.mediumImpact();
         _goToApp();
       } else {
-        HapticFeedback.heavyImpact();
+        Haptics.heavyImpact();
         setState(() => _errorMsg = 'Email o contraseña incorrectos');
         _passCtrl.clear();
       }

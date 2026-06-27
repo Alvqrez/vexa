@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:vexa_finance/core/utils/haptics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -249,10 +249,17 @@ class _MainShellState extends ConsumerState<MainShell>
 
   Future<void> _scheduleNotifications() async {
     final prefs = ref.read(notifPrefsProvider);
+
+    // Recurring scheduled notifications (gated by their toggles).
     if (prefs.dailyTip) {
       await NotificationService.scheduleDailyTip();
     } else {
       await NotificationService.cancelDailyTip();
+    }
+    if (prefs.logReminder) {
+      await NotificationService.scheduleLogReminder();
+    } else {
+      await NotificationService.cancelLogReminder();
     }
 
     // Immediate alerts (subscription + budget) fire at most once per calendar day.
@@ -263,25 +270,29 @@ class _MainShellState extends ConsumerState<MainShell>
     await LocalPrefsService.setString('last_alert_day', todayKey);
 
     // Subscription expiry alerts
-    final subs = ref.read(subscriptionsProvider)
-        .where((s) => s.isActive && s.daysUntilBilling <= 3)
-        .toList();
-    for (var i = 0; i < subs.length; i++) {
-      await NotificationService.showSubscriptionAlert(
-        name: subs[i].name,
-        daysLeft: subs[i].daysUntilBilling,
-        index: i,
-      );
-    }
-    // Budget alerts (≥ 80%)
-    final budgets = ref.read(budgetWithSpentProvider);
-    for (var i = 0; i < budgets.length; i++) {
-      if (budgets[i].isWarning || budgets[i].isOver) {
-        await NotificationService.showBudgetAlert(
-          categoryName: budgets[i].item.name,
-          percent: (budgets[i].ratio * 100).round(),
+    if (prefs.subscriptionAlerts) {
+      final subs = ref.read(subscriptionsProvider)
+          .where((s) => s.isActive && s.daysUntilBilling <= 3)
+          .toList();
+      for (var i = 0; i < subs.length; i++) {
+        await NotificationService.showSubscriptionAlert(
+          name: subs[i].name,
+          daysLeft: subs[i].daysUntilBilling,
           index: i,
         );
+      }
+    }
+    // Budget alerts (≥ 80%)
+    if (prefs.budgetAlerts) {
+      final budgets = ref.read(budgetWithSpentProvider);
+      for (var i = 0; i < budgets.length; i++) {
+        if (budgets[i].isWarning || budgets[i].isOver) {
+          await NotificationService.showBudgetAlert(
+            categoryName: budgets[i].item.name,
+            percent: (budgets[i].ratio * 100).round(),
+            index: i,
+          );
+        }
       }
     }
   }
@@ -612,7 +623,7 @@ class _QuickAddFabState extends ConsumerState<_QuickAddFab>
         onTapUp: (_) => _press.forward(),
         onTapCancel: () => _press.forward(),
         onTap: () {
-          HapticFeedback.selectionClick();
+          Haptics.selectionClick();
           widget.onTap();
         },
         child: ScaleTransition(
@@ -782,7 +793,7 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
     final title = _titleCtrl.text.trim();
     final target = double.tryParse(_targetCtrl.text.replaceAll(',', '.'));
     if (title.isEmpty || target == null || target <= 0) {
-      HapticFeedback.heavyImpact();
+      Haptics.heavyImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Completa el nombre y el monto objetivo')),
       );
@@ -797,7 +808,7 @@ class _QuickAddGoalSheetState extends ConsumerState<_QuickAddGoalSheet> {
           target: target,
           deadline: DateTime.now().add(const Duration(days: 90)),
         ));
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     Navigator.pop(context);
   }
 
@@ -1147,7 +1158,7 @@ class _TutorialCard extends StatelessWidget {
               const Spacer(),
               GestureDetector(
                 onTap: () {
-                  HapticFeedback.selectionClick();
+                  Haptics.selectionClick();
                   onSkip();
                 },
                 child: Text('Omitir',
@@ -1166,7 +1177,7 @@ class _TutorialCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           GestureDetector(
             onTap: () {
-              HapticFeedback.selectionClick();
+              Haptics.selectionClick();
               onNext();
             },
             child: Container(
@@ -1264,13 +1275,18 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
       _showError('Saldo insuficiente en ${fromAccount.name}');
       return;
     }
-    HapticFeedback.mediumImpact();
+    Haptics.mediumImpact();
     final accounts = ref.read(accountsProvider);
     final toAccount = accounts.firstWhere((a) => a.id == _toId);
     final notifier = ref.read(accountsProvider.notifier);
     await notifier.transfer(_fromId!, _toId!, amount);
+    // Ahorro del mes = neto de depósitos menos retiros. Mover dinero ENTRE dos
+    // cuentas de Ahorro se compensa (suma y resta), por lo que no altera el neto.
     if (toAccount.isSavings) {
       await ref.read(savingsTransfersProvider.notifier).addTransfer(amount);
+    }
+    if (fromAccount.isSavings) {
+      await ref.read(savingsTransfersProvider.notifier).removeTransfer(amount);
     }
     // Save audit record
     final record = TransferRecord(
@@ -1287,7 +1303,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
   }
 
   void _pickAccount({required bool isFrom}) {
-    HapticFeedback.selectionClick();
+    Haptics.selectionClick();
     final accounts = ref.read(accountsProvider);
     showModalBottomSheet(
       context: context,
@@ -1324,7 +1340,7 @@ class _TransferSheetState extends ConsumerState<_TransferSheet> {
                 final sel = isFrom ? a.id == _fromId : a.id == _toId;
                 return GestureDetector(
                   onTap: () {
-                    HapticFeedback.selectionClick();
+                    Haptics.selectionClick();
                     setState(() {
                       if (isFrom) { _fromId = a.id; } else { _toId = a.id; }
                     });
@@ -1696,7 +1712,7 @@ class _SavingsExplainerSheet extends StatelessWidget {
           // CTA button
           GestureDetector(
             onTap: () {
-              HapticFeedback.mediumImpact();
+              Haptics.mediumImpact();
               Navigator.of(context).pop();
             },
             child: Container(
